@@ -16,6 +16,7 @@ from env_config import (
     ENV_PATH,
     credentials_source_label,
     get_gemini_api_key,
+    get_google_sheet_id,
 )
 from narrative_engine import (
     PROFILE_KEYS,
@@ -737,6 +738,33 @@ def render_inquiry_fab(*, above_chat_input: bool = True) -> None:
         st.rerun()
 
 
+def _sheets_error_message(sheets: SheetsLogger) -> str:
+    """연결 실패 시 사용자용 안내 (상세 오류 + 설정 방법)."""
+    lines = [t("err_sheets")]
+    if sheets.error_message:
+        lines.append(f"`{sheets.error_message}`")
+    src = credentials_source_label()
+    if src != "none":
+        lines.append(f"인증 소스: `{src}`")
+    else:
+        lines.append("인증 소스: **없음** (Secrets 또는 service_account.json 필요)")
+    sid = get_google_sheet_id()
+    if sid:
+        lines.append(f"시트 ID: `{sid[:8]}…`")
+    lines.append(t("err_sheets_setup"))
+    return "\n\n".join(lines)
+
+
+def render_sheets_status(sheets: SheetsLogger) -> None:
+    """Sheets 연결 상태 — 실패 시 설정 안내."""
+    if sheets.is_connected:
+        email = sheets.service_account_email or "—"
+        st.caption(f"🟢 Google Sheets 연결됨 · {email}")
+        return
+    with st.expander("⚠️ Google Sheets 연결 안 됨 — 설정 방법", expanded=True):
+        st.markdown(_sheets_error_message(sheets))
+
+
 def render_inquiry_page(sheets: SheetsLogger) -> None:
     """문의하기 전용 — Google Sheets 기록 폼."""
     st.markdown(f"## {t('inquiry_page_title')}")
@@ -911,7 +939,7 @@ def show_admin_reply_banner() -> None:
 def render_researcher_inquiry(sheets: SheetsLogger) -> None:
     """연구자·일반 문의 — Google Sheets Inquiries 탭에 기록."""
     if not sheets.is_connected:
-        st.warning(sheets.error_message or t("err_sheets"))
+        st.warning(_sheets_error_message(sheets))
         return
 
     participant = (st.session_state.get("participant_id") or "").strip()
@@ -1300,6 +1328,7 @@ def reset_user_session() -> None:
 
 def render_onboarding(sheets: SheetsLogger) -> None:
     st.markdown(f"## {t('consent_title')}")
+    render_sheets_status(sheets)
     st.info(t("onboarding_banner"))
     tab_new, tab_return = st.tabs([t("tab_new"), t("tab_return")])
 
@@ -1375,7 +1404,7 @@ def render_onboarding(sheets: SheetsLogger) -> None:
             if not nick or not password:
                 st.error(t("err_login_both"))
             elif not sheets.is_connected:
-                st.error(t("err_sheets"))
+                st.error(_sheets_error_message(sheets))
             else:
                 sheets.ensure_header_row()
                 found = sheets.find_returning_user(nick, password)
@@ -1692,20 +1721,17 @@ def handle_chat_turn(
         st.session_state.pop("_request_summary", None)
         deliver_life_summary(gemini_ok)
 
-    _clear_chat_input_widgets()
     st.rerun()
 
 
-def _clear_chat_input_widgets() -> None:
-    """전송 직후 입력·업로드 위젯 초기화 (text_area는 nonce로 강제 리셋)."""
-    nonce = int(st.session_state.get("chat_composer_nonce", 0))
-    alt_key = f"alt_chat_input_{nonce}"
-    if alt_key in st.session_state:
-        st.session_state[alt_key] = ""
-    # 레거시 단일 키
-    if "alt_chat_input" in st.session_state:
-        st.session_state.alt_chat_input = ""
-    st.session_state.chat_composer_nonce = nonce + 1
+def _bump_chat_composer_nonce() -> None:
+    """
+    입력창 비우기 — 위젯 생성 후 session_state[alt_chat_input_*] 를 건드리면
+    Streamlit 오류가 나므로 nonce만 올려 다음 rerun 에 새 key 로 그린다.
+    """
+    st.session_state.chat_composer_nonce = (
+        int(st.session_state.get("chat_composer_nonce", 0)) + 1
+    )
     for key in ("chat_photo_upload", "main_chat_input"):
         if key in st.session_state:
             del st.session_state[key]
@@ -1792,7 +1818,7 @@ def render_chat_composer() -> bool:
 
     if text or image_bytes:
         _enqueue_chat_turn(text, image_bytes=image_bytes, image_mime=image_mime)
-        _clear_chat_input_widgets()
+        _bump_chat_composer_nonce()
         st.rerun()
         return True
     return False
