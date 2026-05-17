@@ -809,6 +809,7 @@ def _init_session_state() -> None:
         "pending_user_prompt": "",
         "pending_turn": None,
         "story_thread": "",
+        "chat_composer_nonce": 0,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1691,12 +1692,21 @@ def handle_chat_turn(
         st.session_state.pop("_request_summary", None)
         deliver_life_summary(gemini_ok)
 
+    _clear_chat_input_widgets()
     st.rerun()
 
 
 def _clear_chat_input_widgets() -> None:
-    """전송 직후 입력·업로드 위젯 초기화."""
-    for key in ("alt_chat_input", "chat_photo_upload", "main_chat_input"):
+    """전송 직후 입력·업로드 위젯 초기화 (text_area는 nonce로 강제 리셋)."""
+    nonce = int(st.session_state.get("chat_composer_nonce", 0))
+    alt_key = f"alt_chat_input_{nonce}"
+    if alt_key in st.session_state:
+        st.session_state[alt_key] = ""
+    # 레거시 단일 키
+    if "alt_chat_input" in st.session_state:
+        st.session_state.alt_chat_input = ""
+    st.session_state.chat_composer_nonce = nonce + 1
+    for key in ("chat_photo_upload", "main_chat_input"):
         if key in st.session_state:
             del st.session_state[key]
 
@@ -1754,13 +1764,14 @@ def render_chat_composer() -> bool:
 
     alt_text = ""
     alt_send = False
+    alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
+    alt_key = f"alt_chat_input_{alt_nonce}"
     with st.expander(t("chat_alt_expander")):
         alt_text = st.text_area(
             "메시지",
-            key="alt_chat_input",
+            key=alt_key,
             height=80,
             label_visibility="collapsed",
-            value="",
         )
         alt_send = st.button(
             t("chat_alt_send"),
