@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>낮막 미리보기 — 나의 지난 이야기 동반자: dlinso</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      background: linear-gradient(165deg, #faf6f0 0%, #e8eef5 45%, #d4c4b0 100%);
+      min-height: 100vh;
+      color: #4a4038;
+    }
+    .layout { display: flex; max-width: 1100px; margin: 0 auto; min-height: 100vh; }
+    aside {
+      width: 280px;
+      padding: 1.5rem;
+      background: linear-gradient(180deg, #ebe4d8 0%, #dce6ef 100%);
+      border-right: 1px solid rgba(120,100,80,.12);
+    }
+    main { flex: 1; padding: 1.5rem 2rem; }
+    .banner {
+      text-align: center;
+      background: #e8dfd0;
+      padding: .5rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      margin-bottom: 1rem;
+    }
+    .gentle {
+      text-align: center;
+      padding: 1.25rem;
+      background: linear-gradient(135deg, #fff9f2, #f0ebe3);
+      border: 1px solid rgba(160,140,110,.25);
+      border-radius: 14px;
+      font-size: 1.05rem;
+      margin: 1rem 0;
+    }
+    .hero {
+      background: linear-gradient(135deg, #fffcf8, #f5efe6);
+      border: 1px solid rgba(140,120,100,.18);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 24px rgba(90,70,50,.08);
+    }
+    .hero h1 { font-size: 1.4rem; margin: .25rem 0 .75rem; }
+    .chip {
+      display: inline-block;
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(140,120,100,.22);
+      border-radius: 999px;
+      padding: .25rem .75rem;
+      font-size: .82rem;
+      margin: .2rem .3rem .2rem 0;
+    }
+    .chat {
+      background: #fffcf8;
+      border: 1px solid rgba(140,120,100,.2);
+      border-radius: 16px;
+      padding: 1.25rem;
+      min-height: 200px;
+    }
+    .msg { margin: .75rem 0; padding: .75rem 1rem; border-radius: 12px; max-width: 85%; }
+    .msg.user { background: #eef3f8; margin-left: auto; }
+    .msg.bot { background: #f5efe6; }
+    .input-mock {
+      margin-top: 1rem;
+      padding: .85rem 1rem;
+      border: 1px dashed #b8a088;
+      border-radius: 12px;
+      color: #9a8a78;
+      font-size: .9rem;
+    }
+    .phase { font-size: .8rem; color: #6b5a48; background: rgba(180,150,110,.2); padding: .2rem .6rem; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <strong>dlinso</strong>
+      <p style="font-size:.85rem;opacity:.85">나의 지난 이야기 동반자</p>
+      <p class="phase">서사 안내자와 함께</p>
+      <div class="gentle">마음의 기록이 차곡차곡 쌓이고 있어요 🌿</div>
+    </aside>
+    <main>
+      <p class="banner">🌅 낮막 UI 미리보기 (정적 화면) · 실제 앱은 <code>?preview=1</code></p>
+      <div class="hero">
+        <small style="color:#9a8a78">dlinso · 낮막의 이야기</small>
+        <h1>나의 지난 이야기 동반자: dlinso</h1>
+        <p>🌿 <b>서사 안내자</b> — 서사 자원을 모으는 중. 평가·그래프 없이 기록만 쌓입니다.</p>
+        <span class="chip">🪪 미리보기</span>
+        <span class="chip">📅 30-40대</span>
+      </div>
+      <div class="chat">
+        <div class="msg bot">🌿 먼저, 가슴이 따뜻해지는 기억부터 나눠 볼까요? 즐거웠던 순간이나 작은 성취가 있다면 들려주세요.</div>
+        <div class="msg user">어릴 때 할머니와 만든 딸기잼이 아직도 제일 행복한 기억이에요.</div>
+        <div class="msg bot">🌿 그 딸기잼의 달콤함이 지금도 가슴에 남아 있군요. 그때 당신에게 가장 빛났던 순간은 무엇이었나요?</div>
+        <div class="input-mock">따뜻했던 기억을 들려주세요… (대화 입력창)</div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,174 @@
+"""마음의 정원사 · 글로벌 산파술(Maieutic) — System Instruction · 사진 상징 분석."""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import google.generativeai as genai
+
+from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from personas import GUIDE_NAME, LANG_REPLY
+
+VISION_MODEL = "gemini-2.5-flash"
+GARDEN_KEEPER_NAME = "마음의 정원사"
+
+# Gemini System Instruction — 글로벌 정원사 (모든 Phase·언어 공통)
+GLOBAL_MAIEUTIC_SYSTEM_INSTRUCTION = f"""
+=== GLOBAL MAIEUTIC SYSTEM INSTRUCTION ===
+(dlinso · Narrative Research Lab — {GARDEN_KEEPER_NAME})
+
+[정체성: 다국어 정원사 Multilingual Maieutic Gardener]
+당신은 단순한 챗봇이 아닙니다. 스스로를 **{GARDEN_KEEPER_NAME}**이라 부르세요.
+「산파」「챗봇」「AI」라고 소개하지 마세요.
+참여자가 **어떤 언어**로 말하든, 그 언어의 **문학적·철학적 뉘앙스**를 살려
+응답하는 **글로벌 정원사**입니다. 언어의 장벽을 넘어 **인간 보편의 진리**를
+함께 탐구하며, 가르치거나 처방하지 않고 **오직 질문으로만** 인도합니다.
+
+[정원 비유 — 대화 전반]
+- 참여자의 한마디 = **열매를 맺기 위한 씨앗**. 씨앗을 존중하며 되풀이하지 마세요.
+- 당신의 질문 = **물과 햇빛**. 씨앗이 스스로 자라 **고유한 열매(가치·깨달음)** 를 맺게 하세요.
+- 참여자가 이미 맺은 통찰 = **열매** — 인정하고 다음 씨앗을 물으세요.
+
+[산파술의 보편적 적용 — 모든 언어·문화권]
+
+1) **Elenchus (엘렌코스 / 반박·음미)**
+   - 참여자가 쓴 **그 언어 고유의 표현** 속에 숨은 전제를 부드럽게 질문하세요.
+   - 말을 되풀이·표면적 동의("좋아요", "힘내세요")로 대체하지 마세요.
+
+2) **Aporia (아포리아 / 막다른 곳)**
+   - 참여자가 답을 몰라 혼란스러워할 때, 그 **언어권에 어울리는 아름다운 은유(Metaphor)** 로
+     스스로 길을 찾게 하세요. 혼란을 채우려 조언하지 마세요.
+
+3) **이미지-텍스트 융합 분석**
+   - 사진이 오면 시각 정보를 텍스트로 옮기는 것에서 **멈추지 마세요**.
+   - 그 이미지가 **그 사람에게 주는 심리적 의미**를, 참여자 언어의 **감성·문화적 맥락**으로 풀어내세요.
+   - 상징 1개를 **씨앗**으로 삼아 Elenchus → Aporia로 이어지는 **질문 1개**로 마무리하세요.
+
+4) **문화적 감수성**
+   - 각 언어권의 문화·존댓말·비유 체계를 존중하세요.
+   - 다만 **소크라테스적 질문의 날카로움**은 유지하세요. 설교·진단·해결책 나열 금지.
+
+[응답 형식 — 매 턴]
+① Elenchus (전제를 흔드는 질문 또는 음미) — 1문장
+② 공감(진통) — 감정 인정, 과장 없이 — 1문장
+③ Maieutic question — 정원·씨앗·열매 은유를 섞은 **질문 1개만**
+
+[Meta-Contextual Narrative Analysis]
+- '슬퍼요/힘들어요' 등 = 단순 부정이 아니라 **자기 개방·성찰 의지(귀한 씨앗)** 로 받아들이세요.
+- 감정 회피·반복 단답 = **방어 기제** — 한 가지 감각(몸·장소·때)만 부드럽게 물으세요.
+
+[절대 금지]
+- 참여자 문장 그대로 반복, 템플릿 인사 매 턴 복붙, 조언·처방·라벨 진단
+=== END GLOBAL MAIEUTIC SYSTEM INSTRUCTION ===
+"""
+
+MAIEUTIC_TURN_ADDON_HEADER = """
+[이번 턴 보강 — 직전 맥락만 인용, 질문은 새로]
+"""
+
+
+def build_global_maieutic_system_instruction(lang: str = "ko") -> str:
+    """Gemini system_instruction 최상단 — 언어별 응답 언어 명시."""
+    reply_lang = LANG_REPLY.get(lang, "Korean")
+    native = LANG_NAMES.get(lang, reply_lang)
+    return (
+        GLOBAL_MAIEUTIC_SYSTEM_INSTRUCTION
+        + f"\n\n[응답 언어 — 필수]\n"
+        f"참여자 UI 언어: **{native}** ({reply_lang}). "
+        f"반드시 **{reply_lang}** 로만 답하세요. "
+        f"자칭은 **{GARDEN_KEEPER_NAME}** ({reply_lang}로 자연스럽게 옮김, 예: Mind Gardener). "
+        "다른 언어로 섞지 마세요(고유명사·인용 제외). "
+        "그 언어의 문학·철학적 어휘를 사용하세요."
+    )
+
+
+def build_maieutic_addon(*, last_user: str = "", user_turns: int = 0) -> str:
+    block = MAIEUTIC_TURN_ADDON_HEADER
+    if user_turns:
+        block += f"\n- 참여자 씨앗(발화) 누적: {user_turns}회."
+    if last_user:
+        block += f"\n- 방금 심어진 씨앗(1회만 인용): 「{last_user[:180]}」"
+    block += (
+        "\n- Elenchus → 공감 → Maieutic question 1개. "
+        "씨앗·정원·열매 비유 중 1가지만. 직전과 다른 질문."
+    )
+    return block
+
+
+def analyze_uploaded_image(
+    image_bytes: bytes,
+    mime_type: str,
+    user_note: str = "",
+    *,
+    lang: str = "ko",
+) -> dict[str, str]:
+    """
+    이미지-텍스트 융합: 시각 분석 + 다국어적·문화적 심리 상징 해석.
+    """
+    ensure_gemini_configured()
+    note = (user_note or "").strip()[:500]
+    reply_lang = LANG_REPLY.get(lang, "Korean")
+    prompt = (
+        "You are a cross-cultural maieutic gardener (Mind Gardener) for dlinso.\n"
+        "Do NOT only describe pixels — infer **psychological meaning** as a **seed** "
+        "for the participant's narrative fruit.\n"
+        "Respect cultural sensitivity; output JSON only in the participant's language "
+        f"({reply_lang}).\n"
+        "{\n"
+        f'  "visual": "color, composition, light, objects (in {reply_lang})",\n'
+        f'  "symbol": "one object as psychological symbol — seed metaphor ok (in {reply_lang})",\n'
+        f'  "hook": "one maieutic bridge for the Mind Gardener — garden/seed/fruit metaphor (in {reply_lang})"\n'
+        "}\n"
+        f"{f'[Participant note] {note}' if note else ''}"
+    )
+    model = genai.GenerativeModel(
+        VISION_MODEL,
+        generation_config=genai.GenerationConfig(
+            temperature=0.45,
+            max_output_tokens=600,
+        ),
+    )
+    try:
+        response = model.generate_content(
+            [
+                {"mime_type": mime_type or "image/jpeg", "data": image_bytes},
+                prompt,
+            ]
+        )
+        data = _extract_json(response.text or "") or {}
+        visual = str(data.get("visual", "")).strip()
+        symbol = str(data.get("symbol", "")).strip()
+        hook = str(data.get("hook", "")).strip()
+        if not visual and response.text:
+            visual = response.text.strip()[:400]
+        return {
+            "visual": visual or "—",
+            "symbol": symbol or "—",
+            "hook": hook or "—",
+        }
+    except Exception:  # noqa: BLE001
+        return {
+            "visual": "—",
+            "symbol": "—",
+            "hook": "—",
+        }
+
+
+def format_image_context_for_chat(analysis: dict[str, str]) -> str:
+    return (
+        "[📷 Image–text fusion / 이미지-텍스트 융합]\n"
+        f"· Visual / 시각: {analysis.get('visual', '')}\n"
+        f"· Symbol (seed) / 상징(씨앗): {analysis.get('symbol', '')}\n"
+        f"· Garden hook / 정원사 연결: {analysis.get('hook', '')}"
+    )
+
+
+def merge_text_and_image(user_text: str, analysis: dict[str, str] | None) -> str:
+    text = (user_text or "").strip()
+    if not analysis:
+        return text
+    block = format_image_context_for_chat(analysis)
+    if text:
+        return f"{text}\n\n{block}"
+    return block

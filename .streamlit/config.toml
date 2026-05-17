@@ -1,0 +1,18 @@
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[server]
+headless = false
+port = 8501
+
+[client]
+toolbarMode = "auto"
+showSidebarNavigation = true
+
+[theme]
+primaryColor = "#6c5ce7"
+backgroundColor = "#faf6f0"
+secondaryBackgroundColor = "#fffcf8"
+textColor = "#4a4038"
+font = "sans serif"
