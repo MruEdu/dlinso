@@ -1,0 +1,21 @@
+# secrets & local config
+.env
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+service_account.json
+
+# python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.Python
+*.egg-info/
+dist/
+build/
+
+# os / ide
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
