@@ -1908,5 +1908,5 @@ def _run_app() -> None:
     render_inquiry_fab()
 
 
-if __name__ == "__main__":
-    main()
+# Streamlit Cloud는 스크립트를 매 rerun마다 실행 — main()을 항상 호출
+main()
