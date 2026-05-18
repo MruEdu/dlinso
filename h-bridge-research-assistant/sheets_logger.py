@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +16,7 @@ from env_config import (
     credentials_source_label,
     get_google_sheet_id,
     get_service_account_info,
+    korea_now_str,
 )
 
 apply_secrets_to_environ()
@@ -28,6 +28,29 @@ SERVICE_ACCOUNT_FILE = "service_account.json"
 
 MAIN_SHEET_DEFAULT = "시트1"
 INQUIRIES_SHEET = "Inquiries"
+PARTICIPANTS_SHEET = "참여자"
+
+PARTICIPANTS_HEADER = [
+    "식별코드",
+    "비밀번호해시",
+    "언어",
+    "성별",
+    "연령대",
+    "학력",
+    "첫방문",
+    "최근방문",
+    "방문횟수",
+    "총대화턴수",
+    "최근사용자질문",
+    "최근정원사답변",
+    "admin_reply",
+    "자아 주도성",
+    "성찰 깊이",
+    "정서적 풍요",
+    "관계성",
+    "맥락",
+    "삶의 이야기 진행도",
+]
 
 HEADER_ROW = [
     "식별코드",
@@ -249,6 +272,236 @@ class SheetsLogger:
         assist = self._cell(row, "Gemini 답변_원문") or self._cell(row, "Gemini 답변")
         return bool(assist)
 
+    @staticmethod
+    def _is_system_marker_message(text: str) -> bool:
+        return (text or "").strip().startswith("[")
+
+    def _read_sheet_data_rows(self, sheet_title: str, last_col: str) -> list[list[str]]:
+        if not self.is_connected or sheet_title not in self._sheet_titles:
+            return []
+        try:
+            result = (
+                self._service.spreadsheets()
+                .values()
+                .get(
+                    spreadsheetId=self.sheet_id,
+                    range=self._range(sheet_title, f"A2:{last_col}"),
+                )
+                .execute()
+            )
+            return result.get("values", [])
+        except Exception:  # noqa: BLE001
+            return []
+
+    def _participants_last_col(self) -> str:
+        return column_letter(len(PARTICIPANTS_HEADER))
+
+    def _find_participant_sheet_row(self, nickname: str) -> int | None:
+        """참여자 시트에서 식별코드 행 번호(1-based). 없으면 None."""
+        nick = nickname.strip()
+        if not nick:
+            return None
+        for offset, row in enumerate(
+            self._read_sheet_data_rows(
+                PARTICIPANTS_SHEET, self._participants_last_col()
+            )
+        ):
+            if row and row[0].strip() == nick:
+                return offset + 2
+        return None
+
+    def _participant_cell(self, row: list[str], header: str) -> str:
+        try:
+            idx = PARTICIPANTS_HEADER.index(header)
+        except ValueError:
+            return ""
+        if idx >= len(row):
+            return ""
+        return row[idx].strip()
+
+    def _write_participants_row(
+        self, row_number: int | None, values: list[str]
+    ) -> None:
+        last_col = self._participants_last_col()
+        if row_number is not None:
+            (
+                self._service.spreadsheets()
+                .values()
+                .update(
+                    spreadsheetId=self.sheet_id,
+                    range=self._range(
+                        PARTICIPANTS_SHEET, f"A{row_number}:{last_col}"
+                    ),
+                    valueInputOption="USER_ENTERED",
+                    body={"values": [values]},
+                )
+                .execute()
+            )
+            return
+        (
+            self._service.spreadsheets()
+            .values()
+            .append(
+                spreadsheetId=self.sheet_id,
+                range=self._range(PARTICIPANTS_SHEET, f"A:{last_col}"),
+                valueInputOption="USER_ENTERED",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [values]},
+            )
+            .execute()
+        )
+
+    def record_visit(
+        self,
+        *,
+        participant_id: str,
+        password_hash: str = "",
+        lang: str = "ko",
+        gender: str = "",
+        age_group: str = "",
+        life_stage: str = "",
+    ) -> tuple[bool, str | None]:
+        """로그인·가입 시 방문 1회 기록 — 참여자 시트에 닉네임당 한 줄."""
+        if not self.is_connected:
+            return False, self._error
+        self._ensure_sheet_exists(PARTICIPANTS_SHEET, PARTICIPANTS_HEADER)
+        nick = participant_id.strip()
+        if not nick:
+            return False, "식별코드가 비어 있습니다."
+        try:
+            now = korea_now_str()
+            row_no = self._find_participant_sheet_row(nick)
+            existing: list[str] = []
+            if row_no is not None:
+                rows = self._read_sheet_data_rows(
+                    PARTICIPANTS_SHEET, self._participants_last_col()
+                )
+                idx = row_no - 2
+                if 0 <= idx < len(rows):
+                    existing = rows[idx]
+
+            visits = 1
+            if existing:
+                try:
+                    visits = int(self._participant_cell(existing, "방문횟수") or "0") + 1
+                except ValueError:
+                    visits = 1
+            turns = 0
+            if existing:
+                try:
+                    turns = int(self._participant_cell(existing, "총대화턴수") or "0")
+                except ValueError:
+                    turns = 0
+
+            first_seen = self._participant_cell(existing, "첫방문") if existing else ""
+            if not first_seen:
+                first_seen = now
+
+            pw = password_hash or self._participant_cell(existing, "비밀번호해시")
+            values = [
+                nick,
+                pw,
+                lang or self._participant_cell(existing, "언어") or "ko",
+                gender or self._participant_cell(existing, "성별"),
+                age_group or self._participant_cell(existing, "연령대"),
+                life_stage or self._participant_cell(existing, "학력"),
+                first_seen,
+                now,
+                str(visits),
+                str(turns),
+                self._participant_cell(existing, "최근사용자질문"),
+                self._participant_cell(existing, "최근정원사답변"),
+                self._participant_cell(existing, "admin_reply"),
+                self._participant_cell(existing, "자아 주도성"),
+                self._participant_cell(existing, "성찰 깊이"),
+                self._participant_cell(existing, "정서적 풍요"),
+                self._participant_cell(existing, "관계성"),
+                self._participant_cell(existing, "맥락"),
+                self._participant_cell(existing, "삶의 이야기 진행도"),
+            ]
+            self._write_participants_row(row_no, values)
+            return True, None
+        except Exception as exc:  # noqa: BLE001
+            return False, str(exc)
+
+    def _upsert_participant_from_turn(
+        self,
+        *,
+        participant_id: str,
+        password_hash: str,
+        lang: str,
+        gender: str,
+        age_group: str,
+        education: str,
+        user_message: str,
+        assistant_message: str,
+        admin_reply: str,
+        profile: dict[str, float],
+        life_context: str,
+        narrative_stage: str,
+        count_as_turn: bool,
+    ) -> None:
+        if not self.is_connected:
+            return
+        self._ensure_sheet_exists(PARTICIPANTS_SHEET, PARTICIPANTS_HEADER)
+        nick = participant_id.strip()
+        if not nick:
+            return
+
+        now = korea_now_str()
+        row_no = self._find_participant_sheet_row(nick)
+        existing: list[str] = []
+        if row_no is not None:
+            rows = self._read_sheet_data_rows(
+                PARTICIPANTS_SHEET, self._participants_last_col()
+            )
+            idx = row_no - 2
+            if 0 <= idx < len(rows):
+                existing = rows[idx]
+
+        visits = 1
+        if existing:
+            try:
+                visits = int(self._participant_cell(existing, "방문횟수") or "1")
+            except ValueError:
+                visits = 1
+
+        turns = 0
+        if existing:
+            try:
+                turns = int(self._participant_cell(existing, "총대화턴수") or "0")
+            except ValueError:
+                turns = 0
+        if count_as_turn:
+            turns += 1
+
+        first_seen = self._participant_cell(existing, "첫방문") if existing else now
+        user_snip = (user_message or "").strip().replace("\n", " ")[:280]
+        assist_snip = (assistant_message or "").strip().replace("\n", " ")[:280]
+
+        values = [
+            nick,
+            password_hash or self._participant_cell(existing, "비밀번호해시"),
+            lang or self._participant_cell(existing, "언어") or "ko",
+            gender or self._participant_cell(existing, "성별"),
+            age_group or self._participant_cell(existing, "연령대"),
+            education or self._participant_cell(existing, "학력"),
+            first_seen,
+            now,
+            str(visits),
+            str(turns),
+            user_snip or self._participant_cell(existing, "최근사용자질문"),
+            assist_snip or self._participant_cell(existing, "최근정원사답변"),
+            admin_reply or self._participant_cell(existing, "admin_reply"),
+            str(round(float(profile.get("agency", 0)), 1)),
+            str(round(float(profile.get("reflection_depth", 0)), 1)),
+            str(round(float(profile.get("emotional_richness", 0)), 1)),
+            str(round(float(profile.get("relational_connection", 0)), 1)),
+            life_context or self._participant_cell(existing, "맥락"),
+            narrative_stage or self._participant_cell(existing, "삶의 이야기 진행도"),
+        ]
+        self._write_participants_row(row_no, values)
+
     @property
     def is_connected(self) -> bool:
         return self._service is not None and self._error is None
@@ -284,6 +537,7 @@ class SheetsLogger:
                 )
             self._col = {h: i for i, h in enumerate(HEADER_ROW)}
             self._ensure_sheet_exists(INQUIRIES_SHEET, INQUIRIES_HEADER)
+            self._ensure_sheet_exists(PARTICIPANTS_SHEET, PARTICIPANTS_HEADER)
             return True, None
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)
@@ -421,7 +675,7 @@ class SheetsLogger:
         itype = inquiry_type if inquiry_type in INQUIRY_TYPES else "general"
         u_ko = message_ko or (message if lang == "ko" else "")
         try:
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ts = korea_now_str()
             row = [""] * len(INQUIRIES_HEADER)
             row[0] = participant_id
             row[1] = ts
@@ -489,7 +743,7 @@ class SheetsLogger:
         a_ko = assistant_message_ko or (assistant_message if lang == "ko" else "")
 
         try:
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ts = korea_now_str()
             row = [""] * len(HEADER_ROW)
             row[self._col["식별코드"]] = code
             row[self._col["비밀번호해시"]] = password_hash or ""
@@ -539,6 +793,21 @@ class SheetsLogger:
                     body={"values": [row]},
                 )
                 .execute()
+            )
+            self._upsert_participant_from_turn(
+                participant_id=code,
+                password_hash=password_hash or "",
+                lang=lang,
+                gender=gender,
+                age_group=age_group,
+                education=edu,
+                user_message=user_message,
+                assistant_message=assistant_message,
+                admin_reply=admin_reply,
+                profile=profile,
+                life_context=life_context,
+                narrative_stage=narrative_stage,
+                count_as_turn=not self._is_system_marker_message(user_message),
             )
             return True, None
         except Exception as exc:  # noqa: BLE001

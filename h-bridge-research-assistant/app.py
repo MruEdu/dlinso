@@ -397,8 +397,29 @@ CUSTOM_CSS = """
         letter-spacing: -0.02em !important;
         white-space: nowrap !important;
     }
-    /* 데스크톱 — 모바일 전용 입력은 서버에서 UA로 아예 그리지 않음(:has 숨김은 대화 패널 오동작 유발). */
+    /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림 */
     @media (min-width: 601px) {
+        [data-testid="stBottomBlockContainer"] {
+            display: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) {
+            min-height: 10rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.desktop-chat-composer-marker) {
+            margin-top: 0.35rem !important;
+            padding-top: 0.4rem !important;
+            border-top: 1px solid rgba(120, 100, 80, 0.12) !important;
+        }
+        div[data-testid="column"]:has(.desktop-chat-send-marker) button {
+            min-height: 2.85rem !important;
+            width: 100% !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="column"]:has(.desktop-chat-send-marker) {
+            display: flex !important;
+            align-items: flex-end !important;
+        }
         button[data-testid="baseButton-secondary"][aria-label*="문의"],
         button[data-testid="baseButton-primary"][aria-label*="문의"] {
             font-size: 0.82rem !important;
@@ -457,6 +478,30 @@ CUSTOM_CSS = """
         div[data-testid="column"]:has(.mobile-chat-send-marker) {
             display: flex !important;
             align-items: flex-end !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stExpander"] {
+            margin-bottom: 0.25rem !important;
+            border: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stExpander"] summary {
+            font-size: 0.86rem !important;
+            padding: 0.4rem 0.45rem !important;
+            min-height: 2.4rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stFileUploader"] {
+            padding: 0.15rem 0 !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stFileUploader"] small {
+            font-size: 0.72rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) textarea {
+            min-height: 4.25rem !important;
+            font-size: 1rem !important;
+            line-height: 1.45 !important;
+        }
+        div[data-testid="column"]:has(.mobile-chat-send-marker) button {
+            min-height: 2.85rem !important;
+            padding: 0.55rem 0.35rem !important;
         }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button {
             font-size: clamp(0.88rem, 3.8vw, 1.05rem) !important;
@@ -1354,7 +1399,7 @@ def get_chat_model() -> genai.GenerativeModel:
         generation_config=genai.GenerationConfig(
             temperature=0.82,
             top_p=0.92,
-            max_output_tokens=1024,
+            max_output_tokens=2048,
         ),
     )
 
@@ -1616,6 +1661,14 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                     st.error(t("err_login"))
                 else:
                     profile = found["profile"]
+                    sheets.record_visit(
+                        participant_id=profile["participant_id"],
+                        password_hash=profile["password_hash"],
+                        lang=profile.get("lang", get_lang()) or "ko",
+                        gender=profile.get("gender", ""),
+                        age_group=profile.get("age_group", ""),
+                        life_stage=profile.get("life_stage", ""),
+                    )
                     _activate_session(
                         participant_id=profile["participant_id"],
                         password_hash_value=profile["password_hash"],
@@ -1724,14 +1777,36 @@ def render_chat_area(display: dict) -> None:
                     st.markdown(body)
 
 
-def stream_gemini_reply(
+def _gemini_response_text(response: Any) -> str:
+    """Gemini 응답 본문 — stream 청크 누락 방지용."""
+    try:
+        text = response.text
+        if text and str(text).strip():
+            return str(text).strip()
+    except Exception:  # noqa: BLE001
+        pass
+    parts: list[str] = []
+    for cand in getattr(response, "candidates", None) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            piece = getattr(part, "text", None)
+            if piece:
+                parts.append(str(piece))
+    return "".join(parts).strip()
+
+
+def generate_gemini_reply(
     model,
     messages: list[dict],
     user_prompt: str,
     *,
     image_bytes: bytes | None = None,
     image_mime: str | None = None,
-):
+) -> str:
+    """
+    채팅 응답 생성. UI는 스트리밍을 쓰지 않으므로 stream=False로 전체 문장을 받음
+    (stream=True는 Cloud에서 청크 누락·중간 끊김이 날 수 있음).
+    """
     parts: list[Any] = []
     if image_bytes:
         try:
@@ -1742,10 +1817,8 @@ def stream_gemini_reply(
             pass
     parts.append(user_prompt or "(사진을 보냈습니다)")
     chat = model.start_chat(history=build_gemini_history(messages))
-    response = chat.send_message(parts, stream=True)
-    for chunk in response:
-        if chunk.text:
-            yield chunk.text
+    response = chat.send_message(parts, stream=False)
+    return _gemini_response_text(response)
 
 
 def deliver_life_summary(gemini_ok: bool) -> None:
@@ -1827,17 +1900,15 @@ def handle_chat_turn(
     )
 
     model = get_chat_model()
-    full_reply = ""
     try:
         with st.spinner(f"{display['emoji']} 마음의 정원사가 씨앗을 돌보고 있어요…"):
-            for token in stream_gemini_reply(
+            full_reply = generate_gemini_reply(
                 model,
                 st.session_state.messages,
                 model_prompt,
                 image_bytes=image_bytes,
                 image_mime=image_mime,
-            ):
-                full_reply += token
+            )
     except Exception as exc:  # noqa: BLE001
         full_reply = _gemini_user_error(exc)
 
@@ -2017,51 +2088,86 @@ def _is_mobile_client() -> bool:
     return False
 
 
+def _render_composer_text_row(
+    *,
+    layout_marker: str,
+    send_marker: str,
+    input_key: str,
+    send_key: str,
+    placeholder: str,
+    input_height: int = 88,
+) -> str:
+    """텍스트 영역 + 보내기 — PC·모바일 공통."""
+    if layout_marker:
+        _html_layout_marker(layout_marker)
+    text_col, send_col = st.columns([5.2, 1], gap="small")
+    with text_col:
+        draft = st.text_area(
+            "chat_message",
+            key=input_key,
+            height=input_height,
+            placeholder=placeholder,
+            label_visibility="collapsed",
+        )
+    with send_col:
+        _html_layout_marker(send_marker)
+        submitted = st.button(
+            t("chat_alt_send"),
+            key=send_key,
+            type="primary",
+            use_container_width=True,
+        )
+    if not submitted:
+        return ""
+    return (draft or "").strip()
+
+
 def render_chat_composer_body() -> bool:
-    """
-    사진 + 모바일 입력(텍스트 영역·보내기). st.chat_input 은 넣지 않음 —
-    Streamlit은 chat_input을 st.container 안에 두면 오류가 날 수 있음.
-    """
+    """사진 + PC/모바일 텍스트 입력·보내기 (st.chat_input 미사용)."""
     if st.session_state.conversation_closed:
         return False
 
     alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
     guide_placeholder = t("chat_composer_guide")
+    photo = None
 
-    st.caption(t("chat_photo_row_caption"))
-    photo = st.file_uploader(
-        t("chat_photo_label"),
-        type=["jpg", "jpeg", "png", "webp"],
-        key="chat_photo_upload",
-        label_visibility="collapsed",
-    )
-
-    if not _is_mobile_client():
-        # PC 우선: 데스크톱·판별 불가는 모바일 전용 줄을 그리지 않음(대화 패널 가림·이중 입력 방지).
-        return False
-
-    _html_layout_marker("mobile-chat-composer-marker")
-    text_col, send_col = st.columns([5.2, 1], gap="small")
-    with text_col:
-        mobile_text = st.text_area(
-            "mobile_message",
-            key=f"mobile_chat_input_{alt_nonce}",
-            height=88,
+    if _is_mobile_client():
+        _html_layout_marker("mobile-chat-composer-marker")
+        with st.expander(t("chat_photo_row_caption"), expanded=False):
+            photo = st.file_uploader(
+                t("chat_photo_label"),
+                type=["jpg", "jpeg", "png", "webp"],
+                key="chat_photo_upload",
+                label_visibility="collapsed",
+            )
+        text = _render_composer_text_row(
+            layout_marker="",
+            send_marker="mobile-chat-send-marker",
+            input_key=f"mobile_chat_input_{alt_nonce}",
+            send_key=f"mobile_send_{alt_nonce}",
             placeholder=guide_placeholder,
+            input_height=76,
+        )
+    else:
+        st.caption(t("chat_photo_row_caption"))
+        photo = st.file_uploader(
+            t("chat_photo_label"),
+            type=["jpg", "jpeg", "png", "webp"],
+            key="chat_photo_upload",
             label_visibility="collapsed",
         )
-    with send_col:
-        _html_layout_marker("mobile-chat-send-marker")
-        mobile_send = st.button(
-            t("chat_alt_send"),
-            key=f"mobile_send_{alt_nonce}",
-            type="primary",
-            use_container_width=True,
+        desktop_placeholder = (
+            t("chat_ph_giant")
+            if st.session_state.phase != PHASE_COLLECT
+            else guide_placeholder
         )
-
-    text = ""
-    if mobile_send and (mobile_text or "").strip():
-        text = (mobile_text or "").strip()
+        text = _render_composer_text_row(
+            layout_marker="desktop-chat-composer-marker",
+            send_marker="desktop-chat-send-marker",
+            input_key=f"desktop_chat_input_{alt_nonce}",
+            send_key=f"desktop_send_{alt_nonce}",
+            placeholder=desktop_placeholder,
+        )
 
     image_bytes: bytes | None = None
     image_mime: str | None = None
@@ -2075,42 +2181,6 @@ def render_chat_composer_body() -> bool:
         st.rerun()
         return True
     return False
-
-
-def render_desktop_chat_input_submit() -> bool:
-    """
-    PC용 st.chat_input — 반드시 st.container 바깥(메인 열)에서만 호출.
-    """
-    if st.session_state.conversation_closed:
-        return False
-    guide_placeholder = t("chat_composer_guide")
-    desktop_placeholder = (
-        t("chat_ph_giant")
-        if st.session_state.phase != PHASE_COLLECT
-        else guide_placeholder
-    )
-    prompt = st.chat_input(desktop_placeholder, key="main_chat_input")
-    text = (prompt or "").strip()
-
-    image_bytes: bytes | None = None
-    image_mime: str | None = None
-    photo = st.session_state.get("chat_photo_upload")
-    if photo is not None:
-        try:
-            image_bytes = photo.getvalue()
-            image_mime = getattr(photo, "type", None) or "image/jpeg"
-        except Exception:  # noqa: BLE001
-            image_bytes = None
-
-    if text or image_bytes:
-        _enqueue_chat_turn(text, image_bytes=image_bytes, image_mime=image_mime)
-        _bump_chat_composer_nonce()
-        st.rerun()
-        return True
-    return False
-
-
-# render_chat_composer_body / render_desktop_chat_input_submit 만 사용 (chat_input 은 컨테이너 밖).
 
 
 def main() -> None:
@@ -2208,15 +2278,14 @@ def _run_app() -> None:
             if gemini_error and "leaked" in gemini_error.lower():
                 st.markdown(t("err_gemini_leaked"))
 
+        composer_queued = False
         if st.session_state.conversation_closed:
             render_chat_area(display)
         else:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
                 render_chat_area(display)
-
-    # 모바일 작성기는 메인 패드 밖 — PC 우선으로 데스크톱 DOM에는 모바일 마커를 넣지 않음(_is_mobile_client).
-    composer_queued = render_chat_composer_body()
+                composer_queued = render_chat_composer_body()
 
     if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
@@ -2237,9 +2306,6 @@ def _run_app() -> None:
     with st.container():
         _html_layout_marker("app-content-pad-marker")
         render_lab_footer()
-
-    if not st.session_state.conversation_closed and not composer_queued:
-        render_desktop_chat_input_submit()
 
 
 # Streamlit Cloud는 스크립트를 매 rerun마다 실행 — main()을 항상 호출
