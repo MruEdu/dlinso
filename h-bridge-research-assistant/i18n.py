@@ -107,6 +107,33 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_photo_label": "사진 업로드",
         "chat_photo_hint": "📷 사진의 색·구도·사물을 읽고, 마음의 정원사가 씨앗이 될 질문으로 이어갑니다.",
         "chat_alt_send": "보내기",
+        "midpoint_analysis_btn": (
+            "지금까지의 대화 중간 정리 및 나만의 마음 지도 확인"
+        ),
+        "reflection_depth_gauge_label": "성찰의 깊이",
+        "midpoint_encourage_before_unlock": (
+            "당신의 서사가 훌륭하게 쌓이고 있습니다. "
+            "조금만 더 이야기를 나누면 '중간 정리'를 도와드릴 수 있어요."
+        ),
+        "narrative_asset_progress_label": "나만의 서사 자산화 진행률",
+        "narrative_asset_progress_turns": (
+            "{current}/{need}회 대화 · 진행 {percent}% — "
+            "이야기가 쌓이면 마음 지도를 그릴 수 있어요"
+        ),
+        "narrative_asset_progress_ready": (
+            "이야기가 충분히 쌓였어요. 아래 버튼으로 마음 지도를 받아 보세요."
+        ),
+        "narrative_asset_progress_need_detail": (
+            "10회는 채웠어요. 조금 더 구체적인 장면을 나누면 더 선명한 지도가 그려져요."
+        ),
+        "midpoint_need_turns": (
+            "중간 정리는 참여자 답변 {need}회 이후에 가능합니다. (현재 {current}회)"
+        ),
+        "midpoint_scaffold_default": (
+            "조금 더 구체적인 상황을 들려주시면 더 선명한 지도를 그릴 수 있어요."
+        ),
+        "midpoint_char_mobile_hint": "모바일 환경에서는 1,000자 내외도 충분합니다.",
+        "midpoint_char_over": "입력은 최대 {limit:,}자까지 가능합니다.",
         "chat_ph_collect": "지금 마음이나 기억을 적어 보세요…",
         "chat_ph_giant": "이어서 적어 보세요…",
         "opening": (
@@ -230,6 +257,32 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_photo_label": "Upload photo",
         "chat_photo_hint": "📷 We read color, composition, and objects — then ask a maieutic question.",
         "chat_alt_send": "Send",
+        "midpoint_analysis_btn": (
+            "Mid-conversation summary & your mind map"
+        ),
+        "reflection_depth_gauge_label": "Depth of reflection",
+        "midpoint_encourage_before_unlock": (
+            "Your story is growing beautifully. "
+            "A few more exchanges, and we can offer a mid-conversation summary."
+        ),
+        "narrative_asset_progress_label": "Narrative assetization progress",
+        "narrative_asset_progress_turns": (
+            "{current}/{need} turns · {percent}% — keep sharing your story"
+        ),
+        "narrative_asset_progress_ready": (
+            "You're ready. Use the button below for your mind map."
+        ),
+        "narrative_asset_progress_need_detail": (
+            "10 turns reached. Add a more concrete scene for a clearer map."
+        ),
+        "midpoint_need_turns": (
+            "Summary unlocks after {need} replies. (now {current})"
+        ),
+        "midpoint_scaffold_default": (
+            "Share a bit more context so we can draw a clearer map."
+        ),
+        "midpoint_char_mobile_hint": "On mobile, about 1,000 characters is often enough.",
+        "midpoint_char_over": "You can enter up to {limit:,} characters.",
         "chat_ph_collect": "Write what's on your mind…",
         "chat_ph_giant": "Continue your story…",
         "opening": (

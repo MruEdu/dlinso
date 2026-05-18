@@ -98,6 +98,63 @@ def build_maieutic_addon(*, last_user: str = "", user_turns: int = 0) -> str:
     return block
 
 
+def build_conversation_phase_addon(
+    user_turns: int,
+    *,
+    midpoint_completed: bool = False,
+    min_turns: int = 10,
+) -> str:
+    """
+    10턴 미만: 인사·공감 위주. 10턴 이상·중간정리 전: 분석 리포트 금지.
+    중간정리 후: 정밀 동행(리포트는 이미 공유됨).
+    """
+    if midpoint_completed:
+        return (
+            "\n\n[대화 단계 · 마음 지도 이후]\n"
+            "- 중간 정리 리포트는 이미 나누었음. **수치·OR·지표는 말하지 말 것**.\n"
+            "- 참여자가 지도에 대한 생각·추가 장면을 말하도록 따뜻하게 초대.\n"
+        )
+    if user_turns < min_turns:
+        return (
+            f"\n\n[대화 단계 · 서사 자산화 전 ({min_turns}회 미만)]\n"
+            "- **가벼운 인사·공감** 위주. 짧고 따뜻하게.\n"
+            "- 특성 분석·통계·리포트 형식·들쭉날쭉 해석 **금지**.\n"
+            "- Maieutic question 1개는 부담 없이, 장소·사람을 무겁게 캐묻지 말 것.\n"
+        )
+    return (
+        f"\n\n[대화 단계 · 서사 충분 ({min_turns}회 이상, 중간정리 전)]\n"
+        "- 아직 **중간 정리 리포트 본문을 출력하지 말 것**(버튼으로만 제공).\n"
+        "- 공감 + 구체 장면을 부드럽게 유도. 심화 질문은 가볍게 1개.\n"
+    )
+
+
+def build_adaptive_scaffolding_addon(narrative_precision: float) -> str:
+    """
+    적응형 비계(Adaptive Scaffolding) — Kang et al. I-M 하이브리드·특허 PDF.
+    서사 정밀도가 낮을 때만 심화 질문으로 개입.
+    """
+    p = max(0.0, min(100.0, float(narrative_precision)))
+    if p < 45.0:
+        return (
+            "\n\n[적응형 비계 · 서사 정밀도 낮음]\n"
+            f"- 현재 서사 정밀도: {p:.0f}/100 — **반드시** 구체화 질문 1개.\n"
+            "- 언제·어디·누구·무엇을 느꼈는지, 한 가지 감각(소리·냄새·촉감)으로 좁혀 물으세요.\n"
+            "- 조언·처방·요약 대신 **Maieutic question** 하나로 마무리."
+        )
+    if p < 65.0:
+        return (
+            "\n\n[적응형 비계 · 서사 정밀도 보통]\n"
+            f"- 현재 서사 정밀도: {p:.0f}/100 — 필요할 때만 가벼운 심화 1개.\n"
+            "- 참여자가 이미 풍부하게 쓴 부분은 되풀이하지 마세요."
+        )
+    return (
+        "\n\n[적응형 비계 · 서사 정밀도 높음]\n"
+        f"- 현재 서사 정밀도: {p:.0f}/100 — **과잉 개입 금지**.\n"
+        "- 심화 질문은 짧게 하거나, 인정·음미(Elenchus) 위주로 동행하세요.\n"
+        "- 참여자의 리듬을 존중하고 문장을 끊지 마세요."
+    )
+
+
 def analyze_uploaded_image(
     image_bytes: bytes,
     mime_type: str,

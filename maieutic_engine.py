@@ -98,6 +98,36 @@ def build_maieutic_addon(*, last_user: str = "", user_turns: int = 0) -> str:
     return block
 
 
+def build_conversation_phase_addon(
+    user_turns: int,
+    *,
+    midpoint_completed: bool = False,
+    min_turns: int = 10,
+) -> str:
+    """
+    10턴 미만: 인사·공감 위주. 10턴 이상·중간정리 전: 분석 리포트 금지.
+    중간정리 후: 정밀 동행(리포트는 이미 공유됨).
+    """
+    if midpoint_completed:
+        return (
+            "\n\n[대화 단계 · 마음 지도 이후]\n"
+            "- 중간 정리 리포트는 이미 나누었음. **수치·OR·지표는 말하지 말 것**.\n"
+            "- 참여자가 지도에 대한 생각·추가 장면을 말하도록 따뜻하게 초대.\n"
+        )
+    if user_turns < min_turns:
+        return (
+            f"\n\n[대화 단계 · 서사 자산화 전 ({min_turns}회 미만)]\n"
+            "- **가벼운 인사·공감** 위주. 짧고 따뜻하게.\n"
+            "- 특성 분석·통계·리포트 형식·들쭉날쭉 해석 **금지**.\n"
+            "- Maieutic question 1개는 부담 없이, 장소·사람을 무겁게 캐묻지 말 것.\n"
+        )
+    return (
+        f"\n\n[대화 단계 · 서사 충분 ({min_turns}회 이상, 중간정리 전)]\n"
+        "- 아직 **중간 정리 리포트 본문을 출력하지 말 것**(버튼으로만 제공).\n"
+        "- 공감 + 구체 장면을 부드럽게 유도. 심화 질문은 가볍게 1개.\n"
+    )
+
+
 def build_adaptive_scaffolding_addon(narrative_precision: float) -> str:
     """
     적응형 비계(Adaptive Scaffolding) — Kang et al. I-M 하이브리드·특허 PDF.

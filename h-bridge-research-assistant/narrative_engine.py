@@ -277,6 +277,145 @@ def analyze_narrative_turn(
     }
 
 
+def generate_humanistic_midpoint_report(
+    messages: list[dict],
+    stats: dict[str, Any],
+    *,
+    age_group: str = "",
+    gender: str = "",
+    life_stage: str = "",
+    participant_id: str = "",
+    life_context: str = "",
+    positive_resources: list[str] | None = None,
+    situational_context: dict[str, str] | None = None,
+    lang: str = "ko",
+) -> dict[str, str]:
+    """
+    특허 통계(비공개)를 바탕으로 인문학적 서술형 중간 리포트 생성.
+    화면에는 수치·OR·Jaggedness를 절대 넣지 않음.
+    """
+    from hbridge_analysis import (
+        TITLE_CONNECTION,
+        TITLE_LANDSCAPE,
+        TITLE_TREASURE,
+        compose_humanistic_sections_fallback,
+        resolve_report_voice,
+    )
+
+    user_lines = []
+    for msg in messages:
+        if msg.get("role") != "user":
+            continue
+        text = str(msg.get("content") or msg.get("display") or "").strip()
+        if text:
+            user_lines.append(text[:600])
+    if not user_lines:
+        user_lines = ["(아직 이야기가 짧습니다)"]
+
+    situational = situational_context or {}
+    scene = situational.get("scene_phrase", "지금까지 나누어 주신 이야기 속")
+    voice = resolve_report_voice(life_stage, age_group)
+    nick = (participant_id or "").strip()[:12] or "참여자"
+    resources = "\n".join(f"- {r}" for r in (positive_resources or [])[:5]) or "없음"
+
+    voice_guide = {
+        "elementary": (
+            f'초등 맞춤: "{nick}아, 네 마음속 보물상자를 열어보니..." 다정한 입말체. '
+            "어려운 통계 용어 금지."
+        ),
+        "secondary": (
+            '중·고 맞춤: "너의 이야기 속엔 너만의 특별한 색깔이 담겨 있어." '
+            "자존감을 고취하는 반말·친근 존댓말."
+        ),
+        "adult": (
+            '대학·일반: "당신의 삶의 맥락에서 발견된 고유한 자산은..." '
+            "인문학적·차분한 존댓말."
+        ),
+    }[voice]
+
+    stats_for_model = {
+        "strength_categories": stats.get("strength_categories"),
+        "top_or": stats.get("top_or"),
+        "domain_scores": stats.get("domain_scores"),
+        "jaggedness_index": stats.get("jaggedness_index"),
+        "narrative_precision": stats.get("narrative_precision"),
+    }
+
+    prompt = (
+        "당신은 dlinso 들쭉날쭉사람연구소의 **인문학적 서사 해석가**입니다.\n"
+        "아래 **내부 통계**는 해석의 재료일 뿐, 출력에 숫자·OR·P-value·%·지표명을 "
+        "**절대 쓰지 마세요**.\n\n"
+        "[중간 지도 — 리포트 첫 문장에 반드시 포함]\n"
+        "「이것은 당신의 전체 서사 중 현재까지의 흐름을 짚어본 '중간 지도'입니다.」\n\n"
+        "[특허 개념 — 감성적으로, **현재 대화 맥락** 강조]\n"
+        "- 반드시 포함: 「지금까지의 대화 맥락에서는 이런 강점이 두드러집니다.」\n"
+        "- 자기 내적 오즈비(숫자·OR 금지): 남과 비교하지 않고, 지금까지 나눈 이야기 "
+        "안에서 빛나는 순간을 짚을 것.\n"
+        "- 들쭉날쭉: 평균보다 특정 부분에서 봉우리처럼 솟은 개성이 귀한 자산임을 "
+        "강조.\n\n"
+        f"[말투] {voice_guide}\n"
+        f"성별 참고: {gender or '미입력'} (고정관념 조롱 금지)\n"
+        f"[상황 맥락 — 첫 문단에 대괄호로 반드시 포함]\n"
+        f"예: 당신이 [{scene}] 느꼈던 그 따뜻한 감정은…\n\n"
+        f"[내부 통계 — 출력 금지]\n{json.dumps(stats_for_model, ensure_ascii=False)}\n\n"
+        f"[긍정 서사 자원]\n{resources}\n"
+        f"[생활 맥락] {life_context or '—'}\n\n"
+        "[참여자 발화]\n" + "\n".join(f"- {line}" for line in user_lines[-12:]) + "\n\n"
+        "JSON만 출력:\n"
+        "{\n"
+        '  "midpoint_preface": "중간 지도 서두 1문장",\n'
+        f'  "title_landscape": "{TITLE_LANDSCAPE}",\n'
+        f'  "title_connection": "{TITLE_CONNECTION}",\n'
+        f'  "title_treasure": "{TITLE_TREASURE}",\n'
+        '  "section_landscape": "2~4문장, [상황]으로 시작",\n'
+        '  "section_connection": "2~4문장",\n'
+        '  "section_treasure": "2~4문장, 들쭉날쭉 강조",\n'
+        '  "situational_opening": "[상황]만 짧게"\n'
+        "}\n"
+        f"언어: {LANG_NAMES.get(lang, 'Korean')}"
+    )
+
+    try:
+        model = _analysis_model(max_tokens=1400)
+        response = model.generate_content(prompt)
+        data = _extract_json(response.text or "")
+        if data and data.get("section_landscape"):
+            from hbridge_analysis import MIDPOINT_MAP_PREFACE
+
+            return {
+                "midpoint_preface": str(
+                    data.get("midpoint_preface", MIDPOINT_MAP_PREFACE)
+                ).strip(),
+                "title_landscape": str(
+                    data.get("title_landscape", TITLE_LANDSCAPE)
+                ),
+                "title_connection": str(
+                    data.get("title_connection", TITLE_CONNECTION)
+                ),
+                "title_treasure": str(data.get("title_treasure", TITLE_TREASURE)),
+                "section_landscape": str(data.get("section_landscape", "")).strip(),
+                "section_connection": str(
+                    data.get("section_connection", "")
+                ).strip(),
+                "section_treasure": str(data.get("section_treasure", "")).strip(),
+                "situational_opening": str(
+                    data.get("situational_opening", f"[{scene}]")
+                ).strip(),
+            }
+    except Exception:  # noqa: BLE001
+        pass
+
+    return compose_humanistic_sections_fallback(
+        stats=stats,
+        situational=situational,
+        voice=voice,
+        nickname=nick,
+        gender=gender,
+        positive_resources=positive_resources,
+        life_context=life_context,
+    )
+
+
 def generate_life_summary(
     messages: list[dict],
     positive_resources: list[str],
