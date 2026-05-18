@@ -54,6 +54,7 @@ from personas import (
 from hbridge_analysis import (
     MIN_USER_TURNS_FOR_MIDPOINT,
     assess_midpoint_readiness,
+    parse_stored_midpoint_message,
     compute_midpoint_statistics,
     extract_situational_context,
     format_full_midpoint_message,
@@ -1181,6 +1182,7 @@ def _init_session_state() -> None:
         "narrative_precision": 50.0,
         "jaggedness_index": 0.0,
         "pending_midpoint_analysis": False,
+        "conversation_restored": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1230,11 +1232,16 @@ def _activate_session(
     lang: str = "ko",
     is_returning: bool = False,
     recent_turns: list[dict[str, str]] | None = None,
+    restored_messages: list[dict[str, Any]] | None = None,
+    total_turn_count: int = 0,
+    has_midpoint: bool = False,
     last_topic: str = "",
     admin_reply: str = "",
     admin_reply_type: str = "general",
 ) -> None:
-    """로그인 성공 후 세션·대화 복원."""
+    """로그인 성공 후 세션·대화 복원 (시트 누적 턴·중간 마음 지도 포함)."""
+    from hbridge_analysis import count_user_turns
+
     st.session_state.participant_id = participant_id
     st.session_state.password_hash = password_hash_value
     st.session_state.gender = gender
@@ -1248,21 +1255,55 @@ def _activate_session(
     st.session_state.pending_admin_reply_type = (
         admin_reply_type if is_returning else "general"
     )
-    st.session_state.messages = []
-    for turn in recent_turns or []:
-        st.session_state.messages.append(
-            {"role": "user", "content": turn["user"]}
+
+    if restored_messages is not None:
+        st.session_state.messages = [dict(m) for m in restored_messages]
+    else:
+        st.session_state.messages = []
+        for turn in recent_turns or []:
+            st.session_state.messages.append(
+                {"role": "user", "content": turn["user"], "display": turn["user"]}
+            )
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": turn["assistant"],
+                    "display": turn["assistant"],
+                }
+            )
+
+    if has_midpoint:
+        st.session_state.extended_input_unlocked = True
+        st.session_state.midpoint_analysis_count = max(
+            1, int(st.session_state.get("midpoint_analysis_count", 0))
         )
-        st.session_state.messages.append(
-            {"role": "assistant", "content": turn["assistant"]}
-        )
+        for msg in reversed(st.session_state.messages):
+            if msg.get("midpoint") or (
+                msg.get("role") == "assistant"
+                and "마음 지도" in str(msg.get("content") or "")
+            ):
+                parsed = parse_stored_midpoint_message(
+                    str(msg.get("content") or msg.get("display") or "")
+                )
+                if parsed:
+                    st.session_state.last_midpoint_report = parsed
+                break
+
+    st.session_state.total_user_turns = max(
+        int(total_turn_count or 0),
+        count_user_turns(st.session_state.messages),
+    )
+
     if is_returning:
         greeting = build_returning_greeting(
             last_topic, participant_id, lang=lang
         )
         st.session_state.messages.append(
-            {"role": "assistant", "content": greeting}
+            {"role": "assistant", "content": greeting, "display": greeting}
         )
+        if restored_messages or recent_turns:
+            st.session_state.conversation_restored = True
+
     st.session_state.onboarding_complete = True
     st.session_state.current_view = VIEW_APP
 
@@ -1865,6 +1906,9 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                         lang=profile.get("lang", get_lang()) or "ko",
                         is_returning=True,
                         recent_turns=found.get("recent_turns", []),
+                        restored_messages=found.get("restored_messages"),
+                        total_turn_count=int(found.get("total_turn_count") or 0),
+                        has_midpoint=bool(found.get("has_midpoint")),
                         last_topic=found.get("last_topic", ""),
                         admin_reply=found.get("admin_reply", ""),
                         admin_reply_type=found.get("admin_reply_type", "general"),
@@ -2750,6 +2794,10 @@ def _run_app() -> None:
             )
         render_main_header(display)
         show_admin_reply_banner()
+        if st.session_state.pop("conversation_restored", False):
+            st.info(
+                "이전에 나눈 대화와 마음 지도를 불러왔어요. 이어서 이야기해 주세요. 🌿"
+            )
         if st.session_state.diet_applied_count > 0:
             st.markdown(
                 f'<div class="diet-banner">이전 이야기는 요약해 두었어요 '

@@ -797,6 +797,41 @@ def run_intra_individual_or_pipeline(
     }
 
 
+def parse_stored_midpoint_message(text: str) -> dict[str, Any] | None:
+    """시트·채팅에 저장된 중간 정리 본문 → last_midpoint_report 복원."""
+    body = (text or "").strip()
+    if not body or "마음 지도" not in body:
+        return None
+    preface = MIDPOINT_MAP_PREFACE
+    pre_m = re.search(
+        r"###\s*지금까지의 대화[^\n]*\n+(.*?)(?=\n####|\Z)",
+        body,
+        re.S,
+    )
+    if pre_m:
+        preface = pre_m.group(1).strip() or preface
+
+    sections: dict[str, str] = {}
+    for m in re.finditer(r"####\s*\[([^\]]+)\]\s*\n(.*?)(?=\n####|\Z)", body, re.S):
+        sections[m.group(1).strip()] = m.group(2).strip()
+
+    landscape = sections.get(TITLE_LANDSCAPE, "")
+    connection = sections.get(TITLE_CONNECTION, "")
+    treasure = sections.get(TITLE_TREASURE, "")
+    if not any((landscape, connection, treasure)):
+        return None
+
+    return {
+        "midpoint_preface": preface,
+        "title_landscape": TITLE_LANDSCAPE,
+        "section_landscape": landscape,
+        "title_connection": TITLE_CONNECTION,
+        "section_connection": connection,
+        "title_treasure": TITLE_TREASURE,
+        "section_treasure": treasure,
+    }
+
+
 def format_midpoint_followup() -> str:
     return (
         "이 지도가 당신의 마음과 닮았나요? "

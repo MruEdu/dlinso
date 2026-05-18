@@ -95,6 +95,9 @@ INQUIRY_TYPES = frozenset(
     {"general", "research_collab", "interview"}
 )
 
+# 재로그인 시 복원할 대화 쌍(사용자+정원사) 상한 — 예전 5쌍은 5/10·중간정리 소실 원인
+MAX_RESTORE_TURNS = 30
+
 
 def column_letter(index: int) -> str:
     """1-based column index → A, B, …, Z, AA, …"""
@@ -265,12 +268,21 @@ class SheetsLogger:
             return ""
         return row[idx].strip()
 
+    def _row_user_text(self, row: list[str]) -> str:
+        return self._cell(row, "사용자 질문_원문") or self._cell(row, "사용자 질문")
+
+    def _row_assistant_text(self, row: list[str]) -> str:
+        return self._cell(row, "Gemini 답변_원문") or self._cell(row, "Gemini 답변")
+
+    def _is_midpoint_row(self, row: list[str]) -> bool:
+        user_q = self._row_user_text(row)
+        return bool(user_q) and "중간정리" in user_q and user_q.strip().startswith("[")
+
     def _is_conversation_row(self, row: list[str]) -> bool:
-        user_q = self._cell(row, "사용자 질문_원문") or self._cell(row, "사용자 질문")
+        user_q = self._row_user_text(row)
         if not user_q or user_q.startswith("["):
             return False
-        assist = self._cell(row, "Gemini 답변_원문") or self._cell(row, "Gemini 답변")
-        return bool(assist)
+        return bool(self._row_assistant_text(row))
 
     @staticmethod
     def _is_system_marker_message(text: str) -> bool:
@@ -542,6 +554,64 @@ class SheetsLogger:
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)
 
+    def get_participant_turn_count(self, nickname: str) -> int:
+        """참여자 시트의 누적 사용자 턴 수."""
+        nick = nickname.strip()
+        if not nick or not self.is_connected:
+            return 0
+        row_no = self._find_participant_sheet_row(nick)
+        if row_no is None:
+            return 0
+        rows = self._read_sheet_data_rows(
+            PARTICIPANTS_SHEET, self._participants_last_col()
+        )
+        idx = row_no - 2
+        if idx < 0 or idx >= len(rows):
+            return 0
+        try:
+            return int(self._participant_cell(rows[idx], "총대화턴수") or "0")
+        except ValueError:
+            return 0
+
+    def _build_restored_messages(
+        self, matching_rows: list[list[str]]
+    ) -> tuple[list[dict[str, Any]], bool, int]:
+        """시트 행 → 채팅 messages (중간정리 포함), has_midpoint, 로그상 사용자 턴 수."""
+        entries: list[dict[str, Any]] = []
+        has_midpoint = False
+        logged_user_turns = 0
+        for row in matching_rows:
+            user_q = self._row_user_text(row)
+            assist = self._row_assistant_text(row)
+            if not assist:
+                continue
+            if self._is_midpoint_row(row):
+                has_midpoint = True
+                entries.append(
+                    {
+                        "role": "assistant",
+                        "content": assist,
+                        "display": assist,
+                        "midpoint": True,
+                    }
+                )
+                continue
+            if not user_q or user_q.startswith("["):
+                continue
+            logged_user_turns += 1
+            entries.append(
+                {"role": "user", "content": user_q, "display": user_q}
+            )
+            entries.append(
+                {"role": "assistant", "content": assist, "display": assist}
+            )
+
+        max_msgs = MAX_RESTORE_TURNS * 2 + (2 if has_midpoint else 0)
+        if len(entries) > max_msgs:
+            entries = entries[-max_msgs:]
+
+        return entries, has_midpoint, logged_user_turns
+
     def nickname_exists(self, nickname: str) -> bool:
         nick = nickname.strip()
         for row in self._read_main_rows():
@@ -579,24 +649,38 @@ class SheetsLogger:
             "life_stage": self._cell(latest, "학력"),
         }
 
-        turns: list[dict[str, str]] = []
-        for row in matching:
-            if not self._is_conversation_row(row):
-                continue
-            turns.append(
-                {
-                    "user": self._cell(row, "사용자 질문_원문")
-                    or self._cell(row, "사용자 질문"),
-                    "assistant": self._cell(row, "Gemini 답변_원문")
-                    or self._cell(row, "Gemini 답변"),
-                }
-            )
+        restored_messages, has_midpoint, logged_user_turns = (
+            self._build_restored_messages(matching)
+        )
+        recent_turns: list[dict[str, str]] = []
+        i = 0
+        while i < len(restored_messages):
+            msg = restored_messages[i]
+            if msg.get("role") == "user":
+                user_t = str(msg.get("content") or "")
+                assist_t = ""
+                if (
+                    i + 1 < len(restored_messages)
+                    and restored_messages[i + 1].get("role") == "assistant"
+                    and not restored_messages[i + 1].get("midpoint")
+                ):
+                    assist_t = str(restored_messages[i + 1].get("content") or "")
+                recent_turns.append({"user": user_t, "assistant": assist_t})
+                i += 2 if assist_t else 1
+            else:
+                i += 1
+
+        sheet_turns = self.get_participant_turn_count(nick)
+        total_turn_count = max(sheet_turns, logged_user_turns)
 
         meta = self.get_admin_reply_meta(nick)
         return {
             "profile": profile,
-            "recent_turns": turns[-5:],
-            "last_topic": turns[-1]["user"][:100] if turns else "",
+            "recent_turns": recent_turns[-MAX_RESTORE_TURNS:],
+            "restored_messages": restored_messages,
+            "total_turn_count": total_turn_count,
+            "has_midpoint": has_midpoint,
+            "last_topic": recent_turns[-1]["user"][:100] if recent_turns else "",
             "admin_reply": meta.get("reply", ""),
             "admin_reply_type": meta.get("inquiry_type", "general"),
         }
