@@ -2143,7 +2143,6 @@ def _run_app() -> None:
                 unsafe_allow_html=True,
             )
         render_chat_area(display)
-        render_lab_footer()
 
     if not render_chat_composer():
         pending = _take_pending_turn()
@@ -2161,6 +2160,9 @@ def _run_app() -> None:
                 st.error(gemini_error or "Gemini API를 사용할 수 없습니다.")
 
     render_inquiry_fab()
+    with st.container():
+        _html_layout_marker("app-content-pad-marker")
+        render_lab_footer()
 
 
 # Streamlit Cloud는 스크립트를 매 rerun마다 실행 — main()을 항상 호출
