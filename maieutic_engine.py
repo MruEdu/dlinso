@@ -98,6 +98,33 @@ def build_maieutic_addon(*, last_user: str = "", user_turns: int = 0) -> str:
     return block
 
 
+def build_adaptive_scaffolding_addon(narrative_precision: float) -> str:
+    """
+    적응형 비계(Adaptive Scaffolding) — Kang et al. I-M 하이브리드·특허 PDF.
+    서사 정밀도가 낮을 때만 심화 질문으로 개입.
+    """
+    p = max(0.0, min(100.0, float(narrative_precision)))
+    if p < 45.0:
+        return (
+            "\n\n[적응형 비계 · 서사 정밀도 낮음]\n"
+            f"- 현재 서사 정밀도: {p:.0f}/100 — **반드시** 구체화 질문 1개.\n"
+            "- 언제·어디·누구·무엇을 느꼈는지, 한 가지 감각(소리·냄새·촉감)으로 좁혀 물으세요.\n"
+            "- 조언·처방·요약 대신 **Maieutic question** 하나로 마무리."
+        )
+    if p < 65.0:
+        return (
+            "\n\n[적응형 비계 · 서사 정밀도 보통]\n"
+            f"- 현재 서사 정밀도: {p:.0f}/100 — 필요할 때만 가벼운 심화 1개.\n"
+            "- 참여자가 이미 풍부하게 쓴 부분은 되풀이하지 마세요."
+        )
+    return (
+        "\n\n[적응형 비계 · 서사 정밀도 높음]\n"
+        f"- 현재 서사 정밀도: {p:.0f}/100 — **과잉 개입 금지**.\n"
+        "- 심화 질문은 짧게 하거나, 인정·음미(Elenchus) 위주로 동행하세요.\n"
+        "- 참여자의 리듬을 존중하고 문장을 끊지 마세요."
+    )
+
+
 def analyze_uploaded_image(
     image_bytes: bytes,
     mime_type: str,

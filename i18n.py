@@ -107,6 +107,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_photo_label": "사진 업로드",
         "chat_photo_hint": "📷 사진의 색·구도·사물을 읽고, 마음의 정원사가 씨앗이 될 질문으로 이어갑니다.",
         "chat_alt_send": "보내기",
+        "midpoint_analysis_btn": "지금까지의 대화 중간 정리 및 나의 특성 분석",
+        "midpoint_char_mobile_hint": "모바일 환경에서는 1,000자 내외도 충분합니다.",
+        "midpoint_char_over": "입력은 최대 {limit:,}자까지 가능합니다.",
         "chat_ph_collect": "지금 마음이나 기억을 적어 보세요…",
         "chat_ph_giant": "이어서 적어 보세요…",
         "opening": (
@@ -230,6 +233,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_photo_label": "Upload photo",
         "chat_photo_hint": "📷 We read color, composition, and objects — then ask a maieutic question.",
         "chat_alt_send": "Send",
+        "midpoint_analysis_btn": "Mid-conversation summary & trait analysis",
+        "midpoint_char_mobile_hint": "On mobile, about 1,000 characters is often enough.",
+        "midpoint_char_over": "You can enter up to {limit:,} characters.",
         "chat_ph_collect": "Write what's on your mind…",
         "chat_ph_giant": "Continue your story…",
         "opening": (

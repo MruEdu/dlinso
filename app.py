@@ -50,9 +50,16 @@ from personas import (
     phase_label_ko,
     select_giant,
 )
+from hbridge_analysis import (
+    format_full_midpoint_message,
+    format_midpoint_followup,
+    narrative_precision_score,
+    run_intra_individual_or_pipeline,
+)
 from i18n import FOOTER_BANNER, get_lang, render_language_selector, t
 from maieutic_engine import (
     analyze_uploaded_image,
+    build_adaptive_scaffolding_addon,
     build_global_maieutic_system_instruction,
     build_maieutic_addon,
     format_image_display_for_user,
@@ -185,6 +192,8 @@ def _gemini_user_error(exc: BaseException) -> str:
 
 TOKEN_DIET_KEEP_RECENT = 8
 MAX_STORED_MESSAGES = 48
+DEFAULT_INPUT_CHAR_LIMIT = 1000
+EXTENDED_INPUT_CHAR_LIMIT = 5000
 
 # 메인 영역 전체 너비 (사이드바 제외)
 FULL_WIDTH_LAYOUT_CSS = """
@@ -798,6 +807,31 @@ CUSTOM_CSS = """
         font-size: 1rem;
         color: #2d5a3d;
     }
+    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) {
+        margin-top: 0.35rem !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) button {
+        width: 100% !important;
+        background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #0c1222 !important;
+        font-weight: 600 !important;
+        min-height: 2.75rem !important;
+        border-radius: 10px !important;
+        letter-spacing: -0.02em !important;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.28) !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) button:hover {
+        background: linear-gradient(180deg, #1d4ed8 0%, #1e293b 100%) !important;
+        color: #ffffff !important;
+        border-color: #1e3a8a !important;
+    }
+    .char-counter-hint {
+        font-size: 0.78rem;
+        color: #7a6e62;
+        margin-top: 0.15rem;
+        line-height: 1.4;
+    }
     .intro-view .block-container {
         max-width: 100% !important;
         padding-left: 0.5rem !important;
@@ -1081,6 +1115,12 @@ def _init_session_state() -> None:
         "pending_turn": None,
         "story_thread": "",
         "chat_composer_nonce": 0,
+        "extended_input_unlocked": False,
+        "midpoint_analysis_count": 0,
+        "last_midpoint_report": None,
+        "narrative_precision": 50.0,
+        "jaggedness_index": 0.0,
+        "pending_midpoint_analysis": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1343,6 +1383,24 @@ def build_system_instruction() -> str:
     thread = st.session_state.get("story_thread", "").strip()
     if thread:
         base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
+
+    precision = float(st.session_state.get("narrative_precision", 50.0))
+    if st.session_state.messages:
+        precision = narrative_precision_score(
+            st.session_state.messages, st.session_state.profile
+        )
+        st.session_state.narrative_precision = precision
+    base += build_adaptive_scaffolding_addon(precision)
+
+    report = st.session_state.get("last_midpoint_report")
+    if isinstance(report, dict) and report.get("strength_narrative"):
+        base += (
+            "\n\n[중간 OR·들쭉날쭉 분석 — 참여자와 공유됨]\n"
+            f"- 들쭉날쭉 지표: {report.get('jaggedness_index', 0):.1f}\n"
+            f"- 강점 요약: {str(report.get('strength_narrative', ''))[:350]}\n"
+            "- 위 분석에 대한 생각을 물으며 대화를 **종료하지 말 것**."
+        )
+
     base += _conversation_style_addon()
     return base
 
@@ -2079,6 +2137,10 @@ def handle_chat_turn(
     if st.session_state.get("is_returning_user"):
         st.session_state.is_returning_user = False
 
+    st.session_state.narrative_precision = narrative_precision_score(
+        st.session_state.messages, st.session_state.profile
+    )
+
     if st.session_state.get("_request_summary"):
         st.session_state.pop("_request_summary", None)
         deliver_life_summary(gemini_ok)
@@ -2122,6 +2184,106 @@ def _take_pending_turn() -> dict[str, Any] | None:
     if not turn.get("text") and not turn.get("image_bytes"):
         return None
     return turn
+
+
+def _input_char_limit() -> int:
+    if st.session_state.get("extended_input_unlocked"):
+        return EXTENDED_INPUT_CHAR_LIMIT
+    return DEFAULT_INPUT_CHAR_LIMIT
+
+
+def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
+    """특허 기반 중간 OR 분석 — 대화는 계속."""
+    user_turns = [
+        m
+        for m in st.session_state.messages
+        if m.get("role") == "user" and str(m.get("content") or "").strip()
+    ]
+    if not user_turns:
+        st.warning("분석할 대화가 아직 없습니다. 먼저 이야기를 나눠 주세요.")
+        return
+
+    with st.spinner("지금까지의 이야기에서 고유 강점을 통계적으로 읽고 있어요…"):
+        report = run_intra_individual_or_pipeline(
+            st.session_state.messages,
+            profile=st.session_state.profile,
+            life_context=st.session_state.get("life_context", ""),
+            positive_resources=st.session_state.get("positive_resources") or [],
+        )
+
+    st.session_state.last_midpoint_report = report
+    st.session_state.extended_input_unlocked = True
+    st.session_state.midpoint_analysis_count = (
+        int(st.session_state.get("midpoint_analysis_count", 0)) + 1
+    )
+    st.session_state.jaggedness_index = float(report.get("jaggedness_index", 0))
+    st.session_state.narrative_precision = float(
+        report.get("narrative_precision", 50.0)
+    )
+
+    with st.chat_message("assistant", avatar=display["emoji"]):
+        st.markdown("### 지금까지의 대화 중간 정리 및 나의 특성 분석")
+        st.info(
+            "**① 개개인성 상황**\n\n"
+            + str(report.get("individuality_situation", ""))
+        )
+        st.info(
+            "**② 맥락적 성격**\n\n"
+            + str(report.get("contextual_personality", ""))
+        )
+        st.info(
+            "**③ 강점 서사**\n\n" + str(report.get("strength_narrative", ""))
+        )
+        st.markdown(format_midpoint_followup())
+
+    full_reply = format_full_midpoint_message(report)
+    _append_message("assistant", full_reply, display=full_reply)
+
+    lang = get_lang()
+    giant_name = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
+    stats_json = str(report.get("stats_json", ""))[:500]
+    if sheets.is_connected:
+        sheets.ensure_header_row()
+        ok, err = sheets.log_conversation(
+            user_message="[중간정리·자기내적OR분석]",
+            assistant_message=full_reply,
+            participant_id=st.session_state.participant_id,
+            password_hash=st.session_state.password_hash,
+            lang=lang,
+            gender=st.session_state.gender,
+            age_group=st.session_state.age_group,
+            education=st.session_state.life_stage,
+            user_message_ko="[중간정리·자기내적OR분석]",
+            assistant_message_ko=full_reply,
+            giant_name=giant_name,
+            current_concern=st.session_state.current_concern or "",
+            summoned_narrative=st.session_state.summoned_narrative or "",
+            profile=st.session_state.profile,
+            life_context=st.session_state.life_context or "",
+            narrative_stage=st.session_state.narrative_stage or "",
+            narrative_themes=(
+                f"Jaggedness:{report.get('jaggedness_index', 0):.1f}"
+            ),
+            metaphors=f"Precision:{report.get('narrative_precision', 0):.0f}",
+            turning_points=stats_json,
+        )
+        if not ok:
+            st.warning(f"시트 저장 실패: {err}")
+
+    st.rerun()
+
+
+def _render_midpoint_analysis_button() -> None:
+    """채팅 입력창 바로 아래 — 네이비 전폭 버튼."""
+    _html_layout_marker("midpoint-btn-marker")
+    if st.button(
+        t("midpoint_analysis_btn"),
+        key="midpoint_analysis_btn",
+        use_container_width=True,
+        type="secondary",
+    ):
+        st.session_state.pending_midpoint_analysis = True
+        st.rerun()
 
 
 def _is_mobile_client() -> bool:
@@ -2170,6 +2332,7 @@ def _render_composer_text_row(
     input_height: int = 88,
 ) -> str:
     """텍스트 영역 + 보내기 — PC·모바일 공통(Cloud PC에서 st.chat_input 미표시 대응)."""
+    max_chars = _input_char_limit()
     if layout_marker:
         _html_layout_marker(layout_marker)
     text_col, send_col = st.columns([5.2, 1], gap="small")
@@ -2180,7 +2343,15 @@ def _render_composer_text_row(
             height=input_height,
             placeholder=placeholder,
             label_visibility="collapsed",
+            max_chars=max_chars,
         )
+        current_len = len(st.session_state.get(input_key, "") or "")
+        st.markdown(
+            f'<p class="char-counter-hint">({current_len:,} / {max_chars:,}자)</p>',
+            unsafe_allow_html=True,
+        )
+        if st.session_state.get("extended_input_unlocked"):
+            st.caption(t("midpoint_char_mobile_hint"))
     with send_col:
         _html_layout_marker(send_marker)
         submitted = st.button(
@@ -2191,7 +2362,11 @@ def _render_composer_text_row(
         )
     if not submitted:
         return ""
-    return (draft or "").strip()
+    text = (draft or "").strip()
+    if len(text) > max_chars:
+        st.warning(t("midpoint_char_over").format(limit=max_chars))
+        return ""
+    return text
 
 
 def render_chat_composer_body() -> bool:
@@ -2246,6 +2421,8 @@ def render_chat_composer_body() -> bool:
     if photo is not None:
         image_bytes = photo.getvalue()
         image_mime = photo.type or "image/jpeg"
+
+    _render_midpoint_analysis_button()
 
     if text or image_bytes:
         _enqueue_chat_turn(text, image_bytes=image_bytes, image_mime=image_mime)
@@ -2360,6 +2537,8 @@ def _run_app() -> None:
                 composer_queued = render_chat_composer_body()
 
     if not st.session_state.conversation_closed and not composer_queued:
+        if st.session_state.pop("pending_midpoint_analysis", False):
+            execute_midpoint_analysis(display, sheets)
         pending = _take_pending_turn()
         if pending:
             if gemini_ok:
