@@ -283,13 +283,18 @@ def _topic_categories_hit(texts: list[str]) -> int:
     return hit
 
 
-def narrative_assetization_progress(messages: list[dict]) -> dict[str, Any]:
+def narrative_assetization_progress(
+    messages: list[dict],
+    *,
+    user_turns: int | None = None,
+) -> dict[str, Any]:
     """
     성찰 깊이 게이지 0~100 — 턴 수(10회 만점) + 발화 품질.
     10턴 도달 시 100% → 중간 정리 버튼 노출.
+    user_turns: UI에 남은 메시지보다 많을 때(토큰 다이어트 이후) 누적 턴 수.
     """
     texts = _user_texts(messages)
-    n = len(texts)
+    n = user_turns if user_turns is not None else len(texts)
     substantive = [t for t in texts if not is_trivial_utterance(t)]
     sub_n = len(substantive)
 
@@ -325,14 +330,18 @@ def narrative_assetization_progress(messages: list[dict]) -> dict[str, Any]:
     }
 
 
-def assess_midpoint_readiness(messages: list[dict]) -> dict[str, Any]:
+def assess_midpoint_readiness(
+    messages: list[dict],
+    *,
+    user_turns: int | None = None,
+) -> dict[str, Any]:
     """
     중간 정리(OR 정밀 리포트) 실행 가능 여부.
     10턴 미만 → ready=False, reason=insufficient_turns
     10턴 이상이나 발화 빈약 → ready=False, scaffolding
     """
     texts = _user_texts(messages)
-    n = len(texts)
+    n = user_turns if user_turns is not None else len(texts)
     if n < MIN_USER_TURNS_FOR_MIDPOINT:
         return {
             "ready": False,

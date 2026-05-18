@@ -165,7 +165,7 @@ HERO_CARD_INLINE_STYLE = """
 </style>
 """
 
-TOKEN_DIET_MESSAGE_THRESHOLD = 12
+TOKEN_DIET_MESSAGE_THRESHOLD = 28
 
 
 def _html_layout_marker(*css_classes: str) -> None:
@@ -197,7 +197,7 @@ def _gemini_user_error(exc: BaseException) -> str:
     return f"{t('err_gemini_reply')}: {msg}"
 
 
-TOKEN_DIET_KEEP_RECENT = 8
+TOKEN_DIET_KEEP_RECENT = 20
 MAX_STORED_MESSAGES = 48
 DEFAULT_INPUT_CHAR_LIMIT = 1000
 EXTENDED_INPUT_CHAR_LIMIT = 5000
@@ -457,7 +457,18 @@ CUSTOM_CSS = """
     div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) > div[data-testid="stVerticalBlock"] {
         gap: 0.2rem !important;
     }
+    div[data-testid="stVerticalBlock"]:has(.chat-messages-scroll-marker) {
+        min-height: 6rem;
+    }
     @media (max-width: 600px) {
+        div[data-testid="stVerticalBlock"]:has(.chat-messages-scroll-marker) {
+            max-height: min(52vh, 26rem) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding-bottom: 0.5rem !important;
+            margin-bottom: 0.35rem !important;
+        }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {
             position: sticky !important;
             top: 0 !important;
@@ -1164,6 +1175,7 @@ def _init_session_state() -> None:
         "pending_turn": None,
         "story_thread": "",
         "chat_composer_nonce": 0,
+        "total_user_turns": 0,
         "extended_input_unlocked": False,
         "midpoint_analysis_count": 0,
         "last_midpoint_report": None,
@@ -1174,6 +1186,13 @@ def _init_session_state() -> None:
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+    if not int(st.session_state.get("total_user_turns", 0)):
+        from hbridge_analysis import count_user_turns
+
+        st.session_state.total_user_turns = count_user_turns(
+            st.session_state.get("messages") or []
+        )
 
     profile = st.session_state.get("profile")
     if not isinstance(profile, dict):
@@ -1435,7 +1454,7 @@ def build_system_instruction() -> str:
     if thread:
         base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
 
-    user_turns = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+    user_turns = effective_user_turn_count()
     midpoint_done = bool(st.session_state.get("midpoint_analysis_count", 0))
     base += build_conversation_phase_addon(
         user_turns,
@@ -1469,7 +1488,7 @@ def build_system_instruction() -> str:
 
 def _conversation_style_addon() -> str:
     """턴당 맥락 보강 (글로벌 정원사 System Instruction은 최상단에 고정)."""
-    user_turns = sum(1 for m in st.session_state.messages if m["role"] == "user")
+    user_turns = effective_user_turn_count()
     last_user = _last_user_display_text()
     return build_maieutic_addon(last_user=last_user, user_turns=user_turns)
 
@@ -1496,7 +1515,27 @@ def _append_message(role: str, content: str, **extra: object) -> None:
     entry: dict = {"role": role, "content": content, "display": extra.pop("display", content)}
     entry.update(extra)
     st.session_state.messages.append(entry)
+    if role == "user" and str(content or "").strip():
+        st.session_state.total_user_turns = (
+            int(st.session_state.get("total_user_turns", 0)) + 1
+        )
     _trim_message_history()
+
+
+def effective_user_turn_count() -> int:
+    """화면·중간정리용 — 토큰 다이어트로 메시지가 줄어도 턴 수는 유지."""
+    stored = int(st.session_state.get("total_user_turns", 0))
+    from hbridge_analysis import count_user_turns
+
+    return max(stored, count_user_turns(st.session_state.messages))
+
+
+def messages_for_gemini_api() -> list[dict]:
+    """Gemini API 전송용 — 최근 N턴만. UI messages 는 그대로 둠."""
+    msgs = list(st.session_state.messages)
+    if len(msgs) <= TOKEN_DIET_MESSAGE_THRESHOLD:
+        return msgs
+    return msgs[-TOKEN_DIET_KEEP_RECENT:]
 
 
 def _trim_message_history() -> None:
@@ -1542,6 +1581,9 @@ def build_gemini_history(messages: list[dict]) -> list[dict]:
 
 
 def apply_token_diet() -> bool:
+    """
+    긴 대화 시 **요약만** 갱신. messages 는 삭제하지 않음(모바일·PC 채팅·10턴 카운트 유지).
+    """
     messages = st.session_state.messages
     if len(messages) <= TOKEN_DIET_MESSAGE_THRESHOLD:
         return False
@@ -1553,7 +1595,6 @@ def apply_token_diet() -> bool:
         )
     except Exception:  # noqa: BLE001
         return False
-    st.session_state.messages = messages[split_at:]
     st.session_state.diet_applied_count += 1
     return True
 
@@ -1589,6 +1630,13 @@ def _reset_chat_state() -> None:
         "conversation_closed",
         "pending_turn",
         "story_thread",
+        "total_user_turns",
+        "extended_input_unlocked",
+        "midpoint_analysis_count",
+        "last_midpoint_report",
+        "pending_midpoint_analysis",
+        "narrative_precision",
+        "jaggedness_index",
     ):
         if key == "phase":
             st.session_state[key] = PHASE_COLLECT
@@ -1608,6 +1656,20 @@ def _reset_chat_state() -> None:
             st.session_state[key] = "—" if key == "life_context" else ""
         elif key == "pending_turn":
             st.session_state[key] = None
+        elif key == "total_user_turns":
+            st.session_state[key] = 0
+        elif key == "extended_input_unlocked":
+            st.session_state[key] = False
+        elif key == "midpoint_analysis_count":
+            st.session_state[key] = 0
+        elif key == "last_midpoint_report":
+            st.session_state[key] = None
+        elif key == "pending_midpoint_analysis":
+            st.session_state[key] = False
+        elif key == "narrative_precision":
+            st.session_state[key] = 50.0
+        elif key == "jaggedness_index":
+            st.session_state[key] = 0.0
         else:
             st.session_state[key] = 0 if key == "diet_applied_count" else ""
 
@@ -1874,6 +1936,7 @@ def render_main_header(display: dict) -> None:
 
 
 def render_chat_area(display: dict) -> None:
+    _html_layout_marker("chat-messages-scroll-marker")
     if st.session_state.life_summary:
         st.markdown(
             f'<div class="life-summary-box">{st.session_state.life_summary}</div>',
@@ -2095,7 +2158,7 @@ def handle_chat_turn(
         try:
             yield from iter_gemini_reply_stream(
                 model,
-                st.session_state.messages,
+                messages_for_gemini_api(),
                 model_prompt,
                 image_bytes=image_bytes,
                 image_mime=image_mime,
@@ -2294,13 +2357,17 @@ def _deliver_midpoint_scaffolding(
 
 
 def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
-    """특허 기반 중간 분석 — 8턴+품질 통과 시에만 정밀 리포트."""
-    readiness = assess_midpoint_readiness(st.session_state.messages)
-    if readiness["user_turns"] < MIN_USER_TURNS_FOR_MIDPOINT:
+    """특허 기반 중간 분석 — 10턴+품질 통과 시에만 정밀 리포트."""
+    turn_count = effective_user_turn_count()
+    readiness = assess_midpoint_readiness(
+        st.session_state.messages,
+        user_turns=turn_count,
+    )
+    if turn_count < MIN_USER_TURNS_FOR_MIDPOINT:
         st.warning(
             t("midpoint_need_turns").format(
                 need=MIN_USER_TURNS_FOR_MIDPOINT,
-                current=readiness["user_turns"],
+                current=turn_count,
             )
         )
         return
@@ -2422,7 +2489,10 @@ def _render_reflection_depth_gauge() -> dict[str, Any]:
     if st.session_state.get("extended_input_unlocked"):
         return {"button_eligible": False, "percent": 100}
 
-    prog = narrative_assetization_progress(st.session_state.messages)
+    prog = narrative_assetization_progress(
+        st.session_state.messages,
+        user_turns=effective_user_turn_count(),
+    )
     _html_layout_marker("narrative-asset-progress-marker")
     st.markdown(f"**{t('reflection_depth_gauge_label')}**")
     st.progress(prog["percent"] / 100.0)
@@ -2436,7 +2506,10 @@ def _render_reflection_depth_gauge() -> dict[str, Any]:
             )
         )
     elif prog["percent"] >= 100:
-        readiness = assess_midpoint_readiness(st.session_state.messages)
+        readiness = assess_midpoint_readiness(
+            st.session_state.messages,
+            user_turns=effective_user_turn_count(),
+        )
         if readiness["ready"]:
             st.caption(t("narrative_asset_progress_ready"))
         else:
