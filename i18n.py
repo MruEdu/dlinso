@@ -96,13 +96,14 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_continue": "✅ 이어서 이야기하기",
         "gentle_record": "마음의 기록이 차곡차곡 쌓이고 있어요 🌿",
         "input_hint": (
-            "여기를 탭해 대화해 보세요. 추억 사진을 올리면 사진 이야기도 이어갈 수 있어요. "
-            "문의는 상단 **✉️ 문의하기**에서 할 수 있습니다."
+            "여기를 탭해 대화해 보세요. 추억 사진을 올리면 사진 이야기도 할 수 있어요. "
+            "문의는 상단 **✉️ 문의하기**."
         ),
         "chat_composer_guide": (
-            "여기를 탭해 대화해 보세요. 추억 사진을 올리면 사진 이야기도 이어갈 수 있어요. "
-            "문의는 상단 **✉️ 문의하기**에서 할 수 있습니다."
+            "여기를 탭해 대화해 보세요. 추억 사진을 올리면 사진 이야기도 할 수 있어요. "
+            "문의는 상단 **✉️ 문의하기**."
         ),
+        "chat_photo_row_caption": "📷 사진 (선택)",
         "chat_photo_label": "사진 업로드",
         "chat_photo_hint": "📷 사진의 색·구도·사물을 읽고, 마음의 정원사가 씨앗이 될 질문으로 이어갑니다.",
         "chat_alt_send": "보내기",
@@ -218,13 +219,14 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_continue": "✅ Continue my story",
         "gentle_record": "Your story is gently being recorded 🌿",
         "input_hint": (
-            "Tap here to chat. Upload a memory photo to talk about it. "
-            "Inquiries: top menu **✉️ Contact**."
+            "Tap to chat. Upload a memory photo to talk about it. "
+            "Inquiries: top **✉️ Contact**."
         ),
         "chat_composer_guide": (
-            "Tap here to chat. Upload a memory photo to talk about it. "
-            "Inquiries: top menu **✉️ Contact**."
+            "Tap to chat. Upload a memory photo to talk about it. "
+            "Inquiries: top **✉️ Contact**."
         ),
+        "chat_photo_row_caption": "📷 Photo (optional)",
         "chat_photo_label": "Upload photo",
         "chat_photo_hint": "📷 We read color, composition, and objects — then ask a maieutic question.",
         "chat_alt_send": "Send",

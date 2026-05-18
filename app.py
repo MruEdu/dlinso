@@ -407,6 +407,18 @@ CUSTOM_CSS = """
     .inquiry-page-mail {
         margin-bottom: 1rem;
     }
+    /* 대화 + 입력을 한 카드로 (카톡/문자 느낌) */
+    div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) {
+        background: rgba(255, 252, 248, 0.97) !important;
+        border: 1px solid rgba(140, 120, 100, 0.2) !important;
+        border-radius: 14px !important;
+        padding: 0.4rem 0.45rem 0.45rem !important;
+        margin-bottom: 0.35rem !important;
+        box-shadow: 0 2px 14px rgba(90, 70, 50, 0.06) !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) > div[data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
     @media (max-width: 600px) {
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {
             position: sticky !important;
@@ -1691,25 +1703,24 @@ def render_chat_area(display: dict) -> None:
             st.caption("오늘의 인생 요약본을 선물로 드렸습니다. 언제든 다시 이야기해 주세요. 🌿")
             return
 
-    with st.container(border=True):
-        if not st.session_state.messages:
-            opening = t("opening").replace("\n\n", "<br><br>")
-            st.markdown(
-                f'<div class="opening-guide">{opening}</div>',
-                unsafe_allow_html=True,
-            )
-        for message in st.session_state.messages:
-            avatar = "🧑" if message["role"] == "user" else display["emoji"]
-            with st.chat_message(message["role"], avatar=avatar):
-                if message.get("image_bytes"):
-                    st.image(message["image_bytes"], use_container_width=True)
-                    caption = _user_visible_text(message)
-                    if caption:
-                        st.markdown(caption)
-                else:
-                    body = _user_visible_text(message)
-                    if body:
-                        st.markdown(body)
+    if not st.session_state.messages:
+        opening = t("opening").replace("\n\n", "<br><br>")
+        st.markdown(
+            f'<div class="opening-guide">{opening}</div>',
+            unsafe_allow_html=True,
+        )
+    for message in st.session_state.messages:
+        avatar = "🧑" if message["role"] == "user" else display["emoji"]
+        with st.chat_message(message["role"], avatar=avatar):
+            if message.get("image_bytes"):
+                st.image(message["image_bytes"], use_container_width=True)
+                caption = _user_visible_text(message)
+                if caption:
+                    st.markdown(caption)
+            else:
+                body = _user_visible_text(message)
+                if body:
+                    st.markdown(body)
 
 
 def stream_gemini_reply(
@@ -1984,14 +1995,13 @@ def render_chat_composer() -> bool:
         else t("chat_ph_giant")
     )
 
-    with st.expander(f"📷 {t('chat_photo_label')}", expanded=False):
-        st.caption(t("chat_photo_hint"))
-        photo = st.file_uploader(
-            t("chat_photo_label"),
-            type=["jpg", "jpeg", "png", "webp"],
-            key="chat_photo_upload",
-            label_visibility="collapsed",
-        )
+    st.caption(t("chat_photo_row_caption"))
+    photo = st.file_uploader(
+        t("chat_photo_label"),
+        type=["jpg", "jpeg", "png", "webp"],
+        key="chat_photo_upload",
+        label_visibility="collapsed",
+    )
 
     _html_layout_marker("mobile-chat-composer-marker")
     st.caption(t("chat_composer_guide"))
@@ -2127,14 +2137,17 @@ def _run_app() -> None:
             st.warning(gemini_error or "Gemini API를 사용할 수 없습니다. (.env의 GEMINI_API_KEY 확인)")
             if gemini_error and "leaked" in gemini_error.lower():
                 st.markdown(t("err_gemini_leaked"))
-        if not st.session_state.conversation_closed:
-            st.markdown(
-                f'<p class="input-hint">{t("input_hint")}</p>',
-                unsafe_allow_html=True,
-            )
-        render_chat_area(display)
 
-    if not render_chat_composer():
+        composer_queued = True
+        if st.session_state.conversation_closed:
+            render_chat_area(display)
+        else:
+            with st.container(border=True):
+                _html_layout_marker("unified-chat-panel-marker")
+                render_chat_area(display)
+                composer_queued = render_chat_composer()
+
+    if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
         if pending:
             if gemini_ok:
