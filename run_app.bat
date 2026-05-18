@@ -11,5 +11,6 @@ echo  http://localhost:8501
 echo  미리보기: http://localhost:8501/?preview=1
 echo ========================================
 echo.
+cd /d "%~dp0h-bridge-research-assistant"
 ".venv\Scripts\python.exe" -m streamlit run app.py
 pause

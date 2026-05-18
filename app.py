@@ -399,6 +399,27 @@ CUSTOM_CSS = """
     }
     /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림(:has 숨김은 대화 패널 오동작 유발) */
     @media (min-width: 601px) {
+        [data-testid="stBottomBlockContainer"] {
+            display: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) {
+            min-height: 10rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.desktop-chat-composer-marker) {
+            margin-top: 0.35rem !important;
+            padding-top: 0.4rem !important;
+            border-top: 1px solid rgba(120, 100, 80, 0.12) !important;
+        }
+        div[data-testid="column"]:has(.desktop-chat-send-marker) button {
+            min-height: 2.85rem !important;
+            width: 100% !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="column"]:has(.desktop-chat-send-marker) {
+            display: flex !important;
+            align-items: flex-end !important;
+        }
         button[data-testid="baseButton-secondary"][aria-label*="문의"],
         button[data-testid="baseButton-primary"][aria-label*="문의"] {
             font-size: 0.82rem !important;
@@ -1979,7 +2000,7 @@ def _take_pending_turn() -> dict[str, Any] | None:
 
 
 def _is_mobile_client() -> bool:
-    """PC 우선: 모바일·태블릿으로 확실할 때만 True. 애매하면 False(하단 chat_input)."""
+    """모바일·태블릿으로 확실할 때만 True. PC는 본문 텍스트 입력(데스크톱 작성기)."""
     try:
         ctx = getattr(st, "context", None)
         headers = getattr(ctx, "headers", None) if ctx is not None else None
@@ -2014,11 +2035,40 @@ def _is_mobile_client() -> bool:
     return False
 
 
+def _render_composer_text_row(
+    *,
+    layout_marker: str,
+    send_marker: str,
+    input_key: str,
+    send_key: str,
+    placeholder: str,
+) -> str:
+    """텍스트 영역 + 보내기 — PC·모바일 공통(Cloud PC에서 st.chat_input 미표시 대응)."""
+    _html_layout_marker(layout_marker)
+    text_col, send_col = st.columns([5.2, 1], gap="small")
+    with text_col:
+        draft = st.text_area(
+            "chat_message",
+            key=input_key,
+            height=88,
+            placeholder=placeholder,
+            label_visibility="collapsed",
+        )
+    with send_col:
+        _html_layout_marker(send_marker)
+        submitted = st.button(
+            t("chat_alt_send"),
+            key=send_key,
+            type="primary",
+            use_container_width=True,
+        )
+    if not submitted:
+        return ""
+    return (draft or "").strip()
+
+
 def render_chat_composer_body() -> bool:
-    """
-    사진 + 모바일 입력(텍스트 영역·보내기). st.chat_input 은 넣지 않음 —
-    Streamlit은 chat_input을 st.container 안에 두면 오류가 날 수 있음.
-    """
+    """사진 + PC/모바일 텍스트 입력·보내기 (st.chat_input 미사용)."""
     if st.session_state.conversation_closed:
         return False
 
@@ -2033,31 +2083,27 @@ def render_chat_composer_body() -> bool:
         label_visibility="collapsed",
     )
 
-    if not _is_mobile_client():
-        return False
-
-    _html_layout_marker("mobile-chat-composer-marker")
-    text_col, send_col = st.columns([5.2, 1], gap="small")
-    with text_col:
-        mobile_text = st.text_area(
-            "mobile_message",
-            key=f"mobile_chat_input_{alt_nonce}",
-            height=88,
+    if _is_mobile_client():
+        text = _render_composer_text_row(
+            layout_marker="mobile-chat-composer-marker",
+            send_marker="mobile-chat-send-marker",
+            input_key=f"mobile_chat_input_{alt_nonce}",
+            send_key=f"mobile_send_{alt_nonce}",
             placeholder=guide_placeholder,
-            label_visibility="collapsed",
         )
-    with send_col:
-        _html_layout_marker("mobile-chat-send-marker")
-        mobile_send = st.button(
-            t("chat_alt_send"),
-            key=f"mobile_send_{alt_nonce}",
-            type="primary",
-            use_container_width=True,
+    else:
+        desktop_placeholder = (
+            t("chat_ph_giant")
+            if st.session_state.phase != PHASE_COLLECT
+            else guide_placeholder
         )
-
-    text = ""
-    if mobile_send and (mobile_text or "").strip():
-        text = (mobile_text or "").strip()
+        text = _render_composer_text_row(
+            layout_marker="desktop-chat-composer-marker",
+            send_marker="desktop-chat-send-marker",
+            input_key=f"desktop_chat_input_{alt_nonce}",
+            send_key=f"desktop_send_{alt_nonce}",
+            placeholder=desktop_placeholder,
+        )
 
     image_bytes: bytes | None = None
     image_mime: str | None = None
@@ -2071,42 +2117,6 @@ def render_chat_composer_body() -> bool:
         st.rerun()
         return True
     return False
-
-
-def render_desktop_chat_input_submit() -> bool:
-    """
-    PC용 st.chat_input — 반드시 st.container 바깥(메인 열)에서만 호출.
-    """
-    if st.session_state.conversation_closed:
-        return False
-    guide_placeholder = t("chat_composer_guide")
-    desktop_placeholder = (
-        t("chat_ph_giant")
-        if st.session_state.phase != PHASE_COLLECT
-        else guide_placeholder
-    )
-    prompt = st.chat_input(desktop_placeholder, key="main_chat_input")
-    text = (prompt or "").strip()
-
-    image_bytes: bytes | None = None
-    image_mime: str | None = None
-    photo = st.session_state.get("chat_photo_upload")
-    if photo is not None:
-        try:
-            image_bytes = photo.getvalue()
-            image_mime = getattr(photo, "type", None) or "image/jpeg"
-        except Exception:  # noqa: BLE001
-            image_bytes = None
-
-    if text or image_bytes:
-        _enqueue_chat_turn(text, image_bytes=image_bytes, image_mime=image_mime)
-        _bump_chat_composer_nonce()
-        st.rerun()
-        return True
-    return False
-
-
-# render_chat_composer_body / render_desktop_chat_input_submit 만 사용 (chat_input 은 컨테이너 밖).
 
 
 def main() -> None:
@@ -2204,14 +2214,14 @@ def _run_app() -> None:
             if gemini_error and "leaked" in gemini_error.lower():
                 st.markdown(t("err_gemini_leaked"))
 
+        composer_queued = False
         if st.session_state.conversation_closed:
             render_chat_area(display)
         else:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
                 render_chat_area(display)
-
-    composer_queued = render_chat_composer_body()
+                composer_queued = render_chat_composer_body()
 
     if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
@@ -2232,9 +2242,6 @@ def _run_app() -> None:
     with st.container():
         _html_layout_marker("app-content-pad-marker")
         render_lab_footer()
-
-    if not st.session_state.conversation_closed and not composer_queued:
-        render_desktop_chat_input_submit()
 
 
 # Streamlit Cloud는 스크립트를 매 rerun마다 실행 — main()을 항상 호출
