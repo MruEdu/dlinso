@@ -1661,6 +1661,14 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                     st.error(t("err_login"))
                 else:
                     profile = found["profile"]
+                    sheets.record_visit(
+                        participant_id=profile["participant_id"],
+                        password_hash=profile["password_hash"],
+                        lang=profile.get("lang", get_lang()) or "ko",
+                        gender=profile.get("gender", ""),
+                        age_group=profile.get("age_group", ""),
+                        life_stage=profile.get("life_stage", ""),
+                    )
                     _activate_session(
                         participant_id=profile["participant_id"],
                         password_hash_value=profile["password_hash"],
