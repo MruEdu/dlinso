@@ -1,0 +1,15 @@
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+
+[client]
+toolbarMode = "auto"
+
+[theme]
+primaryColor = "#6c5ce7"
+backgroundColor = "#faf6f0"
+secondaryBackgroundColor = "#fffcf8"
+textColor = "#4a4038"
+font = "sans serif"

@@ -1,0 +1,101 @@
+프로젝트 코드에서 서사 분석 로직을 확인한 뒤, 요청하신 Meta-Contextual Narrative Analysis 원칙을 반영한 시스템 흐름도를 작성합니다.
+
+코드(narrative_engine.py, personas.py, app.py)와 요청하신 Meta-Contextual Narrative Analysis(MCNA) 원칙을 맞춰 정리했습니다. 아래 흐름도는 설계 의도(논리) 를 기준으로 그렸고, 현재 구현과의 차이도 짧게 표시했습니다.
+
+MCNA 핵심 논리 (이해 요약)
+구분	하지 않는 것	하는 것
+1차 필터
+「슬프다」「힘들다」→ 부정 라벨
+발화의 기능을 본다: 고백·서사화·회피·정체
+역설 ①
+고통 표현 = 위험/부정만
+자기 개방 + 성찰 의지 → reflection_depth↑, 서사 단계 재구성 쪽
+역설 ②
+짧은 답 = 무관심만
+반복 단답·감정 회피 → 방어 기제 → agency↓, 단계 정체/탐색 정체
+상위 맥락
+턴 단독 감성
+누적 요약·Phase1 자원·연령/학력·이전 턴 패턴을 메타 맥락으로 결합
+산파적 가이드
+해답·처방
+한 가지 질문으로 생애사 재구성(Reconstruction) 유도
+현재 코드에서는 analyze_narrative_turn()이 Gemini로 4지표·단계·테마를 내고, detect_distress()는 Phase 전환용 키워드만 씁니다. MCNA 역설 규칙은 프롬프트에 명시되어 있지 않아, 흐름도는 목표 알고리즘을 반영하고, 구현 보강 지점은 노란색으로 표기했습니다.
+
+[시스템 흐름도] Meta-Contextual Narrative Analysis
+① 참여자 입력
+② MCNA 1차 — 단순 감성 분석 거부
+③ 상위 맥락(Meta-Context) 적층
+④ 역설적 해석 엔진
+⑤ 단계·동반자 라우팅
+⑥ 산파적 가이드 (대화 생성)
+⑦ 비가시 분석 (UI 미노출)
+⑧ 기록·피드백
+세션 state 갱신
+아니오
+Phase 1
+고민·고통 맥락+ MCNA 개방 신호
+사용자 발화다국어 원문
+감성 사전만으로긍정/부정 분류?
+발화 기능 분류
+자기 개방고통·어려움의 서사적 고백
+방어 기제회피·단답 반복·주제 전환
+서사 확장은유·기억·관계 맥락
+누적 context_summary토큰 다이어트 후 요약
+Phase1 긍정적 서사 자원positive_resources
+연령대·학력·생애주기맞춤 말투·질문 깊이
+직전 N턴 대화 궤적개방↑ vs 방어↑ 추세
+긍정적 서사 지표reflection_depth ↑emotional_richness ↑narrative_stage: 갈등인식→재구성
+정체/방어 지표agency ↓relational_connection ↓stage: 탐색 정체
+맥락·테마·은유·전이점narrative_themes / metaphors / turning_points
+Phase?
+긍정 자원 수집산파술 질문 1개
+Phase 2 거장 상담Adler / Jung / Frankl
+소환된 과거 서사Phase1 자원 인용 → 재구성
+시스템 지시답 X · 질문 O · 재구성 유도
+Gemini 스트리밍 응답통찰 1 + 질문 1
+analyze_narrative_turn4지표 + life_context + stage + 테마
+extract_interests핵심 관심사
+Google Sheets 24열턴당 1행
+채팅 UI점수 비노출
+문의 / admin_replyInquiries 탭
+턴 단위 상세 (한 사이클)
+발화 (예: "요즘 너무 힘들어요…")
+기능 태그 + 역설 점수 방향
+요약·자원·연령·Phase·거인 관점
+재구성 질문 1개 (처방·채점 없음)
+[참여자]+[안내자] 턴 텍스트
+agency / 성찰 / 정서 / 관계 + stage / 테마
+log_conversation (24열)
+❌ "힘들다"≠부정 라벨✅ 자기 개방·성찰 의지로 해석
+참여자
+MCNA 해석층
+Meta-Context
+산파적 가이드(Gemini)
+분석 엔진
+Google Sheets
+앱 모듈 ↔ 흐름도 매핑
+흐름도 블록	코드 위치	비고
+Phase1 산파
+build_phase1_system_prompt()
+긍정 자원, 질문 1개
+Phase2 재구성
+build_giant_system_prompt()
+자원 인용 + 거장 통찰
+Phase 전환
+detect_distress() → maybe_switch_to_giant()
+⚠️ 키워드 기반 — MCNA 역설과 완전 일치 X
+Meta 맥락
+context_summary, summarize_messages()
+상위 맥락 요약
+역설 지표
+analyze_narrative_turn()
+⚠️ 프롬프트에 역설 규칙 미명시 — MCNA 반영 시 여기 보강
+산파 응답
+stream_gemini_reply() + personas 톤
+기록
+sheets.log_conversation()
+시트 24열
+구현과 설계의 간극 (참고)
+detect_distress: 「힘들」「슬프」 등 패턴으로 Phase2 진입 — MCNA가 말하는 “고통 고백 = 개방”과 같은 신호를 다른 목적(전환)으로 씀. 부정 라벨링은 아니지만, 방어 기제(단답 반복) 는 아직 자동 감지 없음.
+analyze_narrative_turn: 토드 로즈·서사 연구 관점은 있으나, 역설적 해석 규칙 문장이 프롬프트에 없음 — 흐름도 ④를 코드에 넣으려면 이 함수의 prompt 보강이 핵심입니다.
+원하시면 다음 단계로 analyze_narrative_turn / detect_distress 프롬프트·로직에 MCNA 역설 규칙을 그대로 코드에 이식하는 패치도 진행할 수 있습니다.

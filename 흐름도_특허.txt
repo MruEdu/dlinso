@@ -1,0 +1,66 @@
+flowchart TB
+    subgraph INPUT["① 참여자 입력"]
+        U[사용자 발화<br/>다국어 원문]
+    end
+
+    subgraph GATE["② MCNA 1차 — 단순 감성 분석 거부"]
+        LEX{감성 사전만으로<br/>긍정/부정 분류?}
+        LEX -->|아니오| FUNC[발화 기능 분류]
+        FUNC --> DISC[자기 개방<br/>고통·어려움의 서사적 고백]
+        FUNC --> AVOID[방어 기제<br/>회피·단답 반복·주제 전환]
+        FUNC --> RICH[서사 확장<br/>은유·기억·관계 맥락]
+    end
+
+    subgraph META["③ 상위 맥락(Meta-Context) 적층"]
+        CTX[누적 context_summary<br/>토큰 다이어트 후 요약]
+        P1[Phase1 긍정적 서사 자원<br/>positive_resources]
+        DEMO[연령대·학력·생애주기<br/>맞춤 말투·질문 깊이]
+        TURN[직전 N턴 대화 궤적<br/>개방↑ vs 방어↑ 추세]
+    end
+
+    subgraph PARADOX["④ 역설적 해석 엔진"]
+        DISC --> POS[긍정적 서사 지표<br/>reflection_depth ↑<br/>emotional_richness ↑<br/>narrative_stage: 갈등인식→재구성]
+        AVOID --> NEG[정체/방어 지표<br/>agency ↓<br/>relational_connection ↓<br/>stage: 탐색 정체]
+        RICH --> MIX[맥락·테마·은유·전이점<br/>narrative_themes / metaphors / turning_points]
+    end
+
+    subgraph PHASE["⑤ 단계·동반자 라우팅"]
+        ROUTE{Phase?}
+        ROUTE -->|Phase 1| COL[긍정 자원 수집<br/>산파술 질문 1개]
+        ROUTE -->|고민·고통 맥락<br/>+ MCNA 개방 신호| G2[Phase 2 거장 상담<br/>Adler / Jung / Frankl]
+        G2 --> SUM[소환된 과거 서사<br/>Phase1 자원 인용 → 재구성]
+    end
+
+    subgraph GUIDE["⑥ 산파적 가이드 (대화 생성)"]
+        SYS[시스템 지시<br/>답 X · 질문 O · 재구성 유도]
+        GEM[Gemini 스트리밍 응답<br/>통찰 1 + 질문 1]
+    end
+
+    subgraph HIDDEN["⑦ 비가시 분석 (UI 미노출)"]
+        ANA[analyze_narrative_turn<br/>4지표 + life_context + stage + 테마]
+        INT[extract_interests<br/>핵심 관심사]
+    end
+
+    subgraph OUT["⑧ 기록·피드백"]
+        SHEET[(Google Sheets 24열<br/>턴당 1행)]
+        UI[채팅 UI<br/>점수 비노출]
+        INQ[문의 / admin_reply<br/>Inquiries 탭]
+    end
+
+    U --> GATE
+    DISC & AVOID & RICH --> META
+    CTX & P1 & DEMO & TURN --> PARADOX
+    POS & NEG & MIX --> PHASE
+    COL & SUM --> GUIDE
+    SYS --> GEM
+    U --> GUIDE
+    GEM --> ANA
+    GEM --> INT
+    ANA --> SHEET
+    GEM --> UI
+    PARADOX -.->|세션 state 갱신| PHASE
+
+    style LEX fill:#fee,stroke:#c33
+    style FUNC fill:#efe,stroke:#393
+    style PARADOX fill:#e8f4ff,stroke:#369
+    style GUIDE fill:#f3e8ff,stroke:#6c5ce7

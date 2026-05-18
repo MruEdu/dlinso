@@ -1,0 +1,157 @@
+dlinso UI 레이아웃 최종 점검 및 연구보고서용 기술 정리
+점검 일자: 2026-05-17
+대상: app.py, landing_page.html
+점검 결과: 전체 너비·반응형 슬라이드 구조는 정상 동작 가능 상태. 상담 채팅 UI는 .app-content-pad 분리로 레이아웃 붕괴를 방지하고 있음.
+
+항목	상태	비고
+layout="wide"
+✅
+main() 최상단 st.set_page_config
+FULL_WIDTH_LAYOUT_CSS
+✅
+소개(iframe) 전폭 표시
+슬라이드 7장 / iframe 높이
+✅
+약 5,660px, scrolling=True
+반응형 미디어쿼리
+✅
+900px / 600px
+상담 채팅 레이아웃
+✅
+app-content-pad + st.chat_input columns 밖 배치
+1. CSS 최적화 분석: FULL_WIDTH_LAYOUT_CSS와 대화 인터페이스 가시성
+1.1 적용 구조
+dlinso는 Streamlit 기본 레이아웃(중앙 정렬·좁은 max-width·좌우 패딩) 위에 이중 CSS 전략을 사용합니다.
+
+FULL_WIDTH_LAYOUT_CSS — 메인 콘텐츠 영역(사이드바 제외)의 컨테이너를 뷰포트 폭에 맞춤
+CUSTOM_CSS의 .app-content-pad — 인생 서사·가입·상담 화면은 최대 820px로 읽기 폭을 유지
+FULL_WIDTH_LAYOUT_CSS = """
+<style>
+    .main .block-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    iframe {
+        width: 100% !important;
+        border: none !important;
+    }
+    ...
+</style>
+"""
+    .app-content-pad {
+        padding: 1rem 1.25rem 2rem;
+        max-width: 820px;
+        margin: 0 auto;
+    }
+1.2 가시성 향상 메커니즘 (기술적)
+요소	변경 전(일반 Streamlit)	변경 후	효과
+메인 max-width
+약 720~820px 고정
+100% (소개 화면)
+슬라이드·브랜드 콘텐츠 좌우 잘림 감소
+좌우 padding
+기본 1~5rem
+0 (소개) / 1.25rem (상담)
+소개는 엣지 투 엣지, 상담은 적정 여백
+iframe
+기본 폭·테두리
+100% 폭, 테두리 제거
+7장 슬라이드 일체형 프레젠테이션
+layout="wide"
+centered
+wide
+사이드바 제외 가용 폭 확대
+1.3 대화 인터페이스에 미치는 영향
+소개(홈) 화면: 전폭 레이아웃 → 연구 플랫폼 정체성·7장 내러티브를 한 화면 흐름으로 전달.
+상담 화면: app-content-pad로 메시지·히어로·온보딩 폼은 인지 부하를 낮추는 820px 읽기 폭 유지.
+st.chat_input: read_user_prompt()가 st.columns 밖에 있어 Streamlit 권장 패턴을 따르며, 입력창은 메인 영역 하단 전폭에 배치됨(모바일 터치 영역 확보). 대화 버블은 column + app-content-pad 안에 있어 본문과 입력창 폭이 다를 수 있으나, 기능·가독성상 문제 없음(오히려 입력창 강조).
+결론(보고서용): FULL_WIDTH_LAYOUT_CSS는 “전 화면을 무조건 넓힌다”가 아니라, **화면별 정보 밀도에 맞춘 이중 레이아웃(전폭 소개 / 제한 폭 상담)**을 구현하여, 연구 참여자의 **탐색(소개)**과 심층 대화(상담) 단계별 가시성을 분리·최적화한다.
+
+2. 반응형 로직: landing_page.html 미디어쿼리 (900px / 600px)
+2.1 기본 원칙
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> — 모바일 브라우저의 가상 데스크톱 폭 축소 방지.
+.slide-container: width: 100%, max-width: 1200px, height: auto — PC 고정 1280px 제거.
+clamp() / min() — 뷰포트에 비례하는 패딩·타이포그래피.
+2.2 기기별 동작 요약
+기기 유형	대표 폭	적용 규칙	최적화 내용
+PC
+>900px
+기본 CSS
+2열 그리드, 대형 타이틀(85px), 이미지 max-height: 50vh
+태블릿
+≤900px
+@media (max-width: 900px)
+2열 → 1열, 제목 clamp, 슬라이드 제목 축소, 푸터 여백 조정
+모바일
+≤600px
+@media (max-width: 600px)
+body 패딩·gap 축소, 거장 3열 카드 → 1열 스택, 모서리 radius 축소
+2.3 미디어쿼리 핵심 (인용 가능)
+@media (max-width: 900px) {
+  .title-layout h1 { font-size: clamp(2rem, 9vw, 3.5rem); }
+  ...
+  .two-column { grid-template-columns: 1fr !important; gap: 28px; }
+}
+@media (max-width: 600px) {
+  body { padding: 16px 10px; gap: 24px; }
+  div[style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+연구 참여 관점: 글로벌·다연령 참여자가 PC·태블릿·스마트폰으로 접속해도, 서사 슬라이드의 텍스트 누락·가로 스크롤 없이 세로 스크롤 한 축으로 콘텐츠를 소비할 수 있다. 이는 토드 로즈의 개개인성 원칙에 부합하는 접근성·포용적 UI 설계로 기술할 수 있다.
+
+3. 슬라이드 렌더링: 7장 + components.html 세로 스크롤 (학술적 서술)
+3.1 구현 방식
+landing_page.html에 7개 .slide-container 블록.
+render_intro() → st.components.v1.html(html, height≈5660, scrolling=True).
+높이: _intro_iframe_height() = 슬라이드 수 × 780px + 200 (최소 1200px, 상한 5800px).
+def _intro_iframe_height(html: str) -> int:
+    slides = _count_landing_slides(html)
+    estimated = slides * INTRO_SLIDE_UNIT_HEIGHT + 200
+    return max(INTRO_HEIGHT_FLOOR, min(estimated, INTRO_HEIGHT_CAP))
+def render_intro() -> None:
+    html = _load_landing_html(_landing_mtime())
+    height = _intro_iframe_height(html)
+    components.html(html, height=height, scrolling=True)
+3.2 세로 스크롤 방식을 선택한 이유 (보고서 본문용)
+인지적 연속성(Narrative Continuity)
+가로 캐러셀·탭 전환은 각 슬라이드를 “끊긴 조각”으로 인식하기 쉽다. 세로 스크롤은 웹·모바일에서 익숙한 **단일 서사 흐름(scrolling narrative)**으로, 7단계 메시지(정체성 → 긍정 자원 → Phase 1/2 → 글로벌 허브 → 양방향 문의)를 선형 서사로 인식하게 한다.
+
+사용자 주도성(User Agency)
+참여자가 스크롤 속도·재독·멈춤을 통제한다. 이는 연구 윤리·자발적 참여 원칙과 맞으며, 강제 자동 재생 슬라이드보다 압박감이 낮다.
+
+플랫폼 통합성
+Streamlit 단일 앱 안에서 iframe으로 HTML을 임베드하면, 페이지 이탈 없이 「홈(소개) → 인생 서사(가입·상담)」 메뉴 전환이 가능하다. 외부 PPT·PDF 링크 대비 참여 이탈률 감소 기대.
+
+기술적 안정성
+scrolling=True는 iframe 내부 스크롤을 허용해, 슬라이드 총 높이(약 5,660px)가 뷰포트를 초과해도 잘림 없이 전체 콘텐츠 접근이 가능하다. 슬라이드 수 변경 시 _count_landing_slides()로 높이를 자동 산정하여 유지보수 부담을 줄인다.
+
+학술·연구 커뮤니케이션 적합성
+7장 구조는 연구 허브의 **개념 프레임(이론 → 방법 → Phase → 글로벌 → 소통)**을 단계적으로 제시하므로, IRB·협력 연구자·참여자 브리핑 자료로 재현 가능한 디지털 온보딩 역할을 한다.
+
+4. 코드 무결성: 상담 채팅 레이아웃 최종 확인
+4.1 화면별 레이아웃 분기 (검증됨)
+화면	current_view / 조건	레이아웃
+홈(소개)
+VIEW_INTRO
+전폭 iframe, 하단만 좁은 푸터 영역
+가입·동의
+VIEW_APP + 미로그인
+app-content-pad + 온보딩 탭
+상담
+VIEW_APP + 로그인
+app-content-pad + st.columns + render_chat_area
+4.2 상담 UI가 깨지지 않는 근거
+FULL_WIDTH가 상담 본문에 직접 820px 제한을 제거하지 않음 — 제한은 .app-content-pad가 담당.
+st.chat_input은 columns 밖 — Streamlit 이슈(입력창 비표시) 회피, 기존 read_user_prompt() 설계 유지.
+render_chat_area + st.chat_message — main_col 내부, border 컨테이너·opening-guide 스타일 CUSTOM_CSS 그대로 적용.
+전역 iframe CSS — 실질적으로 소개 화면 components.html에만 해당; 상담 화면에는 iframe 미사용 → 상담 레이아웃 간섭 없음.
+4.3 잔여 권고(선택, 보고서 각주용)
+입력창과 메시지 영역 폭을 완전히 일치시키려면 st.chat_input을 app-content-pad 내부 column으로 옮기는 미세 조정 가능(현재는 기능상 문제 없음).
+향후 iframe이 추가될 경우, iframe 선택자를 .intro-iframe 등으로 스코프 제한 권장.
+무결성 판정: 현재 설정으로 상담 채팅창 레이아웃은 의도적으로 보호되며, 깨짐 없이 운영 가능하다.
+
+5. 연구보고서 삽입용 한 줄 요약 (Abstract 스타일)
+dlinso Beta 1.0은 Streamlit wide 레이아웃과 FULL_WIDTH_LAYOUT_CSS로 연구 소개 슬라이드(7장)를 전폭·세로 스크롤로 제공하고, app-content-pad(max-width 820px)로 상담·가입 인터페이스의 가독성을 유지한다. landing_page.html의 900px/600px 미디어쿼리는 PC·태블릿·모바일에서 반응형 서사 전달을 보장하며, 코드 분리 구조상 상담 UI와 소개 UI는 상호 간섭 없이 독립 동작한다.
+
+추가로 보고서용 다이어그램(화면 분기 플로우) 또는 표/그림 캡션이 필요하면 말씀해 주세요.

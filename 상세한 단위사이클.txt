@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant P as 참여자
+    participant MC as MCNA 해석층
+    participant M as Meta-Context
+    participant G as 산파적 가이드(Gemini)
+    participant A as 분석 엔진
+    participant S as Google Sheets
+
+  P->>MC: 발화 (예: "요즘 너무 힘들어요…")
+  Note over MC: ❌ "힘들다"≠부정 라벨<br/>✅ 자기 개방·성찰 의지로 해석
+  MC->>M: 기능 태그 + 역설 점수 방향
+  M->>G: 요약·자원·연령·Phase·거인 관점
+  G->>P: 재구성 질문 1개 (처방·채점 없음)
+  G->>A: [참여자]+[안내자] 턴 텍스트
+  A->>M: agency / 성찰 / 정서 / 관계 + stage / 테마
+  A->>S: log_conversation (24열)
