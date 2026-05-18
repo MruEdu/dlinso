@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -218,3 +220,11 @@ def apply_secrets_to_environ() -> None:
         val = get_config(key)
         if val:
             os.environ.setdefault(key, val)
+
+
+KOREA_TZ = ZoneInfo("Asia/Seoul")
+
+
+def korea_now_str(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    """Sheets 등에 기록할 한국 표준시(KST, UTC+9) 시각."""
+    return datetime.now(KOREA_TZ).strftime(fmt)

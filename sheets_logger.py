@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +16,7 @@ from env_config import (
     credentials_source_label,
     get_google_sheet_id,
     get_service_account_info,
+    korea_now_str,
 )
 
 apply_secrets_to_environ()
@@ -421,7 +421,7 @@ class SheetsLogger:
         itype = inquiry_type if inquiry_type in INQUIRY_TYPES else "general"
         u_ko = message_ko or (message if lang == "ko" else "")
         try:
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ts = korea_now_str()
             row = [""] * len(INQUIRIES_HEADER)
             row[0] = participant_id
             row[1] = ts
@@ -489,7 +489,7 @@ class SheetsLogger:
         a_ko = assistant_message_ko or (assistant_message if lang == "ko" else "")
 
         try:
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ts = korea_now_str()
             row = [""] * len(HEADER_ROW)
             row[self._col["식별코드"]] = code
             row[self._col["비밀번호해시"]] = password_hash or ""
