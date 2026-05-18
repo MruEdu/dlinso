@@ -7,6 +7,7 @@ import io
 import os
 import re
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any
 
 import warnings
@@ -1795,18 +1796,29 @@ def _gemini_response_text(response: Any) -> str:
     return "".join(parts).strip()
 
 
-def generate_gemini_reply(
-    model,
-    messages: list[dict],
+def _gemini_chunk_text(chunk: Any) -> str:
+    """스트리밍 청크에서 텍스트 조각 추출."""
+    try:
+        text = chunk.text
+        if text:
+            return str(text)
+    except Exception:  # noqa: BLE001
+        pass
+    parts: list[str] = []
+    for cand in getattr(chunk, "candidates", None) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            piece = getattr(part, "text", None)
+            if piece:
+                parts.append(str(piece))
+    return "".join(parts)
+
+
+def _gemini_message_parts(
     user_prompt: str,
     *,
     image_bytes: bytes | None = None,
-    image_mime: str | None = None,
-) -> str:
-    """
-    채팅 응답 생성. UI는 스트리밍을 쓰지 않으므로 stream=False로 전체 문장을 받음
-    (stream=True는 Cloud에서 청크 누락·중간 끊김이 날 수 있음).
-    """
+) -> list[Any]:
     parts: list[Any] = []
     if image_bytes:
         try:
@@ -1816,9 +1828,54 @@ def generate_gemini_reply(
         except Exception:  # noqa: BLE001
             pass
     parts.append(user_prompt or "(사진을 보냈습니다)")
+    return parts
+
+
+def iter_gemini_reply_stream(
+    model,
+    messages: list[dict],
+    user_prompt: str,
+    *,
+    image_bytes: bytes | None = None,
+    image_mime: str | None = None,
+) -> Iterator[str]:
+    """Gemini 스트리밍 — UI에 토큰 단위로 넘긴다. 끝나면 전체 본문과 대조해 누락을 보완."""
+    del image_mime  # API는 PIL/bytes로 처리
+    parts = _gemini_message_parts(user_prompt, image_bytes=image_bytes)
     chat = model.start_chat(history=build_gemini_history(messages))
-    response = chat.send_message(parts, stream=False)
-    return _gemini_response_text(response)
+    response = chat.send_message(parts, stream=True)
+    accumulated: list[str] = []
+    for chunk in response:
+        piece = _gemini_chunk_text(chunk)
+        if piece:
+            accumulated.append(piece)
+            yield piece
+    streamed = "".join(accumulated)
+    final = _gemini_response_text(response)
+    if final and len(final) > len(streamed):
+        remainder = final[len(streamed) :]
+        if remainder:
+            yield remainder
+
+
+def generate_gemini_reply(
+    model,
+    messages: list[dict],
+    user_prompt: str,
+    *,
+    image_bytes: bytes | None = None,
+    image_mime: str | None = None,
+) -> str:
+    """비-UI 호출용 — 스트림을 모아 한 문자열로 반환."""
+    return "".join(
+        iter_gemini_reply_stream(
+            model,
+            messages,
+            user_prompt,
+            image_bytes=image_bytes,
+            image_mime=image_mime,
+        )
+    ).strip()
 
 
 def deliver_life_summary(gemini_ok: bool) -> None:
@@ -1899,18 +1956,36 @@ def handle_chat_turn(
         **user_extra,
     )
 
+    with st.chat_message("user", avatar="🧑"):
+        if image_bytes:
+            st.image(image_bytes, use_container_width=True)
+            if display_text:
+                st.markdown(display_text)
+        elif display_text:
+            st.markdown(display_text)
+
     model = get_chat_model()
-    try:
-        with st.spinner(f"{display['emoji']} 마음의 정원사가 씨앗을 돌보고 있어요…"):
-            full_reply = generate_gemini_reply(
+
+    def _reply_token_stream() -> Iterator[str]:
+        try:
+            yield from iter_gemini_reply_stream(
                 model,
                 st.session_state.messages,
                 model_prompt,
                 image_bytes=image_bytes,
                 image_mime=image_mime,
             )
+        except Exception as exc:  # noqa: BLE001
+            yield _gemini_user_error(exc)
+
+    try:
+        with st.chat_message("assistant", avatar=display["emoji"]):
+            streamed = st.write_stream(_reply_token_stream())
+            full_reply = (streamed or "").strip() if isinstance(streamed, str) else ""
     except Exception as exc:  # noqa: BLE001
         full_reply = _gemini_user_error(exc)
+        with st.chat_message("assistant", avatar=display["emoji"]):
+            st.markdown(full_reply)
 
     if not full_reply.strip():
         full_reply = (

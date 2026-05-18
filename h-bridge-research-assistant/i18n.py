@@ -29,8 +29,8 @@ FOOTER_BANNER: dict[str, str] = {
     "primary": (
         "🌿 들쭉날쭉사람연구소: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
     ),
-    "secondary": "Jaggedness Lab: Narrative Research Hub for Individuality",
-    "copyright": "© 2026 Jaggedness Lab by sinihyun. All Rights Reserved.",
+    "secondary": "Dlinso Lab",
+    "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
     "powered": "Powered by Gemini 2.5 Flash · Google Sheets",
 }
 
