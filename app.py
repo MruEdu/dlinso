@@ -150,12 +150,24 @@ TOKEN_DIET_MESSAGE_THRESHOLD = 12
 
 
 def _html_layout_marker(*css_classes: str) -> None:
-    """위젯 사이에 HTML div를 열고 닫으면 Streamlit이 `</motion.div>`를 화면에 그립니다."""
+    """위젯 사이에 HTML div를 열고 닫으면 Streamlit이 `</div>`를 화면에 그립니다."""
     cls = " ".join(css_classes)
     st.markdown(
         f'<span class="layout-marker {cls}" hidden aria-hidden="true"></span>',
         unsafe_allow_html=True,
     )
+
+
+def _render_html_fragment(fragment: str) -> None:
+    """HTML 조각 렌더 — 구버전 Streamlit은 st.html(height=…) 미지원."""
+    html_fn = getattr(st, "html", None)
+    if callable(html_fn):
+        try:
+            html_fn(fragment)
+            return
+        except TypeError:
+            pass
+    st.markdown(fragment, unsafe_allow_html=True)
 
 
 def _gemini_user_error(exc: BaseException) -> str:
@@ -164,6 +176,8 @@ def _gemini_user_error(exc: BaseException) -> str:
     if "leaked" in low or ("403" in msg and "api key" in low):
         return t("err_gemini_leaked")
     return f"{t('err_gemini_reply')}: {msg}"
+
+
 TOKEN_DIET_KEEP_RECENT = 8
 MAX_STORED_MESSAGES = 48
 
@@ -1631,7 +1645,7 @@ def render_main_header(display: dict) -> None:
         f'<div class="profile-strip">{"".join(pills)}</div>'
         f"</section>"
     )
-    st.html(hero_html, height=240)
+    _render_html_fragment(hero_html)
     render_hub_slogan_banner()
 
 
