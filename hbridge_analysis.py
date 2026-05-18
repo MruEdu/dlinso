@@ -256,11 +256,21 @@ def count_user_turns(messages: list[dict]) -> int:
 
 
 def _user_texts(messages: list[dict]) -> list[str]:
-    return [
-        str(m.get("content") or m.get("display") or "").strip()
-        for m in messages
-        if m.get("role") == "user" and str(m.get("content") or "").strip()
-    ]
+    """사용자 발화 — 사진 턴은 display(직접 입력)와 content(분석) 중 더 풍부한 쪽."""
+    out: list[str] = []
+    for m in messages:
+        if m.get("role") != "user":
+            continue
+        content = str(m.get("content") or "").strip()
+        display = str(m.get("display") or "").strip()
+        if m.get("image_bytes"):
+            candidates = [p for p in (display, content) if p]
+            text = max(candidates, key=len) if candidates else ""
+        else:
+            text = content or display
+        if text:
+            out.append(text)
+    return out
 
 
 def is_trivial_utterance(text: str) -> bool:
@@ -337,8 +347,8 @@ def assess_midpoint_readiness(
 ) -> dict[str, Any]:
     """
     중간 정리(OR 정밀 리포트) 실행 가능 여부.
-    10턴 미만 → ready=False, reason=insufficient_turns
-    10턴 이상이나 발화 빈약 → ready=False, scaffolding
+    10턴 미만 → ready=False
+    10턴 이상 → ready=True (버튼 노출과 동일; 품질은 checks·quality_ok에만 기록)
     """
     texts = _user_texts(messages)
     n = user_turns if user_turns is not None else len(texts)
@@ -348,6 +358,8 @@ def assess_midpoint_readiness(
             "reason": "insufficient_turns",
             "user_turns": n,
             "scaffolding_message": "",
+            "quality_ok": False,
+            "checks": {},
         }
 
     substantive = [t for t in texts if not is_trivial_utterance(t)]
@@ -371,15 +383,16 @@ def assess_midpoint_readiness(
         ),
         "topics": topics_hit >= MIN_TOPIC_CATEGORIES_HIT,
     }
-    ready = all(checks.values())
+    quality_ok = all(checks.values())
 
     return {
-        "ready": ready,
-        "reason": "ok" if ready else "sparse_content",
+        "ready": True,
+        "reason": "ok" if quality_ok else "sparse_content",
         "user_turns": n,
         "substantive_turns": len(substantive),
         "checks": checks,
-        "scaffolding_message": MIDPOINT_SCAFFOLDING_MESSAGE if not ready else "",
+        "quality_ok": quality_ok,
+        "scaffolding_message": "",
     }
 
 

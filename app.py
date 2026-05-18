@@ -2355,26 +2355,14 @@ def _deliver_midpoint_scaffolding(
 
 
 def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
-    """특허 기반 중간 분석 — 10턴+품질 통과 시에만 정밀 리포트."""
+    """특허 기반 중간 분석 — 10턴 달성 시 마음 지도 리포트 생성."""
     turn_count = effective_user_turn_count()
-    readiness = assess_midpoint_readiness(
-        st.session_state.messages,
-        user_turns=turn_count,
-    )
     if turn_count < MIN_USER_TURNS_FOR_MIDPOINT:
         st.warning(
             t("midpoint_need_turns").format(
                 need=MIN_USER_TURNS_FOR_MIDPOINT,
                 current=turn_count,
             )
-        )
-        return
-
-    if not readiness["ready"]:
-        _deliver_midpoint_scaffolding(
-            display,
-            sheets,
-            readiness["scaffolding_message"] or t("midpoint_scaffold_default"),
         )
         return
 
@@ -2504,14 +2492,7 @@ def _render_reflection_depth_gauge() -> dict[str, Any]:
             )
         )
     elif prog["percent"] >= 100:
-        readiness = assess_midpoint_readiness(
-            st.session_state.messages,
-            user_turns=effective_user_turn_count(),
-        )
-        if readiness["ready"]:
-            st.caption(t("narrative_asset_progress_ready"))
-        else:
-            st.caption(t("narrative_asset_progress_need_detail"))
+        st.caption(t("narrative_asset_progress_ready"))
     return prog
 
 
