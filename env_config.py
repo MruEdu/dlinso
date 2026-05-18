@@ -169,16 +169,8 @@ def _coerce_service_account_dict(raw: Any) -> dict[str, Any] | None:
 def get_service_account_info() -> dict[str, Any] | None:
     """
     Google 서비스 계정 JSON.
-    우선순위: service_account.json(로컬) → st.secrets(Cloud 배포).
-  """
-    if SERVICE_ACCOUNT_FILE.is_file():
-        try:
-            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and data.get("client_email"):
-                return _normalize_service_account_dict(data)
-        except (OSError, json.JSONDecodeError):
-            pass
-
+    우선순위: st.secrets(Cloud) → 로컬 service_account.json(개발용, Git 미포함).
+    """
     secrets = _streamlit_secrets()
     if secrets is not None:
         for name in _SERVICE_ACCOUNT_SECRET_KEYS:
@@ -189,18 +181,19 @@ def get_service_account_info() -> dict[str, Any] | None:
             info = _coerce_service_account_dict(_secret_raw(key))
             if info and info.get("client_email"):
                 return info
+
+    if SERVICE_ACCOUNT_FILE.is_file():
+        try:
+            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("client_email"):
+                return _normalize_service_account_dict(data)
+        except (OSError, json.JSONDecodeError):
+            pass
     return None
 
 
 def credentials_source_label() -> str:
     """연결 진단용 — secrets / file / none."""
-    if SERVICE_ACCOUNT_FILE.is_file():
-        try:
-            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and data.get("client_email"):
-                return "service_account.json"
-        except (OSError, json.JSONDecodeError):
-            pass
     secrets = _streamlit_secrets()
     if secrets is not None:
         for name in _SERVICE_ACCOUNT_SECRET_KEYS:
@@ -209,6 +202,13 @@ def credentials_source_label() -> str:
         for key in _SERVICE_ACCOUNT_JSON_KEYS:
             if _secret_raw(key) is not None:
                 return f"st.secrets[{key}]"
+    if SERVICE_ACCOUNT_FILE.is_file():
+        try:
+            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("client_email"):
+                return "service_account.json (local only)"
+        except (OSError, json.JSONDecodeError):
+            pass
     return "none"
 
 
