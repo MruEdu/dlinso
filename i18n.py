@@ -27,7 +27,7 @@ LANG_FULL: dict[str, str] = {
 # 하단 배너 — 언어 선택과 무관하게 한/영 병기 (글로벌 공통)
 FOOTER_BANNER: dict[str, str] = {
     "primary": (
-        "🌿 들쭉날쭉연구소: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
+        "🌿 들쭉날쭉사람연구소: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
     ),
     "secondary": "Jaggedness Lab: Narrative Research Hub for Individuality",
     "copyright": "© 2026 Jaggedness Lab by sinihyun. All Rights Reserved.",
