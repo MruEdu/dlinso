@@ -1984,22 +1984,16 @@ def _take_pending_turn() -> dict[str, Any] | None:
     return turn
 
 
-def render_chat_composer() -> bool:
+def render_chat_composer_body() -> bool:
     """
-    하단 입력·사진 업로드. 전송 시 pending_turn에 넣고 rerun → 입력창 자동 비움.
-    모바일은 st.chat_input 대신 본문 고정 입력(전송·아바타 겹침 방지).
-    반환: 이번 실행에서 전송을 큐에 넣었으면 True.
+    사진 + 모바일 입력(텍스트 영역·보내기). st.chat_input 은 넣지 않음 —
+    Streamlit은 chat_input을 st.container 안에 두면 오류가 날 수 있음.
     """
     if st.session_state.conversation_closed:
         return False
 
     alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
     guide_placeholder = t("chat_composer_guide")
-    desktop_placeholder = (
-        t("chat_ph_giant")
-        if st.session_state.phase != PHASE_COLLECT
-        else guide_placeholder
-    )
 
     st.caption(t("chat_photo_row_caption"))
     photo = st.file_uploader(
@@ -2028,9 +2022,7 @@ def render_chat_composer() -> bool:
             use_container_width=True,
         )
 
-    prompt = st.chat_input(desktop_placeholder, key="main_chat_input")
-
-    text = (prompt or "").strip()
+    text = ""
     if mobile_send and (mobile_text or "").strip():
         text = (mobile_text or "").strip()
 
@@ -2046,6 +2038,42 @@ def render_chat_composer() -> bool:
         st.rerun()
         return True
     return False
+
+
+def render_desktop_chat_input_submit() -> bool:
+    """
+    PC용 st.chat_input — 반드시 st.container 바깥(메인 열)에서만 호출.
+    """
+    if st.session_state.conversation_closed:
+        return False
+    guide_placeholder = t("chat_composer_guide")
+    desktop_placeholder = (
+        t("chat_ph_giant")
+        if st.session_state.phase != PHASE_COLLECT
+        else guide_placeholder
+    )
+    prompt = st.chat_input(desktop_placeholder, key="main_chat_input")
+    text = (prompt or "").strip()
+
+    image_bytes: bytes | None = None
+    image_mime: str | None = None
+    photo = st.session_state.get("chat_photo_upload")
+    if photo is not None:
+        try:
+            image_bytes = photo.getvalue()
+            image_mime = getattr(photo, "type", None) or "image/jpeg"
+        except Exception:  # noqa: BLE001
+            image_bytes = None
+
+    if text or image_bytes:
+        _enqueue_chat_turn(text, image_bytes=image_bytes, image_mime=image_mime)
+        _bump_chat_composer_nonce()
+        st.rerun()
+        return True
+    return False
+
+
+# render_chat_composer_body / render_desktop_chat_input_submit 만 사용 (chat_input 은 컨테이너 밖).
 
 
 def main() -> None:
@@ -2150,7 +2178,10 @@ def _run_app() -> None:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
                 render_chat_area(display)
-            composer_queued = render_chat_composer()
+            composer_queued = render_chat_composer_body()
+
+    if not st.session_state.conversation_closed and not composer_queued:
+        composer_queued = render_desktop_chat_input_submit()
 
     if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
