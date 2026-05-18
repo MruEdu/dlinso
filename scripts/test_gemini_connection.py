@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 from dotenv import load_dotenv
 
 # 루트 env_config 기준 .env + 로컬 개발용 하위 .env
-from env_config import ENV_PATH, get_gemini_api_key
+from env_config import ENV_PATH, get_gemini_api_key, get_gemini_model_name
 
 load_dotenv(ENV_PATH, override=True)
 if HB_ENV.is_file():
@@ -56,7 +56,9 @@ def main() -> int:
         print(f"OK: API 인증 성공 (generateContent 모델 {len(models)}개)")
 
         # 2) 짧은 생성 테스트
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model_name = get_gemini_model_name()
+        print(f"OK: 사용 모델 ID = {model_name}")
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content("Say PONG")
         text = ""
         try:

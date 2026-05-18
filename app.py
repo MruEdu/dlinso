@@ -22,6 +22,7 @@ from env_config import (
     ENV_PATH,
     credentials_source_label,
     get_gemini_api_key,
+    get_gemini_model_name,
     get_google_sheet_id,
 )
 from narrative_engine import (
@@ -77,7 +78,6 @@ from sheets_logger import SheetsLogger, hash_password
 
 os.chdir(APP_DIR)
 
-GEMINI_MODEL = "gemini-1.5-flash"
 PAGE_TITLE = SERVICE_TITLE
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 VIEW_INTRO = "intro"
@@ -1520,7 +1520,7 @@ def get_chat_model() -> genai.GenerativeModel:
         else 2048
     )
     return genai.GenerativeModel(
-        GEMINI_MODEL,
+        get_gemini_model_name(),
         system_instruction=build_system_instruction(),
         generation_config=genai.GenerationConfig(
             temperature=0.82,

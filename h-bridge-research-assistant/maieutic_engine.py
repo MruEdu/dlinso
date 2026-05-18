@@ -7,10 +7,9 @@ from typing import Any
 
 import google.generativeai as genai
 
+from env_config import get_gemini_model_name
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
 from personas import GUIDE_NAME, LANG_REPLY
-
-VISION_MODEL = "gemini-1.5-flash"
 GARDEN_KEEPER_NAME = "마음의 정원사"
 
 # Gemini System Instruction — 글로벌 정원사 (모든 Phase·언어 공통)
@@ -179,7 +178,7 @@ def analyze_uploaded_image(
         f"{f'Participant note with the photo: {note}' if note else ''}"
     )
     model = genai.GenerativeModel(
-        VISION_MODEL,
+        get_gemini_model_name(),
         generation_config=genai.GenerationConfig(
             temperature=0.45,
             max_output_tokens=600,

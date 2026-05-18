@@ -7,9 +7,7 @@ import re
 
 import google.generativeai as genai
 
-from env_config import ENV_PATH, get_gemini_api_key
-
-ANALYSIS_MODEL = "gemini-1.5-flash"
+from env_config import ENV_PATH, get_gemini_api_key, get_gemini_model_name
 _gemini_configured = False
 
 PROFILE_KEYS = (
@@ -96,7 +94,7 @@ def _clamp_score(value: object, default: float = 50.0) -> float:
 def _analysis_model(max_tokens: int = 700) -> genai.GenerativeModel:
     ensure_gemini_configured()
     return genai.GenerativeModel(
-        ANALYSIS_MODEL,
+        get_gemini_model_name(),
         generation_config=genai.GenerationConfig(
             temperature=0.2,
             max_output_tokens=max_tokens,

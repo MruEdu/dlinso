@@ -42,9 +42,13 @@ _SERVICE_ACCOUNT_JSON_KEYS = (
 # 환경 변수: secrets 우선 → os.environ (.env)
 _CONFIG_KEYS = (
     "GEMINI_API_KEY",
+    "GEMINI_MODEL",
     "GOOGLE_SHEET_ID",
     "INQUIRY_EMAIL",
 )
+
+# API 키별 사용 가능 모델이 다름. 1.5-flash 는 v1beta 에서 404 인 경우 많음.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 # 연구 협업·문의 기본 수신 (env에 추가 주소가 있으면 함께 사용)
 DEFAULT_INQUIRY_EMAIL = "hyc6999@gmail.com"
@@ -77,6 +81,17 @@ def get_config(key: str, default: str = "") -> str:
     if raw is not None and str(raw).strip():
         return str(raw).strip()
     return os.getenv(key, default).strip()
+
+
+def get_gemini_model_name() -> str:
+    """
+    채팅·분석·비전 공통 모델 ID.
+    .env / Streamlit Secrets 의 GEMINI_MODEL 로 덮어쓸 수 있음.
+    """
+    name = get_config("GEMINI_MODEL")
+    if name and not name.startswith("your_"):
+        return name
+    return DEFAULT_GEMINI_MODEL
 
 
 def get_gemini_api_key() -> str:
