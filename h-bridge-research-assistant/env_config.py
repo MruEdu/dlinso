@@ -1,4 +1,9 @@
-"""앱 설정 — 로컬 .env + 배포(Streamlit) st.secrets 통합."""
+"""
+앱 설정 — 로컬 .env + 배포(Streamlit) st.secrets 통합.
+
+보안: GEMINI_API_KEY 는 .env(로컬) 또는 Streamlit Cloud Secrets 에만 둡니다.
+코드에 문자열로 넣지 마세요. Cloud: Settings → Secrets → GEMINI_API_KEY → Reboot.
+"""
 
 from __future__ import annotations
 
@@ -70,8 +75,9 @@ def get_config(key: str, default: str = "") -> str:
 
 
 def get_gemini_api_key() -> str:
+    """st.secrets(Cloud) 우선, 없으면 os.getenv / .env."""
     key = get_config("GEMINI_API_KEY")
-    if not key or key == "your_gemini_api_key_here":
+    if not key or key in ("your_gemini_api_key_here", "your_gemini_api_key"):
         return ""
     return key
 

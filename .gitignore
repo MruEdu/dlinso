@@ -1,13 +1,16 @@
-# secrets & local config
+# secrets & local config — API 키·서비스 계정 절대 커밋 금지
 .env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
 .streamlit/secrets.toml
+**/.streamlit/secrets.toml
+!**/.streamlit/secrets.toml.example
 .streamlit/credentials.toml
 service_account.json
-h-bridge-research-assistant/service_account.json
-h-bridge-research-assistant/.env
+**/service_account.json
 h-bridge-research-assistant/.venv/
-h-bridge-research-assistant/.streamlit/secrets.toml
-h-bridge-research-assistant/.streamlit/credentials.toml
 
 # python
 .venv/

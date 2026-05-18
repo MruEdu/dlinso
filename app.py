@@ -1382,6 +1382,8 @@ def nickname_exists(sheets: SheetsLogger, nickname: str) -> bool:
 
 
 def init_gemini() -> tuple[bool, str | None]:
+    # 키 출처: env_config.get_gemini_api_key() → st.secrets(Cloud) 또는 .env(로컬)
+    # Cloud 배포 시 Streamlit Settings → Secrets 에 GEMINI_API_KEY 필수 (Reboot)
     api_key = get_gemini_api_key()
     if not api_key:
         return False, f"GEMINI_API_KEY가 설정되지 않았습니다. ({ENV_PATH})"

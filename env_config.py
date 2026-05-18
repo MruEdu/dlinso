@@ -1,4 +1,14 @@
-"""앱 설정 — 로컬 .env + 배포(Streamlit) st.secrets 통합."""
+"""
+앱 설정 — 로컬 .env + 배포(Streamlit) st.secrets 통합.
+
+보안 (API 키):
+  - 코드에 GEMINI_API_KEY 를 문자열로 넣지 마세요.
+  - 로컬: `.env` (Git 제외) — `.env.example` 만 커밋
+  - Streamlit Cloud: 앱 → Settings → Secrets → TOML 예:
+        GEMINI_API_KEY = "새로_발급한_키"
+    저장 후 Reboot app 필수.
+  - 유출된 키는 Google AI Studio 에서 폐기·재발급하세요.
+"""
 
 from __future__ import annotations
 
@@ -70,8 +80,15 @@ def get_config(key: str, default: str = "") -> str:
 
 
 def get_gemini_api_key() -> str:
+    """
+    Gemini API 키 — st.secrets(Cloud) 우선, 없으면 os.getenv / .env.
+    하드코딩 금지. 키 미설정 시 빈 문자열.
+    """
     key = get_config("GEMINI_API_KEY")
-    if not key or key == "your_gemini_api_key_here":
+    if not key or key in (
+        "your_gemini_api_key_here",
+        "your_gemini_api_key",
+    ):
         return ""
     return key
 
