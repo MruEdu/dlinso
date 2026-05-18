@@ -44,13 +44,6 @@ LIFE_CONTEXTS = [
     "기타",
 ]
 
-CLOSING_USER_PATTERNS = re.compile(
-    r"마무리|끝|그만|고마워|감사|요약|정리|오늘은\s*여기|잘\s*자",
-    re.I,
-)
-
-MIN_USER_TURNS_FOR_SUMMARY = 5
-
 LANG_NAMES = {
     "ko": "Korean",
     "en": "English",
@@ -282,14 +275,6 @@ def analyze_narrative_turn(
         "metaphors": _format_research_list(data.get("metaphors")),
         "turning_points": _format_research_list(data.get("turning_points")),
     }
-
-
-def should_offer_closing(messages: list[dict], user_message: str) -> bool:
-    """마무리 의사 표현 또는 대화가 충분히 진행된 경우."""
-    if CLOSING_USER_PATTERNS.search(user_message):
-        return True
-    user_turns = sum(1 for m in messages if m["role"] == "user")
-    return user_turns >= MIN_USER_TURNS_FOR_SUMMARY and len(messages) >= 8
 
 
 def generate_life_summary(

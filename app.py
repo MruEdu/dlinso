@@ -31,7 +31,6 @@ from narrative_engine import (
     extract_positive_resources,
     generate_life_summary,
     pick_summoned_narrative,
-    should_offer_closing,
     summarize_messages,
 )
 from personas import (
@@ -398,11 +397,8 @@ CUSTOM_CSS = """
         letter-spacing: -0.02em !important;
         white-space: nowrap !important;
     }
-    /* 데스크톱 — 모바일 전용 입력 숨김 */
+    /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림(:has 숨김은 대화 패널 오동작 유발) */
     @media (min-width: 601px) {
-        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) {
-            display: none !important;
-        }
         button[data-testid="baseButton-secondary"][aria-label*="문의"],
         button[data-testid="baseButton-primary"][aria-label*="문의"] {
             font-size: 0.82rem !important;
@@ -1937,9 +1933,7 @@ def handle_chat_turn(
     if st.session_state.get("is_returning_user"):
         st.session_state.is_returning_user = False
 
-    if st.session_state.get("_request_summary") or should_offer_closing(
-        st.session_state.messages, model_prompt
-    ):
+    if st.session_state.get("_request_summary"):
         st.session_state.pop("_request_summary", None)
         deliver_life_summary(gemini_ok)
 
@@ -1984,6 +1978,42 @@ def _take_pending_turn() -> dict[str, Any] | None:
     return turn
 
 
+def _is_mobile_client() -> bool:
+    """PC 우선: 모바일·태블릿으로 확실할 때만 True. 애매하면 False(하단 chat_input)."""
+    try:
+        ctx = getattr(st, "context", None)
+        headers = getattr(ctx, "headers", None) if ctx is not None else None
+        if headers is None:
+            return False
+        ch_mobile = (
+            headers.get("sec-ch-ua-mobile") or headers.get("Sec-CH-UA-Mobile") or ""
+        ).strip()
+        if ch_mobile == "?1":
+            return True
+        if ch_mobile == "?0":
+            return False
+        ua = (headers.get("user-agent") or headers.get("User-Agent") or "").lower()
+        if not ua:
+            return False
+    except Exception:  # noqa: BLE001
+        return False
+    if any(
+        s in ua
+        for s in (
+            "mobi",
+            "android",
+            "iphone",
+            "ipad",
+            "ipod",
+            "iemobile",
+            "blackberry",
+            "webos",
+        )
+    ):
+        return True
+    return False
+
+
 def render_chat_composer_body() -> bool:
     """
     사진 + 모바일 입력(텍스트 영역·보내기). st.chat_input 은 넣지 않음 —
@@ -2002,6 +2032,9 @@ def render_chat_composer_body() -> bool:
         key="chat_photo_upload",
         label_visibility="collapsed",
     )
+
+    if not _is_mobile_client():
+        return False
 
     _html_layout_marker("mobile-chat-composer-marker")
     text_col, send_col = st.columns([5.2, 1], gap="small")
@@ -2171,17 +2204,14 @@ def _run_app() -> None:
             if gemini_error and "leaked" in gemini_error.lower():
                 st.markdown(t("err_gemini_leaked"))
 
-        composer_queued = True
         if st.session_state.conversation_closed:
             render_chat_area(display)
         else:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
                 render_chat_area(display)
-            composer_queued = render_chat_composer_body()
 
-    if not st.session_state.conversation_closed and not composer_queued:
-        composer_queued = render_desktop_chat_input_submit()
+    composer_queued = render_chat_composer_body()
 
     if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
@@ -2202,6 +2232,9 @@ def _run_app() -> None:
     with st.container():
         _html_layout_marker("app-content-pad-marker")
         render_lab_footer()
+
+    if not st.session_state.conversation_closed and not composer_queued:
+        render_desktop_chat_input_submit()
 
 
 # Streamlit Cloud는 스크립트를 매 rerun마다 실행 — main()을 항상 호출

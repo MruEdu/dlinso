@@ -3,6 +3,11 @@
 .streamlit/secrets.toml
 .streamlit/credentials.toml
 service_account.json
+h-bridge-research-assistant/service_account.json
+h-bridge-research-assistant/.env
+h-bridge-research-assistant/.venv/
+h-bridge-research-assistant/.streamlit/secrets.toml
+h-bridge-research-assistant/.streamlit/credentials.toml
 
 # python
 .venv/
