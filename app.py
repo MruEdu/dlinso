@@ -393,7 +393,11 @@ CUSTOM_CSS = """
         letter-spacing: -0.02em !important;
         white-space: nowrap !important;
     }
+    /* 데스크톱 — 모바일 전용 입력 숨김 */
     @media (min-width: 601px) {
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) {
+            display: none !important;
+        }
         button[data-testid="baseButton-secondary"][aria-label*="문의"],
         button[data-testid="baseButton-primary"][aria-label*="문의"] {
             font-size: 0.82rem !important;
@@ -414,12 +418,32 @@ CUSTOM_CSS = """
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="column"]:nth-child(2) {
             display: none !important;
         }
+        /* 모바일: 고정 문의 버튼·네이티브 chat_input(전송·아바타 겹침) 숨김 */
         .inquiry-fab-anchor.fab-above-chat ~ div[data-testid="stElementContainer"] {
-            bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)) !important;
+            display: none !important;
         }
-        .inquiry-fab-anchor.fab-low ~ div[data-testid="stElementContainer"] {
-            bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
-            width: min(94vw, 22rem) !important;
+        [data-testid="stBottomBlockContainer"] {
+            display: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) {
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 1000 !important;
+            background: rgba(255, 252, 248, 0.98) !important;
+            border-top: 1px solid rgba(120, 100, 80, 0.15) !important;
+            padding: 0.5rem 0.35rem calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
+            margin: 0 -0.35rem !important;
+            box-shadow: 0 -4px 18px rgba(90, 70, 50, 0.08) !important;
+        }
+        div[data-testid="column"]:has(.mobile-chat-send-marker) button {
+            min-height: 3.1rem !important;
+            width: 100% !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="column"]:has(.mobile-chat-send-marker) {
+            display: flex !important;
+            align-items: flex-end !important;
         }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button {
             font-size: clamp(0.88rem, 3.8vw, 1.05rem) !important;
@@ -1938,29 +1962,52 @@ def _take_pending_turn() -> dict[str, Any] | None:
 def render_chat_composer() -> bool:
     """
     하단 입력·사진 업로드. 전송 시 pending_turn에 넣고 rerun → 입력창 자동 비움.
+    모바일은 st.chat_input 대신 본문 고정 입력(전송·아바타 겹침 방지).
     반환: 이번 실행에서 전송을 큐에 넣었으면 True.
     """
     if st.session_state.conversation_closed:
         return False
 
-    st.caption(t("chat_photo_hint"))
-    photo = st.file_uploader(
-        t("chat_photo_label"),
-        type=["jpg", "jpeg", "png", "webp"],
-        key="chat_photo_upload",
-        label_visibility="collapsed",
-    )
-
+    alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
     placeholder = (
         t("chat_ph_collect")
         if st.session_state.phase == PHASE_COLLECT
         else t("chat_ph_giant")
     )
+
+    with st.expander(f"📷 {t('chat_photo_label')}", expanded=False):
+        st.caption(t("chat_photo_hint"))
+        photo = st.file_uploader(
+            t("chat_photo_label"),
+            type=["jpg", "jpeg", "png", "webp"],
+            key="chat_photo_upload",
+            label_visibility="collapsed",
+        )
+
+    _html_layout_marker("mobile-chat-composer-marker")
+    st.caption(t("mobile_inquiry_hint"))
+    text_col, send_col = st.columns([5.2, 1], gap="small", vertical_alignment="bottom")
+    with text_col:
+        mobile_text = st.text_area(
+            "mobile_message",
+            key=f"mobile_chat_input_{alt_nonce}",
+            height=72,
+            placeholder=placeholder,
+            label_visibility="collapsed",
+        )
+    with send_col:
+        _html_layout_marker("mobile-chat-send-marker")
+        mobile_send = st.button(
+            t("chat_alt_send"),
+            key=f"mobile_send_{alt_nonce}",
+            type="primary",
+            use_container_width=True,
+        )
+
     prompt = st.chat_input(placeholder, key="main_chat_input")
 
     alt_text = ""
     alt_send = False
-    alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
     alt_key = f"alt_chat_input_{alt_nonce}"
     with st.expander(t("chat_alt_expander")):
         alt_text = st.text_area(
@@ -1977,7 +2024,9 @@ def render_chat_composer() -> bool:
         )
 
     text = (prompt or "").strip()
-    if alt_send and alt_text.strip():
+    if mobile_send and (mobile_text or "").strip():
+        text = (mobile_text or "").strip()
+    elif alt_send and alt_text.strip():
         text = alt_text.strip()
 
     image_bytes: bytes | None = None
