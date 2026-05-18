@@ -217,13 +217,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_start": "✅ Agree and start my story",
         "btn_continue": "✅ Continue my story",
         "gentle_record": "Your story is gently being recorded 🌿",
-        "input_hint": "💬 Type in the box below or upload a 📷 photo.",
-        "mobile_inquiry_hint": "For inquiries, use **✉️ Contact** in the top menu.",
+        "input_hint": (
+            "Tap here to chat. Upload a memory photo to talk about it. "
+            "Inquiries: top menu **✉️ Contact**."
+        ),
+        "chat_composer_guide": (
+            "Tap here to chat. Upload a memory photo to talk about it. "
+            "Inquiries: top menu **✉️ Contact**."
+        ),
         "chat_photo_label": "Upload photo",
         "chat_photo_hint": "📷 We read color, composition, and objects — then ask a maieutic question.",
-        "chat_alt_expander": "Can't see the input? Tap here",
         "chat_alt_send": "Send",
-        "chat_ph_collect": "Share a memory or a photo…",
+        "chat_ph_collect": "Write what's on your mind…",
         "chat_ph_giant": "Continue your story…",
         "opening": (
             "Shall we begin with a **memory that warms your heart**?\n\n"
