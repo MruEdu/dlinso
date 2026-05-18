@@ -457,17 +457,16 @@ CUSTOM_CSS = """
     div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) > div[data-testid="stVerticalBlock"] {
         gap: 0.2rem !important;
     }
-    div[data-testid="stVerticalBlock"]:has(.chat-messages-scroll-marker) {
-        min-height: 6rem;
-    }
     @media (max-width: 600px) {
+        /* 대화 카드·메시지 영역 높이 제한 없음 — 52vh 캡은 화면이 반으로 줄어드는 원인이었음 */
+        div[data-testid="stVerticalBlock"]:has(.unified-chat-panel-marker) {
+            max-height: none !important;
+            overflow: visible !important;
+        }
         div[data-testid="stVerticalBlock"]:has(.chat-messages-scroll-marker) {
-            max-height: min(52vh, 26rem) !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-            -webkit-overflow-scrolling: touch !important;
-            padding-bottom: 0.5rem !important;
-            margin-bottom: 0.35rem !important;
+            max-height: none !important;
+            overflow: visible !important;
+            min-height: 0 !important;
         }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {
             position: sticky !important;
@@ -1936,7 +1935,6 @@ def render_main_header(display: dict) -> None:
 
 
 def render_chat_area(display: dict) -> None:
-    _html_layout_marker("chat-messages-scroll-marker")
     if st.session_state.life_summary:
         st.markdown(
             f'<div class="life-summary-box">{st.session_state.life_summary}</div>',
