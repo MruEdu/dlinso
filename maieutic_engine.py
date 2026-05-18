@@ -110,17 +110,14 @@ def analyze_uploaded_image(
     note = (user_note or "").strip()[:500]
     reply_lang = LANG_REPLY.get(lang, "Korean")
     prompt = (
-        "You are a cross-cultural maieutic gardener (Mind Gardener) for dlinso.\n"
-        "Do NOT only describe pixels — infer **psychological meaning** as a **seed** "
-        "for the participant's narrative fruit.\n"
-        "Respect cultural sensitivity; output JSON only in the participant's language "
-        f"({reply_lang}).\n"
-        "{\n"
-        f'  "visual": "color, composition, light, objects (in {reply_lang})",\n'
-        f'  "symbol": "one object as psychological symbol — seed metaphor ok (in {reply_lang})",\n'
-        f'  "hook": "one maieutic bridge for the Mind Gardener — garden/seed/fruit metaphor (in {reply_lang})"\n'
-        "}\n"
-        f"{f'[Participant note] {note}' if note else ''}"
+        f"You are {GARDEN_KEEPER_NAME} (Mind Gardener) for dlinso.\n"
+        "Read this photo for a warm, human conversation — not a technical report.\n"
+        f"Write all string values in {reply_lang} only.\n"
+        "Output valid JSON with exactly these keys (no markdown, no code fence):\n"
+        '  "visual": "1–2 gentle sentences: what you see and the feeling it suggests",\n'
+        '  "symbol": "one detail that could open the person\'s story",\n'
+        '  "hook": "one open question to invite their story (do not answer it)"\n'
+        f"{f'Participant note with the photo: {note}' if note else ''}"
     )
     model = genai.GenerativeModel(
         VISION_MODEL,
@@ -155,20 +152,62 @@ def analyze_uploaded_image(
         }
 
 
-def format_image_context_for_chat(analysis: dict[str, str]) -> str:
-    return (
-        "[📷 Image–text fusion / 이미지-텍스트 융합]\n"
-        f"· Visual / 시각: {analysis.get('visual', '')}\n"
-        f"· Symbol (seed) / 상징(씨앗): {analysis.get('symbol', '')}\n"
-        f"· Garden hook / 정원사 연결: {analysis.get('hook', '')}"
-    )
+def _clean_analysis_field(value: str) -> str:
+    text = (value or "").strip()
+    if not text or text in ("—", "-"):
+        return ""
+    if text.startswith("{"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                return _clean_analysis_field(str(parsed.get("visual", "")))
+        except json.JSONDecodeError:
+            pass
+    return text
+
+
+def format_image_display_for_user(
+    analysis: dict[str, str] | None,
+    user_text: str,
+) -> str:
+    """채팅 말풍선에 보이는 짧은 문장 — 기계적 메타데이터는 숨김."""
+    text = (user_text or "").strip()
+    if text:
+        return text
+    if not analysis:
+        return "📷 사진"
+    visual = _clean_analysis_field(str(analysis.get("visual", "")))
+    if visual:
+        return visual[:240]
+    return "📷 사진을 보냈어요"
+
+
+def format_image_context_for_model(
+    analysis: dict[str, str],
+    user_text: str = "",
+) -> str:
+    """Gemini 대화용 맥락 — UI에 노출하지 않음."""
+    lines: list[str] = []
+    note = (user_text or "").strip()
+    if note:
+        lines.append(f"참여자가 함께 적은 말: {note}")
+    visual = _clean_analysis_field(str(analysis.get("visual", "")))
+    symbol = _clean_analysis_field(str(analysis.get("symbol", "")))
+    hook = _clean_analysis_field(str(analysis.get("hook", "")))
+    if visual:
+        lines.append(f"사진에서 읽은 장면·느낌: {visual}")
+    if symbol:
+        lines.append(f"이야기의 씨앗이 될 만한 요소: {symbol}")
+    if hook:
+        lines.append(f"정원사가 이어갈 질문 방향: {hook}")
+    return "\n".join(lines) if lines else note or "참여자가 사진만 보냈습니다."
 
 
 def merge_text_and_image(user_text: str, analysis: dict[str, str] | None) -> str:
     text = (user_text or "").strip()
     if not analysis:
         return text
-    block = format_image_context_for_chat(analysis)
+    block = format_image_context_for_model(analysis, user_text)
     if text:
         return f"{text}\n\n{block}"
     return block

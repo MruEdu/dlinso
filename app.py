@@ -51,6 +51,7 @@ from maieutic_engine import (
     analyze_uploaded_image,
     build_global_maieutic_system_instruction,
     build_maieutic_addon,
+    format_image_display_for_user,
     merge_text_and_image,
 )
 from narrative_engine import translate_to_korean
@@ -1298,6 +1299,13 @@ def _message_text(msg: dict) -> str:
     return str(msg.get("content") or "").strip()
 
 
+def _user_visible_text(msg: dict) -> str:
+    """사진 메시지는 display만 보여 주고, AI용 content(분석 블록)는 숨김."""
+    if msg.get("role") == "user" and msg.get("image_bytes"):
+        return str(msg.get("display") or "").strip()
+    return _message_text(msg)
+
+
 def _last_user_display_text() -> str:
     for msg in reversed(st.session_state.messages):
         if msg.get("role") == "user":
@@ -1694,14 +1702,14 @@ def render_chat_area(display: dict) -> None:
             avatar = "🧑" if message["role"] == "user" else display["emoji"]
             with st.chat_message(message["role"], avatar=avatar):
                 if message.get("image_bytes"):
-                    st.image(
-                        message["image_bytes"],
-                        caption=str(message.get("display") or "")[:120] or None,
-                        use_container_width=True,
-                    )
-                body = _message_text(message)
-                if body:
-                    st.markdown(body)
+                    st.image(message["image_bytes"], use_container_width=True)
+                    caption = _user_visible_text(message)
+                    if caption:
+                        st.markdown(caption)
+                else:
+                    body = _user_visible_text(message)
+                    if body:
+                        st.markdown(body)
 
 
 def stream_gemini_reply(
@@ -1763,7 +1771,6 @@ def handle_chat_turn(
 
     apply_token_diet()
 
-    display_text = (user_text or "").strip() or ("📷 사진" if image_bytes else "")
     image_analysis: dict[str, str] | None = None
     if image_bytes:
         with st.spinner("📷 사진 속 이야기를 읽고 있어요…"):
@@ -1773,6 +1780,11 @@ def handle_chat_turn(
                 user_text,
                 lang=get_lang(),
             )
+
+    if image_bytes:
+        display_text = format_image_display_for_user(image_analysis, user_text)
+    else:
+        display_text = (user_text or "").strip()
 
     model_prompt = merge_text_and_image(user_text, image_analysis)
     if not model_prompt.strip():
