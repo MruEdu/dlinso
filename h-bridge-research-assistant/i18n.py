@@ -31,7 +31,7 @@ FOOTER_BANNER: dict[str, str] = {
     ),
     "secondary": "Dlinso Lab",
     "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
-    "powered": "Powered by Gemini 2.5 Flash · Google Sheets",
+    "powered": "Powered by Gemini 1.5 Flash · Google Sheets",
 }
 
 # 공통 옵션 (연령·학력은 연구 표준 한국어 라벨 유지, UI만 번역)

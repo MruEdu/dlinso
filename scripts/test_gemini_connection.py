@@ -56,7 +56,7 @@ def main() -> int:
         print(f"OK: API 인증 성공 (generateContent 모델 {len(models)}개)")
 
         # 2) 짧은 생성 테스트
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content("Say PONG")
         text = ""
         try:

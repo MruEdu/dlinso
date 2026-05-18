@@ -77,7 +77,7 @@ from sheets_logger import SheetsLogger, hash_password
 
 os.chdir(APP_DIR)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-1.5-flash"
 PAGE_TITLE = SERVICE_TITLE
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 VIEW_INTRO = "intro"

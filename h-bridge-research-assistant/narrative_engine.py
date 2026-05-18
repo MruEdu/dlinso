@@ -9,7 +9,7 @@ import google.generativeai as genai
 
 from env_config import ENV_PATH, get_gemini_api_key
 
-ANALYSIS_MODEL = "gemini-2.5-flash"
+ANALYSIS_MODEL = "gemini-1.5-flash"
 _gemini_configured = False
 
 PROFILE_KEYS = (

@@ -10,7 +10,7 @@ import google.generativeai as genai
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
 from personas import GUIDE_NAME, LANG_REPLY
 
-VISION_MODEL = "gemini-2.5-flash"
+VISION_MODEL = "gemini-1.5-flash"
 GARDEN_KEEPER_NAME = "마음의 정원사"
 
 # Gemini System Instruction — 글로벌 정원사 (모든 Phase·언어 공통)
