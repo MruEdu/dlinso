@@ -1574,26 +1574,14 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
 
 def render_hub_slogan_banner() -> None:
-    """서비스 취지 슬로건 — 안내 박스 + 익명 베타 테스트 강조."""
+    """서비스 취지 슬로건 — st.info + 베타 강조."""
     slogan_md = t("hub_slogan").strip()
     if not slogan_md:
         return
-    slogan_html = slogan_md.replace(
-        "**익명 베타 테스트**",
-        '<span class="beta-emphasis">익명 베타 테스트</span>',
-    )
-    if slogan_html == slogan_md:
-        slogan_html = re.sub(
-            r"\*\*anonymous beta test\*\*",
-            '<span class="beta-emphasis">anonymous beta test</span>',
-            slogan_md,
-            flags=re.I,
-        )
-    st.markdown(
-        f'<div class="hub-slogan-info">{slogan_html}</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption(t("hub_eyebrow"))
+    st.info(slogan_md)
+    beta_note = t("hub_slogan_beta_note").strip()
+    if beta_note:
+        st.caption(beta_note)
 
 
 def _profile_pill_html(icon: str, label: str, value: str, *, accent: bool = False) -> str:
@@ -2034,6 +2022,7 @@ def _run_app() -> None:
 
     if view == VIEW_INTRO:
         st.subheader("🏠 홈 (소개)")
+        render_hub_slogan_banner()
         render_intro()
         foot = st.container()
         with foot:

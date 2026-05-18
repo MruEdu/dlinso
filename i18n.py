@@ -41,7 +41,14 @@ TEXTS: dict[str, dict[str, str]] = {
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research · dlinso",
         "hub_tagline": "",
-        "hub_slogan": "",
+        "hub_slogan": (
+            "마음의 정원사와 나누는 들쭉날쭉한 일상 서사 — "
+            "당신만의 고유한 가치를 열매로 맺는 **익명 베타 테스트**에 함께해 주세요."
+        ),
+        "hub_slogan_beta_note": (
+            "지금은 **Beta 1.0** 익명 베타 기간입니다. "
+            "닉네임과 비밀번호만으로 안전하게 이어갈 수 있어요."
+        ),
         "err_gemini_reply": "응답 생성 중 오류가 발생했습니다",
         "err_gemini_leaked": (
             "Gemini API 키가 유출로 차단되었습니다. "
@@ -166,8 +173,11 @@ TEXTS: dict[str, dict[str, str]] = {
             "join our anonymous beta to grow your unique values into fruit."
         ),
         "hub_slogan": (
-            "Everyday bumpy stories with the **Mind Gardener** — "
+            "Everyday jagged stories with the **Mind Gardener** — "
             "grow your unique values into fruit. Join our **anonymous beta test**."
+        ),
+        "hub_slogan_beta_note": (
+            "Now in **Beta 1.0** — participate anonymously with only a nickname and password."
         ),
         "lang_label": "Language",
         "tab_new": "First visit",
