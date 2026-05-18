@@ -98,22 +98,69 @@ def get_inquiry_email() -> str:
     return ",".join(get_inquiry_emails())
 
 
+_PEM_BEGIN = "-----BEGIN PRIVATE KEY-----"
+_PEM_END = "-----END PRIVATE KEY-----"
+
+
+def _normalize_private_key(pk: str) -> str:
+    """
+    Streamlit Secrets TOML 붙여넣기 시 PEM 깨짐 보정.
+    (InvalidData InvalidByte — BOM·한글 주석·줄바꿈 누락 등)
+    """
+    if not isinstance(pk, str):
+        return pk
+    text = pk.strip().lstrip("\ufeff").strip("\u200b")
+    text = text.replace("\\n", "\n").replace("\\r", "")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # 따옴표로 한 번 더 감싼 경우
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        text = text[1:-1].replace("\\n", "\n")
+
+    begin = text.find(_PEM_BEGIN)
+    if begin < 0:
+        return text
+    if begin > 0:
+        text = text[begin:]
+    end = text.find(_PEM_END)
+    if end >= 0:
+        text = text[: end + len(_PEM_END)]
+
+    _, rest = text.split(_PEM_BEGIN, 1)
+    mid, _after = rest.split(_PEM_END, 1)
+    body = "".join(line.strip() for line in mid.splitlines())
+    body = body.replace(" ", "")
+    lines = [_PEM_BEGIN]
+    for i in range(0, len(body), 64):
+        lines.append(body[i : i + 64])
+    lines.append(_PEM_END)
+    return "\n".join(lines) + "\n"
+
+
+def _normalize_service_account_dict(data: dict[str, Any]) -> dict[str, Any]:
+    """Streamlit Secrets·JSON 붙여넣기 시 private_key 줄바꿈 보정."""
+    out = dict(data)
+    pk = out.get("private_key")
+    if isinstance(pk, str):
+        out["private_key"] = _normalize_private_key(pk)
+    return out
+
+
 def _coerce_service_account_dict(raw: Any) -> dict[str, Any] | None:
     if raw is None:
         return None
     if isinstance(raw, dict):
-        return dict(raw)
+        return _normalize_service_account_dict(dict(raw))
     # Streamlit SecretsAttrDict 등
     if hasattr(raw, "keys"):
         try:
-            return {k: raw[k] for k in raw.keys()}
+            return _normalize_service_account_dict({k: raw[k] for k in raw.keys()})
         except Exception:  # noqa: BLE001
             pass
     if isinstance(raw, str) and raw.strip():
         try:
             parsed = json.loads(raw)
             if isinstance(parsed, dict):
-                return parsed
+                return _normalize_service_account_dict(parsed)
         except json.JSONDecodeError:
             return None
     return None
@@ -122,8 +169,16 @@ def _coerce_service_account_dict(raw: Any) -> dict[str, Any] | None:
 def get_service_account_info() -> dict[str, Any] | None:
     """
     Google 서비스 계정 JSON.
-    우선순위: st.secrets(TOML 섹션/JSON 키) → service_account.json 파일.
-    """
+    우선순위: service_account.json(로컬) → st.secrets(Cloud 배포).
+  """
+    if SERVICE_ACCOUNT_FILE.is_file():
+        try:
+            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("client_email"):
+                return _normalize_service_account_dict(data)
+        except (OSError, json.JSONDecodeError):
+            pass
+
     secrets = _streamlit_secrets()
     if secrets is not None:
         for name in _SERVICE_ACCOUNT_SECRET_KEYS:
@@ -134,19 +189,18 @@ def get_service_account_info() -> dict[str, Any] | None:
             info = _coerce_service_account_dict(_secret_raw(key))
             if info and info.get("client_email"):
                 return info
-
-    if SERVICE_ACCOUNT_FILE.is_file():
-        try:
-            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and data.get("client_email"):
-                return data
-        except (OSError, json.JSONDecodeError):
-            return None
     return None
 
 
 def credentials_source_label() -> str:
     """연결 진단용 — secrets / file / none."""
+    if SERVICE_ACCOUNT_FILE.is_file():
+        try:
+            data = json.loads(SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("client_email"):
+                return "service_account.json"
+        except (OSError, json.JSONDecodeError):
+            pass
     secrets = _streamlit_secrets()
     if secrets is not None:
         for name in _SERVICE_ACCOUNT_SECRET_KEYS:
@@ -155,8 +209,6 @@ def credentials_source_label() -> str:
         for key in _SERVICE_ACCOUNT_JSON_KEYS:
             if _secret_raw(key) is not None:
                 return f"st.secrets[{key}]"
-    if SERVICE_ACCOUNT_FILE.is_file():
-        return "service_account.json"
     return "none"
 
 
