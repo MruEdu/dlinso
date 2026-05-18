@@ -1919,10 +1919,7 @@ def handle_chat_turn(
 
 
 def _bump_chat_composer_nonce() -> None:
-    """
-    입력창 비우기 — 위젯 생성 후 session_state[alt_chat_input_*] 를 건드리면
-    Streamlit 오류가 나므로 nonce만 올려 다음 rerun 에 새 key 로 그린다.
-    """
+    """입력창 비우기 — nonce를 올려 다음 rerun에 새 위젯 key로 다시 그린다."""
     st.session_state.chat_composer_nonce = (
         int(st.session_state.get("chat_composer_nonce", 0)) + 1
     )
@@ -2006,28 +2003,9 @@ def render_chat_composer() -> bool:
 
     prompt = st.chat_input(placeholder, key="main_chat_input")
 
-    alt_text = ""
-    alt_send = False
-    alt_key = f"alt_chat_input_{alt_nonce}"
-    with st.expander(t("chat_alt_expander")):
-        alt_text = st.text_area(
-            "메시지",
-            key=alt_key,
-            height=80,
-            label_visibility="collapsed",
-        )
-        alt_send = st.button(
-            t("chat_alt_send"),
-            key="alt_send_btn",
-            type="primary",
-            use_container_width=True,
-        )
-
     text = (prompt or "").strip()
     if mobile_send and (mobile_text or "").strip():
         text = (mobile_text or "").strip()
-    elif alt_send and alt_text.strip():
-        text = alt_text.strip()
 
     image_bytes: bytes | None = None
     image_mime: str | None = None
