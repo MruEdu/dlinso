@@ -479,6 +479,30 @@ CUSTOM_CSS = """
             display: flex !important;
             align-items: flex-end !important;
         }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stExpander"] {
+            margin-bottom: 0.25rem !important;
+            border: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stExpander"] summary {
+            font-size: 0.86rem !important;
+            padding: 0.4rem 0.45rem !important;
+            min-height: 2.4rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stFileUploader"] {
+            padding: 0.15rem 0 !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) [data-testid="stFileUploader"] small {
+            font-size: 0.72rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) textarea {
+            min-height: 4.25rem !important;
+            font-size: 1rem !important;
+            line-height: 1.45 !important;
+        }
+        div[data-testid="column"]:has(.mobile-chat-send-marker) button {
+            min-height: 2.85rem !important;
+            padding: 0.55rem 0.35rem !important;
+        }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button {
             font-size: clamp(0.88rem, 3.8vw, 1.05rem) !important;
             min-height: clamp(3rem, 11vw, 3.4rem) !important;
@@ -1375,7 +1399,7 @@ def get_chat_model() -> genai.GenerativeModel:
         generation_config=genai.GenerationConfig(
             temperature=0.82,
             top_p=0.92,
-            max_output_tokens=1024,
+            max_output_tokens=2048,
         ),
     )
 
@@ -1745,14 +1769,36 @@ def render_chat_area(display: dict) -> None:
                     st.markdown(body)
 
 
-def stream_gemini_reply(
+def _gemini_response_text(response: Any) -> str:
+    """Gemini 응답 본문 — stream 청크 누락 방지용."""
+    try:
+        text = response.text
+        if text and str(text).strip():
+            return str(text).strip()
+    except Exception:  # noqa: BLE001
+        pass
+    parts: list[str] = []
+    for cand in getattr(response, "candidates", None) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            piece = getattr(part, "text", None)
+            if piece:
+                parts.append(str(piece))
+    return "".join(parts).strip()
+
+
+def generate_gemini_reply(
     model,
     messages: list[dict],
     user_prompt: str,
     *,
     image_bytes: bytes | None = None,
     image_mime: str | None = None,
-):
+) -> str:
+    """
+    채팅 응답 생성. UI는 스트리밍을 쓰지 않으므로 stream=False로 전체 문장을 받음
+    (stream=True는 Cloud에서 청크 누락·중간 끊김이 날 수 있음).
+    """
     parts: list[Any] = []
     if image_bytes:
         try:
@@ -1763,10 +1809,8 @@ def stream_gemini_reply(
             pass
     parts.append(user_prompt or "(사진을 보냈습니다)")
     chat = model.start_chat(history=build_gemini_history(messages))
-    response = chat.send_message(parts, stream=True)
-    for chunk in response:
-        if chunk.text:
-            yield chunk.text
+    response = chat.send_message(parts, stream=False)
+    return _gemini_response_text(response)
 
 
 def deliver_life_summary(gemini_ok: bool) -> None:
@@ -1848,17 +1892,15 @@ def handle_chat_turn(
     )
 
     model = get_chat_model()
-    full_reply = ""
     try:
         with st.spinner(f"{display['emoji']} 마음의 정원사가 씨앗을 돌보고 있어요…"):
-            for token in stream_gemini_reply(
+            full_reply = generate_gemini_reply(
                 model,
                 st.session_state.messages,
                 model_prompt,
                 image_bytes=image_bytes,
                 image_mime=image_mime,
-            ):
-                full_reply += token
+            )
     except Exception as exc:  # noqa: BLE001
         full_reply = _gemini_user_error(exc)
 
@@ -2042,15 +2084,17 @@ def _render_composer_text_row(
     input_key: str,
     send_key: str,
     placeholder: str,
+    input_height: int = 88,
 ) -> str:
     """텍스트 영역 + 보내기 — PC·모바일 공통(Cloud PC에서 st.chat_input 미표시 대응)."""
-    _html_layout_marker(layout_marker)
+    if layout_marker:
+        _html_layout_marker(layout_marker)
     text_col, send_col = st.columns([5.2, 1], gap="small")
     with text_col:
         draft = st.text_area(
             "chat_message",
             key=input_key,
-            height=88,
+            height=input_height,
             placeholder=placeholder,
             label_visibility="collapsed",
         )
@@ -2074,24 +2118,33 @@ def render_chat_composer_body() -> bool:
 
     alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
     guide_placeholder = t("chat_composer_guide")
-
-    st.caption(t("chat_photo_row_caption"))
-    photo = st.file_uploader(
-        t("chat_photo_label"),
-        type=["jpg", "jpeg", "png", "webp"],
-        key="chat_photo_upload",
-        label_visibility="collapsed",
-    )
+    photo = None
 
     if _is_mobile_client():
+        _html_layout_marker("mobile-chat-composer-marker")
+        with st.expander(t("chat_photo_row_caption"), expanded=False):
+            photo = st.file_uploader(
+                t("chat_photo_label"),
+                type=["jpg", "jpeg", "png", "webp"],
+                key="chat_photo_upload",
+                label_visibility="collapsed",
+            )
         text = _render_composer_text_row(
-            layout_marker="mobile-chat-composer-marker",
+            layout_marker="",
             send_marker="mobile-chat-send-marker",
             input_key=f"mobile_chat_input_{alt_nonce}",
             send_key=f"mobile_send_{alt_nonce}",
             placeholder=guide_placeholder,
+            input_height=76,
         )
     else:
+        st.caption(t("chat_photo_row_caption"))
+        photo = st.file_uploader(
+            t("chat_photo_label"),
+            type=["jpg", "jpeg", "png", "webp"],
+            key="chat_photo_upload",
+            label_visibility="collapsed",
+        )
         desktop_placeholder = (
             t("chat_ph_giant")
             if st.session_state.phase != PHASE_COLLECT
