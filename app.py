@@ -1989,10 +1989,11 @@ def render_chat_composer() -> bool:
         return False
 
     alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
-    placeholder = (
-        t("chat_ph_collect")
-        if st.session_state.phase == PHASE_COLLECT
-        else t("chat_ph_giant")
+    guide_placeholder = t("chat_composer_guide")
+    desktop_placeholder = (
+        t("chat_ph_giant")
+        if st.session_state.phase != PHASE_COLLECT
+        else guide_placeholder
     )
 
     st.caption(t("chat_photo_row_caption"))
@@ -2004,14 +2005,13 @@ def render_chat_composer() -> bool:
     )
 
     _html_layout_marker("mobile-chat-composer-marker")
-    st.caption(t("chat_composer_guide"))
     text_col, send_col = st.columns([5.2, 1], gap="small", vertical_alignment="bottom")
     with text_col:
         mobile_text = st.text_area(
             "mobile_message",
             key=f"mobile_chat_input_{alt_nonce}",
-            height=72,
-            placeholder=placeholder,
+            height=88,
+            placeholder=guide_placeholder,
             label_visibility="collapsed",
         )
     with send_col:
@@ -2023,7 +2023,7 @@ def render_chat_composer() -> bool:
             use_container_width=True,
         )
 
-    prompt = st.chat_input(placeholder, key="main_chat_input")
+    prompt = st.chat_input(desktop_placeholder, key="main_chat_input")
 
     text = (prompt or "").strip()
     if mobile_send and (mobile_text or "").strip():
