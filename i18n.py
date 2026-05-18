@@ -31,9 +31,7 @@ FOOTER_BANNER: dict[str, str] = {
     ),
     "secondary": "Jaggedness Lab: Narrative Research Hub for Individuality",
     "copyright": "© 2026 Jaggedness Lab by sinihyun. All Rights Reserved.",
-    "powered": (
-        "Powered by Todd Rose's Principles of Individuality & Gemini 1.5 Flash"
-    ),
+    "powered": "Powered by Gemini 2.5 Flash · Google Sheets",
 }
 
 # 공통 옵션 (연령·학력은 연구 표준 한국어 라벨 유지, UI만 번역)
@@ -41,9 +39,16 @@ TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso: 들쭉날쭉사람연구소",
         "beta_badge": "Beta 1.0",
-        "hub_eyebrow": "Narrative Research · Todd Rose",
+        "hub_eyebrow": "Narrative Research · dlinso",
         "hub_tagline": "",
         "hub_slogan": "",
+        "err_gemini_reply": "응답 생성 중 오류가 발생했습니다",
+        "err_gemini_leaked": (
+            "Gemini API 키가 유출로 차단되었습니다. "
+            "[Google AI Studio](https://aistudio.google.com/apikey)에서 **새 API 키**를 만든 뒤 "
+            "Streamlit Cloud **Settings → Secrets**와 로컬 `.env`의 `GEMINI_API_KEY`를 "
+            "교체하고 앱을 **Reboot**하세요."
+        ),
         "lang_label": "언어",
         "tab_new": "처음 오신 분",
         "tab_return": "다시 오신 분",
@@ -124,13 +129,34 @@ TEXTS: dict[str, dict[str, str]] = {
         "err_login": "닉네임 또는 비밀번호가 맞지 않습니다.",
         "err_login_both": "닉네임과 비밀번호를 모두 입력해 주세요.",
         "err_sheets": "Google Sheets 연결이 필요합니다.",
+        "err_sheets_setup": (
+            "**배포(Streamlit Cloud):** 앱 **Settings → Secrets**에 "
+            "`GOOGLE_SHEET_ID`와 `[gcp_service_account]`(JSON 키 전체)를 넣어 주세요.\n\n"
+            "**로컬:** 프로젝트 폴더에 `service_account.json` + `.env`의 "
+            "`GOOGLE_SHEET_ID`.\n\n"
+            "Google 시트 **공유**에 서비스 계정 이메일(예: `...@...iam.gserviceaccount.com`)을 "
+            "**편집자**로 추가해야 합니다.\n\n"
+            "`Invalid JWT Signature`가 보이면 GCP에서 **새 JSON 키**를 발급해 "
+            "Secrets/`service_account.json`을 교체하세요.\n\n"
+            "**`Unable to load PEM file` / `InvalidByte`:** Secrets의 `private_key`가 "
+            "깨진 경우입니다. `[gcp_service_account]` 대신 "
+            "`GOOGLE_SERVICE_ACCOUNT_JSON`에 **JSON 파일 전체 한 줄**을 넣는 것이 "
+            "가장 안전합니다."
+        ),
         "phase_collect": "서사 자원을 모으는 중",
         "returning_badge": "🔄 재방문",
     },
     "en": {
         "app_title": "dlinso: Narrative Research Lab for Individuality",
         "beta_badge": "Beta 1.0",
-        "hub_eyebrow": "Narrative Research · Todd Rose",
+        "hub_eyebrow": "Narrative Research · dlinso",
+        "err_gemini_reply": "Error while generating a reply",
+        "err_gemini_leaked": (
+            "Your Gemini API key was reported as leaked and blocked. "
+            "Create a **new key** at [Google AI Studio](https://aistudio.google.com/apikey), "
+            "update `GEMINI_API_KEY` in Streamlit **Settings → Secrets** (and local `.env`), "
+            "then **Reboot** the app."
+        ),
         "hub_tagline": (
             "Everyday bumpy stories with the Mind Gardener — "
             "join our anonymous beta to grow your unique values into fruit."
@@ -209,6 +235,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "err_nick_taken": "Nickname taken. Use **Continue** to log in.",
         "err_login": "Invalid nickname or password.",
         "err_sheets": "Google Sheets connection required.",
+        "err_sheets_setup": (
+            "**Streamlit Cloud:** add `GOOGLE_SHEET_ID` and `[gcp_service_account]` "
+            "under **Settings → Secrets**. Share the spreadsheet with the service "
+            "account email as **Editor**. Regenerate the JSON key if you see "
+            "`Invalid JWT Signature`."
+        ),
         "phase_collect": "Collecting narrative resources",
         "returning_badge": "🔄 Return visit",
     },

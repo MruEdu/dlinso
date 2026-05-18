@@ -69,6 +69,23 @@ INTRO_HEIGHT_CAP = 3800
 SHEETS_LOGGER_CACHE_VERSION = 4
 
 TOKEN_DIET_MESSAGE_THRESHOLD = 12
+
+
+def _html_layout_marker(*css_classes: str) -> None:
+    """위젯 사이에 HTML div를 열고 닫으면 Streamlit이 `</motion.div>`를 화면에 그립니다."""
+    cls = " ".join(css_classes)
+    st.markdown(
+        f'<span class="layout-marker {cls}" hidden aria-hidden="true"></span>',
+        unsafe_allow_html=True,
+    )
+
+
+def _gemini_user_error(exc: BaseException) -> str:
+    msg = str(exc)
+    low = msg.lower()
+    if "leaked" in low or ("403" in msg and "api key" in low):
+        return t("err_gemini_leaked")
+    return f"{t('err_gemini_reply')}: {msg}"
 TOKEN_DIET_KEEP_RECENT = 8
 MAX_STORED_MESSAGES = 48
 
@@ -101,8 +118,8 @@ CUSTOM_CSS = """
         padding-bottom: 0;
         max-width: 100%;
     }
-    .app-content-pad,
-    .chat-content-pad {
+    div[data-testid="stVerticalBlock"]:has(.app-content-pad-marker),
+    div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) {
         padding: clamp(0.75rem, 2.5vw, 1.25rem) clamp(0.65rem, 3vw, 1.5rem) clamp(1.25rem, 4vw, 2rem);
         max-width: min(900px, 100%);
         margin: 0 auto;
@@ -240,12 +257,17 @@ CUSTOM_CSS = """
     section.main .block-container {
         padding-bottom: 1rem !important;
     }
-    .chat-toolbar {
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) {
         margin-bottom: 0.75rem;
     }
-    .chat-toolbar-lang label {
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-lang-marker) label {
         font-size: 0.78rem !important;
         color: #7a6e62 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.intro-foot-marker) {
+        padding: 0.75rem 1rem 1.5rem;
+        max-width: 900px;
+        margin: 0 auto;
     }
     /* 모바일 — 상단 큼직한 버튼 + 본문·채팅 여백 */
     /* 하단 문의 바 — 앵커 직후 버튼 블록 고정 */
@@ -312,8 +334,8 @@ CUSTOM_CSS = """
             min-height: clamp(3rem, 11vw, 3.4rem) !important;
             padding: clamp(0.65rem, 2.5vw, 0.9rem) 0.5rem !important;
         }
-        .app-content-pad,
-        .chat-content-pad {
+        div[data-testid="stVerticalBlock"]:has(.app-content-pad-marker),
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) {
             padding-left: 0.4rem !important;
             padding-right: 0.4rem !important;
             max-width: 100% !important;
@@ -1053,11 +1075,17 @@ def init_gemini() -> tuple[bool, str | None]:
     api_key = get_gemini_api_key()
     if not api_key:
         return False, f"GEMINI_API_KEY가 설정되지 않았습니다. ({ENV_PATH})"
+    cache_key = f"gemini_init_{hash(api_key)}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
     try:
         genai.configure(api_key=api_key)
-        return True, None
+        next(iter(genai.list_models()), None)
+        result: tuple[bool, str | None] = (True, None)
     except Exception as exc:  # noqa: BLE001
-        return False, f"Gemini 초기화 실패: {exc}"
+        result = (False, _gemini_user_error(exc))
+    st.session_state[cache_key] = result
+    return result
 
 
 def build_system_instruction() -> str:
@@ -1236,72 +1264,69 @@ def render_chat_toolbar(
     sheets: SheetsLogger,
 ) -> None:
     """상담 화면 상단 — 언어(우측)·상태·도구."""
-    st.markdown('<div class="chat-toolbar">', unsafe_allow_html=True)
-    left, right = st.columns([2.2, 1], gap="small")
-    with left:
-        companion = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
-        st.markdown(
-            f'<span class="phase-badge">{companion}와 함께</span>',
-            unsafe_allow_html=True,
-        )
-        if st.session_state.preview_mode:
+    with st.container():
+        _html_layout_marker("chat-toolbar-marker")
+        left, right = st.columns([2.2, 1], gap="small")
+        with left:
+            companion = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
             st.markdown(
-                '<p class="preview-banner">🌅 낮막 미리보기 모드</p>',
+                f'<span class="phase-badge">{companion}와 함께</span>',
                 unsafe_allow_html=True,
             )
-    with right:
-        st.markdown('<div class="chat-toolbar-lang">', unsafe_allow_html=True)
-        render_language_selector(key="chat_lang")
-        st.markdown("</div>", unsafe_allow_html=True)
+            if st.session_state.preview_mode:
+                st.markdown(
+                    '<p class="preview-banner">🌅 낮막 미리보기 모드</p>',
+                    unsafe_allow_html=True,
+                )
+        with right:
+            _html_layout_marker("chat-toolbar-lang-marker")
+            render_language_selector(key="chat_lang")
 
-    st.markdown(
-        f'<div class="gentle-record">{t("gentle_record")}</div>',
-        unsafe_allow_html=True,
-    )
-    if st.session_state.phase == PHASE_GIANT and st.session_state.active_giant:
-        gk = st.session_state.active_giant
-        st.caption(f"지금은 {GIANTS[gk]['label']}의 관점으로 이어갑니다.")
+        st.markdown(
+            f'<div class="gentle-record">{t("gentle_record")}</div>',
+            unsafe_allow_html=True,
+        )
+        if st.session_state.phase == PHASE_GIANT and st.session_state.active_giant:
+            gk = st.session_state.active_giant
+            st.caption(f"지금은 {GIANTS[gk]['label']}의 관점으로 이어갑니다.")
 
-    act1, act2, act3 = st.columns(3, gap="small")
-    with act1:
-        if st.button(t("reset_chat"), use_container_width=True, key="chat_reset"):
-            _reset_chat_state()
-            st.rerun()
-    with act2:
-        if st.session_state.conversation_closed:
-            if st.button(
-                t("new_story"),
-                use_container_width=True,
-                type="primary",
-                key="chat_new_story",
-            ):
-                st.session_state.conversation_closed = False
-                st.session_state.life_summary = ""
-                st.session_state._request_summary = False
+        act1, act2, act3 = st.columns(3, gap="small")
+        with act1:
+            if st.button(t("reset_chat"), use_container_width=True, key="chat_reset"):
+                _reset_chat_state()
                 st.rerun()
-        elif st.session_state.messages:
-            if st.button(t("finish_chat"), use_container_width=True, key="chat_finish"):
-                st.session_state._request_summary = True
+        with act2:
+            if st.session_state.conversation_closed:
+                if st.button(
+                    t("new_story"),
+                    use_container_width=True,
+                    type="primary",
+                    key="chat_new_story",
+                ):
+                    st.session_state.conversation_closed = False
+                    st.session_state.life_summary = ""
+                    st.session_state._request_summary = False
+                    st.rerun()
+            elif st.session_state.messages:
+                if st.button(t("finish_chat"), use_container_width=True, key="chat_finish"):
+                    st.session_state._request_summary = True
+                    st.rerun()
+        with act3:
+            sheets_ok = sheets.is_connected
+            gem_icon = "🟢" if gemini_ok else "🔴"
+            sheet_icon = "🟢" if sheets_ok else "🔴"
+            st.caption(f"{gem_icon} Gemini · {sheet_icon} Sheets")
+
+        with st.expander(t("sidebar_inquiry"), expanded=False):
+            if st.button(t("nav_inquiry"), key="chat_open_inquiry", use_container_width=True):
+                st.session_state.inquiry_return_view = VIEW_APP
+                st.session_state.current_view = VIEW_INQUIRY
                 st.rerun()
-    with act3:
-        sheets_ok = sheets.is_connected
-        gem_icon = "🟢" if gemini_ok else "🔴"
-        sheet_icon = "🟢" if sheets_ok else "🔴"
-        st.caption(f"{gem_icon} Gemini · {sheet_icon} Sheets")
-
-    with st.expander(t("sidebar_inquiry"), expanded=False):
-        if st.button(t("nav_inquiry"), key="chat_open_inquiry", use_container_width=True):
-            st.session_state.inquiry_return_view = VIEW_APP
-            st.session_state.current_view = VIEW_INQUIRY
-            st.rerun()
-        render_researcher_inquiry(sheets)
-    if not gemini_ok and gemini_error:
-        st.caption(gemini_error)
-    if not sheets.is_connected and sheets.error_message:
-        st.warning(sheets.error_message)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
+            render_researcher_inquiry(sheets)
+        if not gemini_ok and gemini_error:
+            st.caption(gemini_error)
+        if not sheets.is_connected and sheets.error_message:
+            st.warning(sheets.error_message)
 
 def reset_user_session() -> None:
     """가입·로그인 화면을 다시 보이게 세션 초기화."""
@@ -1335,7 +1360,6 @@ def render_onboarding(sheets: SheetsLogger) -> None:
     with tab_new:
         st.markdown(t("key_hint"))
         consent = st.checkbox(t("consent_check"), key="consent_new")
-        st.markdown('<div class="signup-form-wrap">', unsafe_allow_html=True)
         with st.form("signup_form"):
             nickname = st.text_input(t("nickname"), placeholder="…")
             password = st.text_input(t("password"), type="password")
@@ -1348,7 +1372,6 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                 type="primary",
                 use_container_width=True,
             )
-        st.markdown("</div>", unsafe_allow_html=True)
 
         if signup:
             nick = nickname.strip()
@@ -1388,7 +1411,6 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
     with tab_return:
         st.markdown(t("return_hint"))
-        st.markdown('<div class="login-form-wrap">', unsafe_allow_html=True)
         with st.form("login_form"):
             nickname = st.text_input(t("nickname"), key="return_nick")
             password = st.text_input(t("password"), type="password", key="return_pw")
@@ -1397,7 +1419,6 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                 type="primary",
                 use_container_width=True,
             )
-        st.markdown("</div>", unsafe_allow_html=True)
 
         if login:
             nick = nickname.strip()
@@ -1621,7 +1642,7 @@ def handle_chat_turn(
             ):
                 full_reply += token
     except Exception as exc:  # noqa: BLE001
-        full_reply = f"응답 생성 중 오류가 발생했습니다: {exc}"
+        full_reply = _gemini_user_error(exc)
 
     if not full_reply.strip():
         full_reply = (
@@ -1858,10 +1879,10 @@ def _run_app() -> None:
     render_hybrid_nav(include_lang=not chat_screen)
 
     if view == VIEW_INQUIRY:
-        st.markdown('<div class="app-content-pad">', unsafe_allow_html=True)
-        render_inquiry_page(sheets)
-        render_lab_footer()
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            _html_layout_marker("app-content-pad-marker")
+            render_inquiry_page(sheets)
+            render_lab_footer()
         return
 
     if view == VIEW_INTRO:
@@ -1869,10 +1890,7 @@ def _run_app() -> None:
         render_intro()
         foot = st.container()
         with foot:
-            st.markdown(
-                '<div style="padding:0.75rem 1rem 1.5rem;max-width:900px;margin:0 auto;">',
-                unsafe_allow_html=True,
-            )
+            _html_layout_marker("intro-foot-marker")
             st.info(t("intro_hint"))
             if st.button(t("go_life_story"), type="primary", use_container_width=True):
                 st.session_state.current_view = VIEW_APP
@@ -1882,12 +1900,12 @@ def _run_app() -> None:
         return
 
     if not is_ready_for_chat():
-        st.markdown('<div class="app-content-pad">', unsafe_allow_html=True)
-        st.markdown(f"### {t('app_title')}", unsafe_allow_html=True)
-        render_hub_slogan_banner()
-        render_onboarding(sheets)
-        render_lab_footer()
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            _html_layout_marker("app-content-pad-marker")
+            st.markdown(f"### {t('app_title')}", unsafe_allow_html=True)
+            render_hub_slogan_banner()
+            render_onboarding(sheets)
+            render_lab_footer()
         render_inquiry_fab(above_chat_input=False)
         return
 
@@ -1897,8 +1915,8 @@ def _run_app() -> None:
     )
     render_chat_toolbar(gemini_ok, gemini_error, sheets)
 
-    st.markdown('<div class="app-content-pad chat-content-pad">', unsafe_allow_html=True)
     with st.container():
+        _html_layout_marker("app-content-pad-marker", "chat-content-pad-marker")
         if _is_preview_mode():
             if st.button("🌅 미리보기 세션 시작 (가입 생략)", key="start_preview_session"):
                 _apply_preview_session()
@@ -1918,12 +1936,15 @@ def _run_app() -> None:
             )
         if not gemini_ok:
             st.warning(gemini_error or "Gemini API를 사용할 수 없습니다. (.env의 GEMINI_API_KEY 확인)")
+            if gemini_error and "leaked" in gemini_error.lower():
+                st.markdown(t("err_gemini_leaked"))
         if not st.session_state.conversation_closed:
             st.markdown(
                 f'<p class="input-hint">{t("input_hint")}</p>',
                 unsafe_allow_html=True,
             )
         render_chat_area(display)
+        render_lab_footer()
 
     if not render_chat_composer():
         pending = _take_pending_turn()
@@ -1940,8 +1961,6 @@ def _run_app() -> None:
             else:
                 st.error(gemini_error or "Gemini API를 사용할 수 없습니다.")
 
-    render_lab_footer()
-    st.markdown("</div>", unsafe_allow_html=True)
     render_inquiry_fab()
 
 
