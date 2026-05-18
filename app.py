@@ -444,8 +444,8 @@ CUSTOM_CSS = """
             z-index: 1000 !important;
             background: rgba(255, 252, 248, 0.98) !important;
             border-top: 1px solid rgba(120, 100, 80, 0.15) !important;
-            padding: 0.5rem 0.35rem calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
-            margin: 0 -0.35rem !important;
+            padding: 0.35rem 0.35rem calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
+            margin: -0.15rem -0.35rem 0 !important;
             box-shadow: 0 -4px 18px rgba(90, 70, 50, 0.08) !important;
         }
         div[data-testid="column"]:has(.mobile-chat-send-marker) button {
@@ -2005,7 +2005,7 @@ def render_chat_composer() -> bool:
     )
 
     _html_layout_marker("mobile-chat-composer-marker")
-    text_col, send_col = st.columns([5.2, 1], gap="small", vertical_alignment="bottom")
+    text_col, send_col = st.columns([5.2, 1], gap="small")
     with text_col:
         mobile_text = st.text_area(
             "mobile_message",
@@ -2145,7 +2145,7 @@ def _run_app() -> None:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
                 render_chat_area(display)
-                composer_queued = render_chat_composer()
+            composer_queued = render_chat_composer()
 
     if not st.session_state.conversation_closed and not composer_queued:
         pending = _take_pending_turn()
