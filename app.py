@@ -9,7 +9,11 @@ import re
 from pathlib import Path
 from typing import Any
 
-import google.generativeai as genai
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", FutureWarning)
+    import google.generativeai as genai
 import streamlit as st
 import streamlit.components.v1 as components
 from env_config import (
@@ -1255,7 +1259,8 @@ def init_gemini() -> tuple[bool, str | None]:
         return st.session_state[cache_key]
     try:
         genai.configure(api_key=api_key)
-        next(iter(genai.list_models()), None)
+        # list_models()는 Cloud 첫 로딩에서 수십 초 걸리거나 멈춘 것처럼 보일 수 있어 생략.
+        # 실제 키 검증은 첫 generate 시점에 이루어집니다.
         result: tuple[bool, str | None] = (True, None)
     except Exception as exc:  # noqa: BLE001
         result = (False, _gemini_user_error(exc))
