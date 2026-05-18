@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import io
 import os
 import re
@@ -67,6 +68,83 @@ INTRO_SLIDE_UNIT_HEIGHT = 900
 INTRO_HEIGHT_FLOOR = 3600
 INTRO_HEIGHT_CAP = 3800
 SHEETS_LOGGER_CACHE_VERSION = 4
+
+# st.html iframe에는 앱 전역 CSS가 적용되지 않음 — 헤더·프로필 칩 전용
+HERO_CARD_INLINE_STYLE = """
+<style>
+  .hero-header {
+    font-family: "Source Sans Pro", sans-serif;
+    background: linear-gradient(135deg, #fffcf8 0%, #f5efe6 100%);
+    border: 1px solid rgba(140, 120, 100, 0.18);
+    border-radius: 16px;
+    padding: 1.35rem 1.5rem 1.15rem;
+    margin: 0 0 1rem 0;
+    box-shadow: 0 4px 24px rgba(90, 70, 50, 0.08);
+  }
+  .hero-eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: #9a8a78;
+    font-weight: 600;
+    margin: 0 0 0.35rem 0;
+  }
+  .hero-title {
+    font-size: clamp(1.2rem, 4vw, 1.55rem);
+    font-weight: 700;
+    color: #4a4038;
+    margin: 0 0 0.45rem 0;
+    line-height: 1.35;
+  }
+  .hero-desc { color: #6b5f55; font-size: 0.94rem; line-height: 1.6; margin: 0; }
+  .profile-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1rem;
+    align-items: stretch;
+  }
+  .profile-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem 0.5rem 0.6rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(140, 120, 100, 0.22);
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(90, 70, 50, 0.07);
+    min-height: 2.65rem;
+    line-height: 1.25;
+    box-sizing: border-box;
+  }
+  .profile-pill--accent {
+    border-color: rgba(108, 92, 231, 0.35);
+    background: linear-gradient(135deg, #f6f3ff 0%, #fffcf8 100%);
+  }
+  .profile-pill-icon { font-size: 1.2rem; line-height: 1; flex-shrink: 0; }
+  .profile-pill-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .profile-pill-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.07em;
+    color: #9a8a78;
+    font-weight: 600;
+  }
+  .profile-pill-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4a4038;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 10.5rem;
+  }
+</style>
+"""
 
 TOKEN_DIET_MESSAGE_THRESHOLD = 12
 
@@ -428,14 +506,60 @@ CUSTOM_CSS = """
         border-radius: 6px;
         letter-spacing: -0.02em;
     }
-    .hero-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
-    .hero-chip {
-        background: rgba(255, 255, 255, 0.7);
-        border: 1px solid rgba(140, 120, 100, 0.22);
-        color: #5c5048;
-        border-radius: 999px;
-        padding: 0.28rem 0.8rem;
-        font-size: 0.82rem;
+    .profile-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-top: 1rem;
+        align-items: stretch;
+    }
+    .profile-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.85rem 0.5rem 0.6rem;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(140, 120, 100, 0.2);
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(90, 70, 50, 0.07);
+        min-height: 2.65rem;
+        line-height: 1.25;
+        box-sizing: border-box;
+    }
+    .profile-pill--accent {
+        border-color: rgba(108, 92, 231, 0.32);
+        background: linear-gradient(135deg, #f6f3ff 0%, #fffcf8 100%);
+    }
+    .profile-pill-icon {
+        font-size: 1.2rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .profile-pill-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.12rem;
+        min-width: 0;
+    }
+    .profile-pill-label {
+        font-size: 0.62rem;
+        letter-spacing: 0.08em;
+        color: #9a8a78;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .profile-pill-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #4a4038;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: min(28vw, 9rem);
+    }
+    @media (min-width: 480px) {
+        .profile-pill-value { max-width: 11rem; }
     }
     .onboarding-card, .consent-box {
         background: #fffcf8;
@@ -1472,31 +1596,54 @@ def render_hub_slogan_banner() -> None:
     st.caption(t("hub_eyebrow"))
 
 
+def _profile_pill_html(icon: str, label: str, value: str, *, accent: bool = False) -> str:
+    extra = " profile-pill--accent" if accent else ""
+    label_html = (
+        f'<span class="profile-pill-label">{html.escape(label)}</span>'
+        if label
+        else ""
+    )
+    return (
+        f'<div class="profile-pill{extra}">'
+        f'<span class="profile-pill-icon" aria-hidden="true">{icon}</span>'
+        f'<div class="profile-pill-body">{label_html}'
+        f'<span class="profile-pill-value">{html.escape(str(value or "—"))}</span>'
+        f"</div></div>"
+    )
+
+
 def render_main_header(display: dict) -> None:
     phase_txt = (
         t("phase_collect")
         if st.session_state.phase == PHASE_COLLECT
         else f"{display.get('short', display['label'])}"
     )
-    st.markdown(
-        f"""
-        <div class="hero-header">
-            <div class="hero-eyebrow">{t("hub_eyebrow")}</div>
-            <div class="hero-title">{t("app_title")}</div>
-            <p class="hero-desc">
-                {display["emoji"]} <b>{display["label"]}</b> — {phase_txt}.
-            </p>
-            <div class="hero-chips">
-                <span class="hero-chip">🪪 {st.session_state.participant_id}</span>
-                <span class="hero-chip">📅 {st.session_state.age_group}</span>
-                <span class="hero-chip">📚 {st.session_state.life_stage}</span>
-                <span class="hero-chip">{display["emoji"]} {display["label"]}</span>
-                {f"<span class='hero-chip'>{t('returning_badge')}</span>" if st.session_state.get("is_returning_user") else ""}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    pills = [
+        _profile_pill_html("🪪", t("profile_nick"), st.session_state.participant_id),
+        _profile_pill_html("📅", t("profile_age"), st.session_state.age_group),
+        _profile_pill_html("📚", t("profile_stage"), st.session_state.life_stage),
+        _profile_pill_html(
+            display["emoji"],
+            t("profile_companion"),
+            display["label"],
+            accent=True,
+        ),
+    ]
+    if st.session_state.get("is_returning_user"):
+        pills.append(_profile_pill_html("🔄", "", t("returning_badge")))
+
+    hero_html = (
+        HERO_CARD_INLINE_STYLE
+        + f'<section class="hero-header">'
+        f'<div class="hero-eyebrow">{html.escape(t("hub_eyebrow"))}</div>'
+        f'<h2 class="hero-title">{html.escape(t("app_title"))}</h2>'
+        f'<p class="hero-desc">{display["emoji"]} <strong>'
+        f"{html.escape(display['label'])}</strong> — "
+        f"{html.escape(phase_txt)}.</p>"
+        f'<div class="profile-strip">{"".join(pills)}</div>'
+        f"</section>"
     )
+    st.html(hero_html, height=240)
     render_hub_slogan_banner()
 
 

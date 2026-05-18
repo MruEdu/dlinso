@@ -144,6 +144,10 @@ TEXTS: dict[str, dict[str, str]] = {
             "가장 안전합니다."
         ),
         "phase_collect": "서사 자원을 모으는 중",
+        "profile_nick": "닉네임",
+        "profile_age": "연령",
+        "profile_stage": "생애 단계",
+        "profile_companion": "동반",
         "returning_badge": "🔄 재방문",
     },
     "en": {
@@ -242,6 +246,10 @@ TEXTS: dict[str, dict[str, str]] = {
             "`Invalid JWT Signature`."
         ),
         "phase_collect": "Collecting narrative resources",
+        "profile_nick": "Nickname",
+        "profile_age": "Age",
+        "profile_stage": "Life stage",
+        "profile_companion": "Companion",
         "returning_badge": "🔄 Return visit",
     },
     "mn": {
