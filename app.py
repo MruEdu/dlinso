@@ -1982,7 +1982,7 @@ def render_chat_composer() -> bool:
         )
 
     _html_layout_marker("mobile-chat-composer-marker")
-    st.caption(t("mobile_inquiry_hint"))
+    st.caption(t("chat_composer_guide"))
     text_col, send_col = st.columns([5.2, 1], gap="small", vertical_alignment="bottom")
     with text_col:
         mobile_text = st.text_area(
