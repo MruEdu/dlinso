@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-SERVICE_TITLE = "dlinso: 들쭉날쭉사람연구소"
+SERVICE_TITLE = "dlinso"
 GUIDE_NAME = "마음의 정원사"
 GUIDE_EMOJI = "🌿"
 
@@ -192,7 +192,7 @@ def build_phase1_system_prompt(
 ) -> str:
     reply_lang = LANG_REPLY.get(lang, "Korean")
     base = (
-        f"[Phase 1 · {GUIDE_NAME}] dlinso '{SERVICE_TITLE}'\n\n"
+        f"[Phase 1 · {GUIDE_NAME}] {SERVICE_TITLE}\n\n"
         f"참여자 맥락: 연령대 {age_group}, 학력·생애주기 「{life_stage}」.\n\n"
         "즐거운 기억·성취·남기고 싶은 추억을 **Elenchus → 공감 → Maieutic question** 으로 수집. "
         "글로벌 정원사 System Instruction을 따르되, 이 Phase는 **희망적 서사 자원(씨앗)** 에 무게.\n\n"

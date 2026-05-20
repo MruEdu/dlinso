@@ -79,7 +79,7 @@ from sheets_logger import SheetsLogger, hash_password
 
 os.chdir(APP_DIR)
 
-PAGE_TITLE = SERVICE_TITLE
+PAGE_TITLE = "dlinso"
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 VIEW_INTRO = "intro"
 VIEW_APP = "app"

@@ -27,7 +27,7 @@ LANG_FULL: dict[str, str] = {
 # 하단 배너 — 언어 선택과 무관하게 한/영 병기 (글로벌 공통)
 FOOTER_BANNER: dict[str, str] = {
     "primary": (
-        "🌿 들쭉날쭉사람연구소: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
+        "🌿 dlinso: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
     ),
     "secondary": "Dlinso Lab",
     "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
@@ -37,7 +37,7 @@ FOOTER_BANNER: dict[str, str] = {
 # 공통 옵션 (연령·학력은 연구 표준 한국어 라벨 유지, UI만 번역)
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
-        "app_title": "dlinso: 들쭉날쭉사람연구소",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research · dlinso",
         "hub_tagline": "",
@@ -151,11 +151,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_placeholder": "궁금한 점이나 전하고 싶은 말을 적어 주세요…",
         "inquiry_send": "문의 보내기",
         "inquiry_ok": "문의가 Google Sheets에 기록되었습니다. 🌿",
-        "admin_reply_title": "🌿 들쭉날쭉 사람연구소장 sinihyun님의 답변이 도착했습니다",
+        "admin_reply_title": "🌿 dlinso sinihyun님의 답변이 도착했습니다",
         "admin_reply_title_research": (
-            "🌿 들쭉날쭉 사람연구소 · 네러티브 연구 협업 회신"
+            "🌿 dlinso · 네러티브 연구 협업 회신"
         ),
-        "admin_reply_title_interview": "🌿 들쭉날쭉 사람연구소 · 인터뷰 관련 회신",
+        "admin_reply_title_interview": "🌿 dlinso · 인터뷰 관련 회신",
         "connection": "연결 상태",
         "connected": "연결됨",
         "disconnected": "연결 안 됨",
@@ -192,7 +192,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 재방문",
     },
     "en": {
-        "app_title": "dlinso: Narrative Research Lab for Individuality",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research · dlinso",
         "err_gemini_reply": "Error while generating a reply",
@@ -330,7 +330,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 Return visit",
     },
     "mn": {
-        "app_title": "dlinso · Түүхийн судлаачдын туслах төв",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research Hub",
         "hub_tagline": "Дэлхийн түүхийн судалгаа, хувийн түүхийн дэмжлэг нэг төвд.",
@@ -383,7 +383,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 Буцах",
     },
     "ja": {
-        "app_title": "dlinso · ナラティブ研究者サポートハブ",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research Hub",
         "hub_tagline": "グローバルな物語研究と個人の物語伴走を一つのハブで。",
@@ -436,7 +436,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 再訪",
     },
     "zh": {
-        "app_title": "dlinso · 叙事研究者支持中心",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research Hub",
         "hub_tagline": "全球叙事研究与个人叙事陪伴，汇聚于一站。",
@@ -489,7 +489,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 回访",
     },
     "vi": {
-        "app_title": "dlinso · Trung tâm hỗ trợ nhà nghiên cứu tự sự",
+        "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "Narrative Research Hub",
         "hub_tagline": "Nghiên cứu tự sự toàn cầu và đồng hành câu chuyện cá nhân.",
