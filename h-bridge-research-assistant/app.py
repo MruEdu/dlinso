@@ -891,9 +891,9 @@ CUSTOM_CSS = """
     }
     .dlinso-intro-panel {
         text-align: center;
-        padding: clamp(1.75rem, 7vh, 3rem) 1.25rem;
+        padding: clamp(1.5rem, 5vh, 2.5rem) 1.25rem;
         margin: 0 auto 0.75rem;
-        max-width: 26rem;
+        max-width: min(36rem, 94vw);
         background: radial-gradient(
             ellipse 90% 70% at 50% 28%,
             #2a2438 0%,
@@ -903,28 +903,42 @@ CUSTOM_CSS = """
         border: 1px solid rgba(157, 142, 207, 0.18);
         box-shadow: 0 12px 40px rgba(26, 22, 37, 0.35);
     }
-    .dlinso-intro-lead {
-        color: #e8e2f4;
-        font-size: clamp(1rem, 3.6vw, 1.2rem);
-        font-weight: 400;
-        letter-spacing: 0.05em;
-        line-height: 1.9;
-        margin: 0 0 0.35rem;
-    }
-    .dlinso-intro-name {
-        color: #b8a8e8;
-        font-size: clamp(1.85rem, 8vw, 2.6rem);
+    .dlinso-intro-headline {
+        color: #ece6f8;
+        font-size: clamp(1.05rem, 3.8vw, 1.35rem);
         font-weight: 500;
-        letter-spacing: 0.18em;
-        line-height: 1.4;
-        margin: 0.25rem 0;
-    }
-    .dlinso-intro-tail {
-        color: #9a92ad;
-        font-size: clamp(0.9rem, 2.8vw, 1rem);
-        font-weight: 300;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.03em;
+        line-height: 1.65;
         margin: 0 0 1rem;
+    }
+    .dlinso-intro-sub {
+        color: #b8b0cc;
+        font-size: clamp(0.88rem, 2.8vw, 0.98rem);
+        font-weight: 300;
+        line-height: 1.75;
+        margin: 0 0 1.1rem;
+        text-align: left;
+    }
+    .dlinso-intro-guide {
+        text-align: left;
+        padding: 0.85rem 1rem;
+        margin: 0 0 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(157, 142, 207, 0.22);
+    }
+    .dlinso-intro-guide-label {
+        color: #9d8ecf;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin: 0 0 0.45rem;
+    }
+    .dlinso-intro-guide-body {
+        color: #c9c0dc;
+        font-size: clamp(0.84rem, 2.6vw, 0.92rem);
+        line-height: 1.65;
+        margin: 0;
     }
     .dlinso-intro-whisper {
         color: #7d758f;
@@ -976,9 +990,12 @@ def render_intro() -> None:
     _html_layout_marker("dlinso-intro-marker")
     panel = (
         '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
-        f'<p class="dlinso-intro-lead">{html.escape(t("intro_verse_lead"))}</p>'
-        f'<p class="dlinso-intro-name">{html.escape(t("intro_verse_name"))}</p>'
-        f'<p class="dlinso-intro-tail">{html.escape(t("intro_verse_tail"))}</p>'
+        f'<h2 class="dlinso-intro-headline">{html.escape(t("intro_headline"))}</h2>'
+        f'<p class="dlinso-intro-sub">{html.escape(t("intro_sub"))}</p>'
+        '<div class="dlinso-intro-guide">'
+        f'<p class="dlinso-intro-guide-label">{html.escape(t("intro_guide_label"))}</p>'
+        f'<p class="dlinso-intro-guide-body">{html.escape(t("intro_guide_body"))}</p>'
+        "</div>"
         f'<p class="dlinso-intro-whisper">{html.escape(t("intro_whisper"))}</p>'
         "</div>"
     )
@@ -1460,7 +1477,7 @@ def init_gemini() -> tuple[bool, str | None]:
     # Cloud 배포 시 Streamlit Settings → Secrets 에 GEMINI_API_KEY 필수 (Reboot)
     api_key = get_gemini_api_key()
     if not api_key:
-        return False, f"GEMINI_API_KEY가 설정되지 않았습니다. ({ENV_PATH})"
+        return False, t("err_dialogue_unavailable")
     cache_key = f"gemini_init_{hash(api_key)}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
@@ -1786,7 +1803,9 @@ def render_chat_toolbar(
             sheets_ok = sheets.is_connected
             gem_icon = "🟢" if gemini_ok else "🔴"
             sheet_icon = "🟢" if sheets_ok else "🔴"
-            st.caption(f"{gem_icon} Gemini · {sheet_icon} Sheets")
+            st.caption(
+                f"{gem_icon} {t('status_dialogue')} · {sheet_icon} {t('status_record')}"
+            )
 
         with st.expander(t("sidebar_inquiry"), expanded=False):
             if st.button(t("nav_inquiry"), key="chat_open_inquiry", use_container_width=True):
@@ -2149,7 +2168,7 @@ def handle_chat_turn(
     image_mime: str | None = None,
 ) -> None:
     if not gemini_ok:
-        st.error("Gemini에 연결되지 않았습니다.")
+        st.error(t("err_dialogue_not_connected"))
         return
     if st.session_state.conversation_closed:
         st.info("오늘의 대화는 마무리되었습니다. '대화 기록 초기화'로 새 이야기를 시작할 수 있어요.")
@@ -2816,7 +2835,7 @@ def _run_app() -> None:
                 unsafe_allow_html=True,
             )
         if not gemini_ok:
-            st.warning(gemini_error or "Gemini API를 사용할 수 없습니다. (.env의 GEMINI_API_KEY 확인)")
+            st.warning(gemini_error or t("err_dialogue_unavailable"))
             if gemini_error and "leaked" in gemini_error.lower():
                 st.markdown(t("err_gemini_leaked"))
 
@@ -2844,7 +2863,7 @@ def _run_app() -> None:
                     image_mime=pending.get("image_mime"),
                 )
             else:
-                st.error(gemini_error or "Gemini API를 사용할 수 없습니다.")
+                st.error(gemini_error or t("err_dialogue_unavailable"))
 
     render_inquiry_fab()
     with st.container():

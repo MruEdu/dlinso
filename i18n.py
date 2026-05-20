@@ -29,7 +29,7 @@ FOOTER_BANNER: dict[str, str] = {
     "primary": "🌿 dlinso",
     "secondary": "Dlinso Lab",
     "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
-    "powered": "Powered by Gemini 2.5 Flash · Google Sheets",
+    "powered": "대화 · 서사 구조화 · Google Sheets",
 }
 
 # 공통 옵션 (연령·학력은 연구 표준 한국어 라벨 유지, UI만 번역)
@@ -39,15 +39,34 @@ TEXTS: dict[str, dict[str, str]] = {
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "",
         "hub_tagline": "",
-        "hub_slogan": "당신의 서사를 깨우는 질문, **dlinso**입니다.",
-        "hub_slogan_beta_note": "",
-        "err_gemini_reply": "응답 생성 중 오류가 발생했습니다",
-        "err_gemini_leaked": (
-            "Gemini API 키가 유출로 차단되었습니다. "
-            "[Google AI Studio](https://aistudio.google.com/apikey)에서 **새 API 키**를 만든 뒤 "
-            "Streamlit Cloud **Settings → Secrets**와 로컬 `.env`의 `GEMINI_API_KEY`를 "
-            "교체하고 앱을 **Reboot**하세요."
+        "hub_slogan": (
+            "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. **dlinso**"
         ),
+        "hub_slogan_beta_note": "",
+        "intro_headline": (
+            "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
+        ),
+        "intro_sub": (
+            "당신의 일상이 작품이 되고, 당신의 강점이 빛나는 기록이 되는 곳. "
+            "dlinso는 당신만의 이야기를 완성하는 대화형 성찰 플랫폼입니다."
+        ),
+        "intro_guide_label": "안내",
+        "intro_guide_body": (
+            "**서사 구조화** — 나눈 대화를 바탕으로 당신만의 이야기 결을 세웁니다. "
+            "대화 기록은 안전하게 보관됩니다."
+        ),
+        "err_gemini_reply": "대화 응답을 준비하지 못했습니다",
+        "err_gemini_leaked": (
+            "대화 연결이 일시적으로 차단되었습니다. "
+            "관리자 설정(Streamlit **Secrets**·로컬 `.env`)의 연결 키를 "
+            "교체한 뒤 앱을 **Reboot**하세요."
+        ),
+        "err_dialogue_unavailable": (
+            "지금은 대화를 이어갈 수 없습니다. 연결 설정을 확인해 주세요."
+        ),
+        "err_dialogue_not_connected": "대화에 연결되지 않았습니다.",
+        "status_dialogue": "대화",
+        "status_record": "기록",
         "lang_label": "언어",
         "tab_new": "처음 오신 분",
         "tab_return": "다시 오신 분",
@@ -69,9 +88,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_back": "← 이전 화면으로",
         "inquiry_fab_label": "✉️ 연구 협업 등 문의",
         "go_life_story": "📖 나의 이야기 · 가입/로그인",
-        "intro_verse_lead": "당신의 서사를 깨우는 질문",
-        "intro_verse_name": "dlinso",
-        "intro_verse_tail": "입니다.",
         "intro_whisper": "📖 나의 이야기 — 그곳에서 열립니다.",
         "intro_hint": "이야기는 **📖 나의 이야기**에서 열립니다.",
         "reset_session": "🔄 처음부터 (세션 초기화)",
@@ -191,15 +207,34 @@ TEXTS: dict[str, dict[str, str]] = {
         "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
         "hub_eyebrow": "",
-        "err_gemini_reply": "Error while generating a reply",
+        "intro_headline": (
+            "Discover your treasure through dialogue — your life as art. dlinso"
+        ),
+        "intro_sub": (
+            "Where daily life becomes a work and your strengths shine in what you record. "
+            "dlinso is a conversational reflection space to complete your own story."
+        ),
+        "intro_guide_label": "Guide",
+        "intro_guide_body": (
+            "**Narrative structuring** — we shape the flow of your story from dialogue. "
+            "Your words are kept safe."
+        ),
+        "err_gemini_reply": "Could not prepare a dialogue response",
         "err_gemini_leaked": (
-            "Your Gemini API key was reported as leaked and blocked. "
-            "Create a **new key** at [Google AI Studio](https://aistudio.google.com/apikey), "
-            "update `GEMINI_API_KEY` in Streamlit **Settings → Secrets** (and local `.env`), "
+            "The dialogue connection was blocked. "
+            "Update the connection key in Streamlit **Secrets** (and local `.env`), "
             "then **Reboot** the app."
         ),
+        "err_dialogue_unavailable": (
+            "Dialogue is unavailable right now. Please check the connection settings."
+        ),
+        "err_dialogue_not_connected": "Not connected to dialogue.",
+        "status_dialogue": "Dialogue",
+        "status_record": "Record",
         "hub_tagline": "",
-        "hub_slogan": "A question to wake your narrative — **dlinso**.",
+        "hub_slogan": (
+            "Discover your treasure through dialogue — your life as art. **dlinso**"
+        ),
         "hub_slogan_beta_note": "",
         "lang_label": "Language",
         "tab_new": "First visit",
