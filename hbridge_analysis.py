@@ -248,10 +248,15 @@ def _tokenize(text: str) -> list[str]:
 
 
 def count_user_turns(messages: list[dict]) -> int:
+    """사용자 발화 턴 — content·display(사진 직접 입력) 모두 인정."""
     return sum(
         1
         for m in messages
-        if m.get("role") == "user" and str(m.get("content") or "").strip()
+        if m.get("role") == "user"
+        and (
+            str(m.get("content") or "").strip()
+            or str(m.get("display") or "").strip()
+        )
     )
 
 

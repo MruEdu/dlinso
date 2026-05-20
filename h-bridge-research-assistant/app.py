@@ -875,6 +875,11 @@ CUSTOM_CSS = """
         border-radius: 10px;
         text-align: center;
     }
+    div[data-testid="stVerticalBlock"]:has(.midpoint-section-marker) {
+        margin-bottom: 0.5rem !important;
+        padding-bottom: 0.35rem !important;
+        border-bottom: 1px solid rgba(157, 142, 207, 0.12);
+    }
     div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) {
         margin-top: 0.35rem !important;
     }
@@ -1408,16 +1413,14 @@ def _activate_session(
             1, int(st.session_state.get("midpoint_analysis_count", 0))
         )
         for msg in reversed(st.session_state.messages):
-            if msg.get("midpoint") or (
-                msg.get("role") == "assistant"
-                and "마음 지도" in str(msg.get("content") or "")
-            ):
-                parsed = parse_stored_midpoint_message(
-                    str(msg.get("content") or msg.get("display") or "")
-                )
-                if parsed:
-                    st.session_state.last_midpoint_report = parsed
-                break
+            if not msg.get("midpoint"):
+                continue
+            parsed = parse_stored_midpoint_message(
+                str(msg.get("content") or msg.get("display") or "")
+            )
+            if parsed:
+                st.session_state.last_midpoint_report = parsed
+            break
 
     st.session_state.total_user_turns = max(
         int(total_turn_count or 0),
@@ -1680,7 +1683,9 @@ def _append_message(role: str, content: str, **extra: object) -> None:
     entry: dict = {"role": role, "content": content, "display": extra.pop("display", content)}
     entry.update(extra)
     st.session_state.messages.append(entry)
-    if role == "user" and str(content or "").strip():
+    if role == "user" and (
+        str(content or "").strip() or str(entry.get("display") or "").strip()
+    ):
         st.session_state.total_user_turns = (
             int(st.session_state.get("total_user_turns", 0)) + 1
         )
@@ -2555,7 +2560,11 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
     user_turns = [
         m
         for m in st.session_state.messages
-        if m.get("role") == "user" and str(m.get("content") or "").strip()
+        if m.get("role") == "user"
+        and (
+            str(m.get("content") or "").strip()
+            or str(m.get("display") or "").strip()
+        )
     ]
     user_texts = [str(m.get("content") or "").strip() for m in user_turns]
 
@@ -2604,24 +2613,10 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
     )
 
     with st.chat_message("assistant", avatar=display["emoji"]):
-        st.markdown("### 지금까지의 대화, 나를 돌아보는 마음 지도")
-        st.markdown(str(report.get("midpoint_preface", "")))
-        st.info(
-            f"**[{report.get('title_landscape', '나만의 마음 풍경')}]**\n\n"
-            + str(report.get("section_landscape", ""))
-        )
-        st.info(
-            f"**[{report.get('title_connection', '우리들의 연결고리')}]**\n\n"
-            + str(report.get("section_connection", ""))
-        )
-        st.info(
-            f"**[{report.get('title_treasure', '삶의 보물지도')}]**\n\n"
-            + str(report.get("section_treasure", ""))
-        )
-        st.markdown(format_midpoint_followup())
+        _render_midpoint_report_blocks(report)
 
     full_reply = format_full_midpoint_message(report)
-    _append_message("assistant", full_reply, display=full_reply)
+    _append_message("assistant", full_reply, display=full_reply, midpoint=True)
 
     lang = get_lang()
     giant_name = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
@@ -2656,50 +2651,95 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
     st.rerun()
 
 
-def _render_reflection_depth_gauge() -> dict[str, Any]:
-    """입력창 바로 위 — 성찰의 깊이 게이지 (10턴 만점)."""
-    if st.session_state.get("extended_input_unlocked"):
-        return {"button_eligible": False, "percent": 100}
+def _render_midpoint_report_blocks(report: dict[str, Any]) -> None:
+    """마음 지도 리포트 본문 (채팅·expander 공용)."""
+    st.markdown("### 지금까지의 대화, 나를 돌아보는 마음 지도")
+    st.markdown(str(report.get("midpoint_preface", "")))
+    st.info(
+        f"**[{report.get('title_landscape', '나만의 마음 풍경')}]**\n\n"
+        + str(report.get("section_landscape", ""))
+    )
+    st.info(
+        f"**[{report.get('title_connection', '우리들의 연결고리')}]**\n\n"
+        + str(report.get("section_connection", ""))
+    )
+    st.info(
+        f"**[{report.get('title_treasure', '삶의 보물지도')}]**\n\n"
+        + str(report.get("section_treasure", ""))
+    )
+    st.markdown(format_midpoint_followup())
 
+
+def _render_midpoint_section() -> None:
+    """대화 패널 상단 — 성찰 게이지 + 중간 정리 (입력창 위 스크롤 없이 보이도록)."""
+    if st.session_state.conversation_closed:
+        return
+    _html_layout_marker("midpoint-section-marker")
+    prog = _render_reflection_depth_gauge()
+    _render_midpoint_unlock_ui(prog)
+
+
+def _render_reflection_depth_gauge() -> dict[str, Any]:
+    """성찰의 깊이 게이지 (10회 대화 기준)."""
+    turns = effective_user_turn_count()
     prog = narrative_assetization_progress(
         st.session_state.messages,
-        user_turns=effective_user_turn_count(),
+        user_turns=turns,
     )
     _html_layout_marker("narrative-asset-progress-marker")
     st.markdown(f"**{t('reflection_depth_gauge_label')}**")
-    st.progress(prog["percent"] / 100.0)
+    st.progress(min(prog["percent"] / 100.0, 1.0))
 
     n = prog["user_turns"]
     need = MIN_USER_TURNS_FOR_MIDPOINT
-    if n < need:
+    unlocked = bool(st.session_state.get("extended_input_unlocked"))
+    if unlocked or n >= need:
+        st.caption(t("narrative_asset_progress_ready"))
+    else:
         st.caption(
             t("narrative_asset_progress_turns").format(
                 current=n, need=need, percent=prog["percent"]
             )
         )
-    elif prog["percent"] >= 100:
-        st.caption(t("narrative_asset_progress_ready"))
+    # 턴 수 기준으로 버튼 노출 (게이지 품질 점수와 분리)
+    prog = dict(prog)
+    prog["button_eligible"] = n >= need
     return prog
 
 
 def _render_midpoint_unlock_ui(prog: dict[str, Any]) -> None:
-    """10턴 미만: 안내 문구 / 10턴 이상: 골드 테두리 보상 버튼."""
-    if st.session_state.get("extended_input_unlocked"):
-        return
+    """10회 미만: 안내 / 10회 이상: 중간 정리 버튼 (완료 후에도 다시 보기·재생성)."""
+    turns = effective_user_turn_count()
+    need = MIN_USER_TURNS_FOR_MIDPOINT
+    eligible = turns >= need or bool(prog.get("button_eligible"))
+    report = st.session_state.get("last_midpoint_report")
+    unlocked = bool(st.session_state.get("extended_input_unlocked"))
 
-    if not prog.get("button_eligible"):
+    if not eligible and not report:
         st.markdown(
             f'<p class="midpoint-encourage-msg">{t("midpoint_encourage_before_unlock")}</p>',
             unsafe_allow_html=True,
         )
         return
 
-    _html_layout_marker("midpoint-btn-reveal-marker")
+    if isinstance(report, dict) and report:
+        with st.expander(t("midpoint_view_expand"), expanded=False):
+            _render_midpoint_report_blocks(report)
+
+    if not eligible:
+        return
+
+    _html_layout_marker("midpoint-btn-marker", "midpoint-btn-reveal-marker")
+    btn_label = (
+        t("midpoint_analysis_btn_rerun")
+        if unlocked
+        else t("midpoint_analysis_btn")
+    )
     if st.button(
-        t("midpoint_analysis_btn"),
+        btn_label,
         key="midpoint_analysis_btn",
         use_container_width=True,
-        type="secondary",
+        type="primary" if not unlocked else "secondary",
     ):
         st.session_state.pending_midpoint_analysis = True
         st.rerun()
@@ -2832,9 +2872,6 @@ def render_chat_composer_body() -> bool:
     else:
         guide_placeholder = t("chat_composer_guide")
     photo = None
-
-    gauge_prog = _render_reflection_depth_gauge()
-    _render_midpoint_unlock_ui(gauge_prog)
 
     if _is_mobile_client():
         _html_layout_marker("mobile-chat-composer-marker")
@@ -3000,6 +3037,7 @@ def _run_app() -> None:
         else:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
+                _render_midpoint_section()
                 render_chat_area(display)
                 composer_queued = render_chat_composer_body()
 

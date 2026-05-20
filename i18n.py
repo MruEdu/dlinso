@@ -149,6 +149,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "midpoint_analysis_btn": (
             "지금까지의 대화 중간 정리 및 나만의 마음 지도 확인"
         ),
+        "midpoint_analysis_btn_rerun": "중간 정리 · 마음 지도 다시 받기",
+        "midpoint_view_expand": "🗺️ 나만의 마음 지도 다시 보기",
         "reflection_depth_gauge_label": "성찰의 깊이",
         "midpoint_encourage_before_unlock": (
             "당신의 서사가 훌륭하게 쌓이고 있습니다. "
@@ -430,6 +432,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "midpoint_analysis_btn": (
             "Mid-conversation summary & your mind map"
         ),
+        "midpoint_analysis_btn_rerun": "Mid-summary · mind map again",
+        "midpoint_view_expand": "🗺️ View your mind map again",
         "reflection_depth_gauge_label": "Depth of reflection",
         "midpoint_encourage_before_unlock": (
             "Your story is growing beautifully. "
