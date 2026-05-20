@@ -26,9 +26,7 @@ LANG_FULL: dict[str, str] = {
 
 # 하단 배너 — 언어 선택과 무관하게 한/영 병기 (글로벌 공통)
 FOOTER_BANNER: dict[str, str] = {
-    "primary": (
-        "🌿 dlinso: 개개인성 기반 내러티브 연구 허브 (Beta 1.0)"
-    ),
+    "primary": "🌿 dlinso",
     "secondary": "Dlinso Lab",
     "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
     "powered": "Powered by Gemini 2.5 Flash · Google Sheets",
@@ -39,16 +37,10 @@ TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
-        "hub_eyebrow": "Narrative Research · dlinso",
+        "hub_eyebrow": "",
         "hub_tagline": "",
-        "hub_slogan": (
-            "마음의 정원사와 나누는 들쭉날쭉한 일상 서사 — "
-            "당신만의 고유한 가치를 열매로 맺는 **익명 베타 테스트**에 함께해 주세요."
-        ),
-        "hub_slogan_beta_note": (
-            "지금은 **Beta 1.0** 익명 베타 기간입니다. "
-            "닉네임과 비밀번호만으로 안전하게 이어갈 수 있어요."
-        ),
+        "hub_slogan": "당신의 서사를 깨우는 질문, **dlinso**입니다.",
+        "hub_slogan_beta_note": "",
         "err_gemini_reply": "응답 생성 중 오류가 발생했습니다",
         "err_gemini_leaked": (
             "Gemini API 키가 유출로 차단되었습니다. "
@@ -63,7 +55,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "👇 아래에서 **개인정보 동의** 후, "
             "「처음 오신 분」또는 「다시 오신 분」탭을 선택해 주세요."
         ),
-        "nav_home": "🏠 dlinso 안내",
+        "nav_home": "🏠 dlinso",
         "nav_consult": "📖 나의 이야기",
         "nav_inquiry": "✉️ 문의하기",
         "nav_inquiry_short": "✉️",
@@ -77,7 +69,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_back": "← 이전 화면으로",
         "inquiry_fab_label": "✉️ 연구 협업 등 문의",
         "go_life_story": "📖 나의 이야기 · 가입/로그인",
-        "intro_hint": "가입·동의·로그인은 상단 **📖 나의 이야기** 메뉴에서 진행합니다.",
+        "intro_hint": "이야기는 **📖 나의 이야기**에서 열립니다.",
         "reset_session": "🔄 처음부터 (세션 초기화)",
         "consent_title": "개인정보처리방침 및 연구 동의",
         "consent_check": "연구 목적·익명 처리에 동의합니다. (필수)",
@@ -137,9 +129,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_ph_collect": "지금 마음이나 기억을 적어 보세요…",
         "chat_ph_giant": "이어서 적어 보세요…",
         "opening": (
-            "저는 **마음의 정원사**입니다. 답을 대신 드리지 않고, "
-            "당신의 말씀을 **열매를 맺을 씨앗**으로 받아 질문으로 돌봅니다.\n\n"
-            "따뜻한 기억, 사진, 또는 지금 마음 — 무엇이든 괜찮아요."
+            "저는 **마음의 정원사**입니다.\n\n"
+            "답 대신, 질문만 드립니다.\n"
+            "지금 마음 — 한 줄이면 됩니다."
         ),
         "sidebar_inquiry": "연구소에 문의하기",
         "inquiry_type_label": "문의 유형",
@@ -194,7 +186,7 @@ TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "app_title": "dlinso",
         "beta_badge": "Beta 1.0",
-        "hub_eyebrow": "Narrative Research · dlinso",
+        "hub_eyebrow": "",
         "err_gemini_reply": "Error while generating a reply",
         "err_gemini_leaked": (
             "Your Gemini API key was reported as leaked and blocked. "
@@ -202,17 +194,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "update `GEMINI_API_KEY` in Streamlit **Settings → Secrets** (and local `.env`), "
             "then **Reboot** the app."
         ),
-        "hub_tagline": (
-            "Everyday bumpy stories with the Mind Gardener — "
-            "join our anonymous beta to grow your unique values into fruit."
-        ),
-        "hub_slogan": (
-            "Everyday jagged stories with the **Mind Gardener** — "
-            "grow your unique values into fruit. Join our **anonymous beta test**."
-        ),
-        "hub_slogan_beta_note": (
-            "Now in **Beta 1.0** — participate anonymously with only a nickname and password."
-        ),
+        "hub_tagline": "",
+        "hub_slogan": "A question to wake your narrative — **dlinso**.",
+        "hub_slogan_beta_note": "",
         "lang_label": "Language",
         "tab_new": "First visit",
         "tab_return": "Continue",
@@ -229,7 +213,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "gender": "Gender",
         "age": "Age group",
         "education": "Education / life stage",
-        "nav_home": "🏠 dlinso guide",
+        "nav_home": "🏠 dlinso",
         "nav_consult": "📖 My story",
         "nav_inquiry": "✉️ Contact",
         "nav_inquiry_short": "✉️",

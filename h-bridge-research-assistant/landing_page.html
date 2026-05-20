@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>dlinso</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #6c5ce7;
-            --secondary-color: #a29bfe;
-            --bg-color: #ffffff;
-            --text-color: #2d3436;
-            --accent-color: #f1f2f6;
-            --slide-min-h: 900px;
+            --ink: #1a1625;
+            --mist: #8b8399;
+            --glow: #9d8ecf;
+            --whisper: #c4b8e0;
+            --slide-min-h: 100vh;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,9 +23,9 @@
 
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
+            background: var(--ink);
+            color: var(--whisper);
+            line-height: 1.9;
             overflow-x: hidden;
             width: 100%;
         }
@@ -38,145 +37,98 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: clamp(48px, 10vw, 80px) clamp(16px, 4vw, 24px);
+            padding: clamp(64px, 14vh, 120px) clamp(20px, 5vw, 32px);
             text-align: center;
-            border-bottom: 1px solid var(--accent-color);
+            border-bottom: 1px solid rgba(157, 142, 207, 0.12);
         }
 
         .content-box {
-            max-width: 1000px;
+            max-width: 420px;
             width: 100%;
             opacity: 0;
-            transform: translateY(30px);
-            animation: fadeIn 1s forwards ease-out;
+            transform: translateY(24px);
+            animation: fadeIn 1.4s forwards ease-out;
         }
 
         @keyframes fadeIn {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        h1 {
-            font-size: clamp(2rem, 7vw, 4.5rem);
-            font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: clamp(12px, 3vw, 24px);
-            letter-spacing: -0.02em;
-            line-height: 1.15;
-        }
-
-        h2 {
-            font-size: clamp(1.35rem, 4.5vw, 2.8rem);
-            margin-bottom: clamp(12px, 2.5vw, 20px);
-            color: #2d3436;
-            line-height: 1.25;
-        }
-
-        h3 {
-            font-size: clamp(1.05rem, 3.2vw, 1.25rem);
-        }
-
-        p {
-            font-size: clamp(0.95rem, 2.8vw, 1.4rem);
-            color: #636e72;
-            max-width: min(800px, 92vw);
-            margin: 0 auto clamp(24px, 5vw, 40px);
-            font-weight: 300;
-            line-height: 1.65;
-        }
-
-        .slide-1 { background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%); }
-        .slide-2 { background-color: #ffffff; }
-        .slide-3 { background-color: var(--accent-color); }
-        .slide-4 {
-            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-            color: white;
-        }
-        .slide-4 h1,
-        .slide-4 h2,
-        .slide-4 p,
-        .slide-4 h3 { color: white; }
-
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-            gap: clamp(16px, 4vw, 30px);
-            margin-top: clamp(28px, 6vw, 50px);
-            width: 100%;
-        }
-
-        .feature-card {
-            background: white;
-            padding: clamp(24px, 5vw, 40px);
-            border-radius: clamp(14px, 3vw, 20px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s;
-        }
-
-        .feature-card:hover { transform: translateY(-6px); }
-
-        .feature-card p {
-            font-size: clamp(0.9rem, 2.5vw, 1rem);
-            margin-bottom: 0;
-        }
-
-        .chart-box {
-            background: white;
-            padding: clamp(24px, 5vw, 40px);
-            border-radius: clamp(20px, 4vw, 30px);
-            display: inline-block;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            max-width: 100%;
-        }
-
-        .chart-bars {
+        .verse {
             display: flex;
-            gap: clamp(12px, 3vw, 20px);
-            align-items: flex-end;
-            justify-content: center;
-            height: clamp(72px, 18vw, 100px);
+            flex-direction: column;
+            gap: clamp(20px, 5vh, 36px);
+            align-items: center;
         }
 
-        .chart-bars div {
-            width: clamp(28px, 8vw, 40px);
-            border-radius: 5px;
+        .verse-line {
+            font-size: clamp(1.05rem, 3.8vw, 1.35rem);
+            font-weight: 300;
+            color: var(--whisper);
+            letter-spacing: 0.06em;
+            line-height: 2;
         }
 
-        .cta-pill {
-            border: 2px solid white;
-            display: inline-block;
-            padding: clamp(12px, 3vw, 15px) clamp(24px, 6vw, 40px);
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: clamp(0.85rem, 2.5vw, 1rem);
+        .verse-line--lead {
+            font-size: clamp(1.25rem, 4.5vw, 1.65rem);
+            font-weight: 400;
+            color: #e8e2f4;
         }
 
-        .eyebrow {
-            color: var(--primary-color);
-            font-weight: 700;
-            margin-bottom: 10px;
-            font-size: clamp(0.8rem, 2.2vw, 0.95rem);
+        .verse-line--name {
+            font-size: clamp(2rem, 9vw, 3.2rem);
+            font-weight: 500;
+            color: var(--glow);
+            letter-spacing: 0.2em;
+            margin-top: clamp(8px, 2vh, 16px);
         }
 
-        @media (max-width: 900px) {
-            :root { --slide-min-h: 820px; }
+        .verse-line--dim {
+            font-size: clamp(0.85rem, 2.6vw, 1rem);
+            color: var(--mist);
+            font-weight: 300;
         }
 
-        @media (max-width: 768px) {
-            .feature-grid { grid-template-columns: 1fr; }
+        .divider {
+            width: 1px;
+            height: clamp(48px, 10vh, 80px);
+            background: linear-gradient(
+                to bottom,
+                transparent,
+                rgba(157, 142, 207, 0.5),
+                transparent
+            );
+            margin: clamp(12px, 3vh, 24px) auto;
+        }
+
+        .slide-1 {
+            background: radial-gradient(
+                ellipse 80% 60% at 50% 40%,
+                #2a2438 0%,
+                var(--ink) 70%
+            );
+        }
+
+        .slide-2 {
+            background: var(--ink);
+        }
+
+        .slide-3 {
+            background: linear-gradient(
+                180deg,
+                var(--ink) 0%,
+                #15121c 100%
+            );
+        }
+
+        .cta-whisper {
+            font-size: clamp(0.8rem, 2.4vw, 0.92rem);
+            color: var(--mist);
+            letter-spacing: 0.14em;
         }
 
         @media (max-width: 600px) {
-            :root { --slide-min-h: clamp(520px, 92dvh, 720px); }
-
-            .slide-container {
-                padding: clamp(36px, 12vw, 56px) clamp(12px, 5vw, 18px);
-                justify-content: flex-start;
-                padding-top: clamp(48px, 14vw, 72px);
-            }
-
-            .feature-card:hover {
-                transform: none;
-            }
+            :root { --slide-min-h: clamp(520px, 100dvh, 720px); }
         }
     </style>
 </head>
@@ -184,51 +136,33 @@
 
     <section class="slide-container slide-1">
         <div class="content-box">
-            <p class="eyebrow">dlinso Project 2026</p>
-            <h1>dlinso</h1>
-            <h2>dlinso</h2>
-            <p>거인의 지혜로 당신의 삶, 그 굴곡진 서사를 다시 읽습니다.<br>우리는 개개인의 고유한 인생 곡선에 주목합니다.</p>
+            <div class="verse">
+                <p class="verse-line verse-line--lead">당신의 서사를 깨우는 질문</p>
+                <div class="divider" aria-hidden="true"></div>
+                <p class="verse-line verse-line--name">dlinso</p>
+                <p class="verse-line verse-line--dim">입니다.</p>
+            </div>
         </div>
     </section>
 
     <section class="slide-container slide-2">
         <div class="content-box">
-            <h2>시대를 초월한 거인과의 조우</h2>
-            <p>소크라테스의 문답법부터 세종대왕의 애민정신까지.<br>검증된 역사적 페르소나가 당신의 생애사 상담 파트너가 됩니다.</p>
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h3 style="color: var(--primary-color); margin-bottom: 15px;">질문하는 철학자</h3>
-                    <p>본질을 꿰뚫는 질문으로 당신의 내면을 깨웁니다.</p>
-                </div>
-                <div class="feature-card">
-                    <h3 style="color: var(--primary-color); margin-bottom: 15px;">공감하는 통치자</h3>
-                    <p>깊은 이해와 포용으로 당신의 서사를 보듬습니다.</p>
-                </div>
+            <div class="verse">
+                <p class="verse-line">이름은 묻지 않습니다.</p>
+                <p class="verse-line">닉네임과 비밀번호만,</p>
+                <p class="verse-line">당신과 정원사 사이에 남습니다.</p>
             </div>
         </div>
     </section>
 
     <section class="slide-container slide-3">
         <div class="content-box">
-            <h2>대화가 데이터가 되는 순간</h2>
-            <p>발화 속 감정 지표와 서사 단계를 실시간 분석합니다.<br>당신의 이야기는 정밀한 연구 데이터로 아카이빙되어 통찰을 제공합니다.</p>
-            <div class="chart-box">
-                <div class="chart-bars">
-                    <div style="height: 60%; background: var(--secondary-color);"></div>
-                    <div style="height: 90%; background: var(--primary-color);"></div>
-                    <div style="height: 40%; background: var(--secondary-color);"></div>
-                    <div style="height: 75%; background: var(--primary-color);"></div>
-                </div>
-                <p style="margin-top: 20px; margin-bottom: 0; font-size: clamp(0.8rem, 2.2vw, 0.9rem); font-weight: 500;">Real-time Narrative Indexing</p>
+            <div class="verse">
+                <p class="verse-line">말을 내려놓으면</p>
+                <p class="verse-line">이야기가 스스로 열립니다.</p>
+                <div class="divider" aria-hidden="true"></div>
+                <p class="cta-whisper">위 메뉴 · 나의 이야기</p>
             </div>
-        </div>
-    </section>
-
-    <section class="slide-container slide-4">
-        <div class="content-box">
-            <h2>당신의 서사를 연구소에 등록하세요</h2>
-            <p>복잡한 인생의 실타래를 거인과 함께 풀어낼 준비가 되셨나요?<br>지금 바로 왼쪽 메뉴의 '인생 서사' 탭을 눌러 상담을 시작하세요.</p>
-            <div class="cta-pill">START YOUR NARRATIVE</div>
         </div>
     </section>
 

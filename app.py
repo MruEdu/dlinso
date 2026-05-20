@@ -966,7 +966,6 @@ def render_intro() -> None:
     html = _load_landing_html(_landing_mtime())
     slides = _count_landing_slides(html)
     height = _intro_iframe_height(html)
-    st.caption(f"🌿 소개 슬라이드 {slides}장 · 아래에서 스크롤하세요")
     components.html(html, height=height, scrolling=True)
 
 
@@ -1917,11 +1916,10 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
 
 def render_hub_slogan_banner() -> None:
-    """서비스 취지 슬로건 — st.info + 베타 강조."""
+    """서비스 슬로건 — 짧은 한 줄."""
     slogan_md = t("hub_slogan").strip()
-    if not slogan_md:
-        return
-    st.info(slogan_md)
+    if slogan_md:
+        st.markdown(slogan_md)
     beta_note = t("hub_slogan_beta_note").strip()
     if beta_note:
         st.caption(beta_note)
@@ -2751,7 +2749,6 @@ def _run_app() -> None:
         return
 
     if view == VIEW_INTRO:
-        st.subheader("🏠 홈 (소개)")
         render_hub_slogan_banner()
         render_intro()
         foot = st.container()
