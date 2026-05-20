@@ -6,165 +6,55 @@
     <title>dlinso</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --ink: #1a1625;
-            --mist: #8b8399;
-            --glow: #9d8ecf;
-            --whisper: #c4b8e0;
-            --slide-min-h: 100vh;
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        html {
-            -webkit-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-        }
-
-        body {
+        html, body {
+            height: 100%;
+            overflow: hidden;
             font-family: 'Noto Sans KR', sans-serif;
-            background: var(--ink);
-            color: var(--whisper);
-            line-height: 1.9;
-            overflow-x: hidden;
-            width: 100%;
+            background: #1a1625;
+            color: #c4b8e0;
         }
-
-        .slide-container {
-            width: 100%;
-            min-height: var(--slide-min-h);
+        .screen {
+            min-height: 100%;
+            min-height: 100dvh;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: center;
-            padding: clamp(64px, 14vh, 120px) clamp(20px, 5vw, 32px);
+            padding: 2rem 1.25rem;
             text-align: center;
-            border-bottom: 1px solid rgba(157, 142, 207, 0.12);
-        }
-
-        .content-box {
-            max-width: 420px;
-            width: 100%;
-            opacity: 0;
-            transform: translateY(24px);
-            animation: fadeIn 1.4s forwards ease-out;
-        }
-
-        @keyframes fadeIn {
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .verse {
-            display: flex;
-            flex-direction: column;
-            gap: clamp(20px, 5vh, 36px);
-            align-items: center;
-        }
-
-        .verse-line {
-            font-size: clamp(1.05rem, 3.8vw, 1.35rem);
-            font-weight: 300;
-            color: var(--whisper);
-            letter-spacing: 0.06em;
-            line-height: 2;
-        }
-
-        .verse-line--lead {
-            font-size: clamp(1.25rem, 4.5vw, 1.65rem);
-            font-weight: 400;
-            color: #e8e2f4;
-        }
-
-        .verse-line--name {
-            font-size: clamp(2rem, 9vw, 3.2rem);
-            font-weight: 500;
-            color: var(--glow);
-            letter-spacing: 0.2em;
-            margin-top: clamp(8px, 2vh, 16px);
-        }
-
-        .verse-line--dim {
-            font-size: clamp(0.85rem, 2.6vw, 1rem);
-            color: var(--mist);
-            font-weight: 300;
-        }
-
-        .divider {
-            width: 1px;
-            height: clamp(48px, 10vh, 80px);
-            background: linear-gradient(
-                to bottom,
-                transparent,
-                rgba(157, 142, 207, 0.5),
-                transparent
-            );
-            margin: clamp(12px, 3vh, 24px) auto;
-        }
-
-        .slide-1 {
             background: radial-gradient(
                 ellipse 80% 60% at 50% 40%,
                 #2a2438 0%,
-                var(--ink) 70%
+                #1a1625 70%
             );
         }
-
-        .slide-2 {
-            background: var(--ink);
+        .verse { max-width: 22rem; }
+        .lead {
+            font-size: clamp(1rem, 3.6vw, 1.2rem);
+            color: #e8e2f4;
+            letter-spacing: 0.05em;
+            line-height: 1.9;
         }
-
-        .slide-3 {
-            background: linear-gradient(
-                180deg,
-                var(--ink) 0%,
-                #15121c 100%
-            );
+        .name {
+            font-size: clamp(1.85rem, 8vw, 2.6rem);
+            color: #b8a8e8;
+            letter-spacing: 0.18em;
+            margin: 0.5rem 0 0.25rem;
         }
-
-        .cta-whisper {
-            font-size: clamp(0.8rem, 2.4vw, 0.92rem);
-            color: var(--mist);
-            letter-spacing: 0.14em;
-        }
-
-        @media (max-width: 600px) {
-            :root { --slide-min-h: clamp(520px, 100dvh, 720px); }
+        .tail {
+            font-size: 0.95rem;
+            color: #9a92ad;
+            letter-spacing: 0.08em;
         }
     </style>
 </head>
 <body>
-
-    <section class="slide-container slide-1">
-        <div class="content-box">
-            <div class="verse">
-                <p class="verse-line verse-line--lead">당신의 서사를 깨우는 질문</p>
-                <div class="divider" aria-hidden="true"></div>
-                <p class="verse-line verse-line--name">dlinso</p>
-                <p class="verse-line verse-line--dim">입니다.</p>
-            </div>
+    <main class="screen">
+        <div class="verse">
+            <p class="lead">당신의 서사를 깨우는 질문</p>
+            <p class="name">dlinso</p>
+            <p class="tail">입니다.</p>
         </div>
-    </section>
-
-    <section class="slide-container slide-2">
-        <div class="content-box">
-            <div class="verse">
-                <p class="verse-line">이름은 묻지 않습니다.</p>
-                <p class="verse-line">닉네임과 비밀번호만,</p>
-                <p class="verse-line">당신과 정원사 사이에 남습니다.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="slide-container slide-3">
-        <div class="content-box">
-            <div class="verse">
-                <p class="verse-line">말을 내려놓으면</p>
-                <p class="verse-line">이야기가 스스로 열립니다.</p>
-                <div class="divider" aria-hidden="true"></div>
-                <p class="cta-whisper">위 메뉴 · 나의 이야기</p>
-            </div>
-        </div>
-    </section>
-
+    </main>
 </body>
 </html>

@@ -84,9 +84,6 @@ LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 VIEW_INTRO = "intro"
 VIEW_APP = "app"
 VIEW_INQUIRY = "inquiry"
-INTRO_SLIDE_UNIT_HEIGHT = 900
-INTRO_HEIGHT_FLOOR = 3600
-INTRO_HEIGHT_CAP = 3800
 SHEETS_LOGGER_CACHE_VERSION = 4
 
 # st.html iframe에는 앱 전역 CSS가 적용되지 않음 — 헤더·프로필 칩 전용
@@ -892,10 +889,50 @@ CUSTOM_CSS = """
         color: #4a4038;
         margin-bottom: 0.2rem;
     }
-    .intro-view .block-container {
-        max-width: 100% !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+    .dlinso-intro-panel {
+        text-align: center;
+        padding: clamp(1.75rem, 7vh, 3rem) 1.25rem;
+        margin: 0 auto 0.75rem;
+        max-width: 26rem;
+        background: radial-gradient(
+            ellipse 90% 70% at 50% 28%,
+            #2a2438 0%,
+            #1a1625 88%
+        );
+        border-radius: 18px;
+        border: 1px solid rgba(157, 142, 207, 0.18);
+        box-shadow: 0 12px 40px rgba(26, 22, 37, 0.35);
+    }
+    .dlinso-intro-lead {
+        color: #e8e2f4;
+        font-size: clamp(1rem, 3.6vw, 1.2rem);
+        font-weight: 400;
+        letter-spacing: 0.05em;
+        line-height: 1.9;
+        margin: 0 0 0.35rem;
+    }
+    .dlinso-intro-name {
+        color: #b8a8e8;
+        font-size: clamp(1.85rem, 8vw, 2.6rem);
+        font-weight: 500;
+        letter-spacing: 0.18em;
+        line-height: 1.4;
+        margin: 0.25rem 0;
+    }
+    .dlinso-intro-tail {
+        color: #9a92ad;
+        font-size: clamp(0.9rem, 2.8vw, 1rem);
+        font-weight: 300;
+        letter-spacing: 0.08em;
+        margin: 0 0 1rem;
+    }
+    .dlinso-intro-whisper {
+        color: #7d758f;
+        font-size: 0.82rem;
+        letter-spacing: 0.12em;
+        margin: 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(157, 142, 207, 0.2);
     }
     .intro-footer-bridge {
         margin-top: 0.25rem;
@@ -934,39 +971,18 @@ def render_lab_footer(*, intro_bridge: bool = False) -> None:
     )
 
 
-def _landing_mtime() -> float:
-    return LANDING_PAGE_PATH.stat().st_mtime if LANDING_PAGE_PATH.is_file() else 0.0
-
-
-@st.cache_data(show_spinner=False)
-def _load_landing_html(_mtime: float) -> str:
-    if not LANDING_PAGE_PATH.is_file():
-        return (
-            "<p style='color:#deff9a;padding:2rem;'>landing_page.html을 "
-            f"프로젝트 루트에 배치해 주세요.<br>{LANDING_PAGE_PATH}</p>"
-        )
-    return LANDING_PAGE_PATH.read_text(encoding="utf-8")
-
-
-def _count_landing_slides(html: str) -> int:
-    n_container = len(re.findall(r'class="slide-container"', html))
-    n_section = len(re.findall(r'class="slide-section"', html))
-    return max(n_container, n_section, 1)
-
-
-def _intro_iframe_height(html: str) -> int:
-    """슬라이드 수 × 단위 높이 — 4장 기준 약 3,600~3,800px."""
-    slides = _count_landing_slides(html)
-    estimated = slides * INTRO_SLIDE_UNIT_HEIGHT + 120
-    return max(INTRO_HEIGHT_FLOOR, min(estimated, INTRO_HEIGHT_CAP))
-
-
 def render_intro() -> None:
-    """홈(소개) — landing_page.html 전체 높이 임베드."""
-    html = _load_landing_html(_landing_mtime())
-    slides = _count_landing_slides(html)
-    height = _intro_iframe_height(html)
-    components.html(html, height=height, scrolling=True)
+    """홈(소개) — 한 화면, 짧은 문구만 (iframe 없음)."""
+    _html_layout_marker("dlinso-intro-marker")
+    panel = (
+        '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
+        f'<p class="dlinso-intro-lead">{html.escape(t("intro_verse_lead"))}</p>'
+        f'<p class="dlinso-intro-name">{html.escape(t("intro_verse_name"))}</p>'
+        f'<p class="dlinso-intro-tail">{html.escape(t("intro_verse_tail"))}</p>'
+        f'<p class="dlinso-intro-whisper">{html.escape(t("intro_whisper"))}</p>'
+        "</div>"
+    )
+    _render_html_fragment(panel)
 
 
 def _apply_view_nav(target: str) -> None:
@@ -2749,12 +2765,10 @@ def _run_app() -> None:
         return
 
     if view == VIEW_INTRO:
-        render_hub_slogan_banner()
         render_intro()
         foot = st.container()
         with foot:
             _html_layout_marker("intro-foot-marker")
-            st.info(t("intro_hint"))
             if st.button(t("go_life_story"), type="primary", use_container_width=True):
                 st.session_state.current_view = VIEW_APP
                 st.rerun()
