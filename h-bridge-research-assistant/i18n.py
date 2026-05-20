@@ -88,6 +88,21 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_back": "← 이전 화면으로",
         "inquiry_fab_label": "✉️ 연구 협업 등 문의",
         "go_life_story": "📖 나의 이야기 · 가입/로그인",
+        "mode_roadmap_title": "dlinso 여정",
+        "mode_lifespan_label": "생애사적 대화",
+        "mode_lifespan_desc": "연령·시기에 맞춰 과거를 회상하고 서사를 인출합니다.",
+        "mode_assessment_label": "심리·강점",
+        "mode_assessment_desc": "대화 속에서 마음 상태와 강점을 살펴봅니다.",
+        "mode_counseling_label": "나러티브 상담",
+        "mode_counseling_desc": "전문 상담 기법이 담긴 심화 대화입니다.",
+        "mode_research_label": "연구용",
+        "mode_research_desc": "질적 연구를 위한 데이터 수집·구조화입니다.",
+        "mode_tag_active": "지금",
+        "mode_tag_soon": "준비 중",
+        "age_entry_title": "어느 시기의 이야기부터 시작할까요?",
+        "age_entry_sub": "연령대를 누르면 그 시기에 맞는 말투로 대화가 열립니다.",
+        "age_entry_selected": "선택한 시기: **{age}** — 가입 후 바로 이어갈 수 있어요.",
+        "age_entry_onboarding_hint": "연령대를 고르시면 아래 가입 정보에 자동 반영됩니다.",
         "intro_whisper": "📖 나의 이야기 — 그곳에서 열립니다.",
         "intro_hint": "이야기는 **📖 나의 이야기**에서 열립니다.",
         "reset_session": "🔄 처음부터 (세션 초기화)",
@@ -146,12 +161,114 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "midpoint_char_mobile_hint": "모바일 환경에서는 1,000자 내외도 충분합니다.",
         "midpoint_char_over": "입력은 최대 {limit:,}자까지 가능합니다.",
-        "chat_ph_collect": "지금 마음이나 기억을 적어 보세요…",
+        "chat_ph_collect": "오늘 마음속 이야기를 적어 보세요…",
         "chat_ph_giant": "이어서 적어 보세요…",
+        "chat_opening_placeholder": (
+            "오늘 마음속에 가장 크게 자리 잡은 이야기를 적어 보세요…"
+        ),
         "opening": (
-            "저는 **마음의 정원사**입니다.\n\n"
-            "답 대신, 질문만 드립니다.\n"
-            "지금 마음 — 한 줄이면 됩니다."
+            "반가워요! 당신의 **마음의 정원사** dlinso입니다.\n\n"
+            "우리는 대화를 통해 당신의 삶 속에 숨겨진 보물을 함께 찾아볼 거예요.\n\n"
+            "오늘 당신의 마음속에 가장 크게 자리 잡고 있는 이야기는 무엇인가요? "
+            "작은 일상의 조각도 괜찮아요.\n\n"
+            "당신의 이야기를 들려주세요."
+        ),
+        "opening_stage_초등학생": (
+            "반가워요! **마음의 정원사** dlinso예요.\n\n"
+            "우리는 대화로 네 마음속 보물을 함께 찾아볼 거야. "
+            "학교·친구·집 이야기, 요즘 제일 신나거나 속상한 일도 좋아.\n\n"
+            "오늘 가장 먼저 떠오르는 이야기를 들려줄래?"
+        ),
+        "opening_stage_중학생": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "대화를 통해 네 삶 속 이야기를 함께 살펴볼 거예요. "
+            "친구, 학교, 꿈, 작은 일상도 모두 소중한 조각이에요.\n\n"
+            "지금 마음에 가장 남는 이야기를 편하게 적어 주세요."
+        ),
+        "opening_stage_고등학생": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "우리는 대화로 네가 소중히 여기는 이야기를 함께 이어 갈 거예요. "
+            "진로, 관계, 지금의 고민이나 작은 기쁨도 괜찮아요.\n\n"
+            "오늘 가장 크게 자리한 이야기를 들려주세요."
+        ),
+        "opening_stage_대학생": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "대화를 통해 네 삶의 조각들을 함께 이어 볼 거예요. "
+            "전공, 관계, 앞으로의 선택—부담 없이 적어 주세요.\n\n"
+            "지금 마음속 이야기를 들려주세요."
+        ),
+        "opening_stage_성인일반": (
+            "반가워요! 당신의 **마음의 정원사** dlinso입니다.\n\n"
+            "우리는 대화를 통해 당신의 삶 속 보물을 함께 찾아볼 거예요.\n\n"
+            "오늘 마음속에 가장 크게 자리한 이야기는 무엇인가요? "
+            "작은 일상의 조각도 괜찮아요.\n\n"
+            "당신의 이야기를 들려주세요."
+        ),
+        "opening_stage_은퇴_후_삶": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "천천히 대화하며 지나온 이야기와 앞으로의 마음을 함께 짚어 볼 거예요. "
+            "기억, 관계, 지금 느끼는 감정—무엇이든 괜찮습니다.\n\n"
+            "편한 마음으로 이야기를 들려주세요."
+        ),
+        "opening_age_10대": (
+            "반가워요! **마음의 정원사** dlinso예요.\n\n"
+            "대화로 네 하루와 마음속 이야기를 함께 살펴볼 거야. "
+            "친구, 학교, 작은 기쁨이나 속상함도 좋아.\n\n"
+            "지금 가장 먼저 떠오르는 이야기를 들려줄래?"
+        ),
+        "opening_age_20대": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "우리는 대화로 네가 걸어온 길과 지금의 마음을 함께 이어 볼 거예요. "
+            "선택, 관계, 작은 일상도 모두 소중해요.\n\n"
+            "오늘 가장 크게 자리한 이야기를 들려주세요."
+        ),
+        "opening_age_30대": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "대화를 통해 일과 관계 속에 숨은 보물을 함께 찾아볼 거예요. "
+            "바쁜 하루 속 작은 장면도 괜찮아요.\n\n"
+            "지금 마음속 이야기를 들려주세요."
+        ),
+        "opening_age_40대": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "우리는 대화로 삶의 무게와 빛나는 순간을 함께 짚어 볼 거예요. "
+            "책임, 전환, 작은 기쁨—무엇이든 괜찮아요.\n\n"
+            "당신의 이야기를 들려주세요."
+        ),
+        "opening_age_50대": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "대화를 통해 쌓아 온 이야기와 지금의 마음을 함께 살펴볼 거예요.\n\n"
+            "오늘 가장 전하고 싶은 이야기를 편하게 적어 주세요."
+        ),
+        "opening_age_60대_이상": (
+            "반가워요! **마음의 정원사** dlinso입니다.\n\n"
+            "천천히 대화하며 삶의 기억과 지금의 마음을 함께 이어 가요. "
+            "작은 일상의 한 조각도 소중합니다.\n\n"
+            "편안한 마음으로 이야기를 들려주세요."
+        ),
+        "opening_gender_note_여": "편한 말투로, 마음 가는 대로 천천히 적어 주셔도 좋아요.",
+        "opening_gender_note_남": "부담 없이, 오늘 떠오르는 장면부터 적어 주셔도 좋아요.",
+        "opening_gender_note_기타": "어떤 표현이든 괜찮아요. 당신의 속도로 이야기해 주세요.",
+        "chat_opening_placeholder_stage_초등학생": (
+            "오늘 제일 떠오르는 이야기를 적어 볼래?"
+        ),
+        "chat_opening_placeholder_stage_중학생": (
+            "지금 마음에 남는 이야기를 적어 보세요…"
+        ),
+        "chat_opening_placeholder_stage_고등학생": (
+            "오늘 가장 크게 자리한 이야기를 적어 보세요…"
+        ),
+        "chat_opening_placeholder_stage_대학생": (
+            "지금 마음속 이야기를 적어 보세요…"
+        ),
+        "chat_opening_placeholder_age_10대": "지금 떠오르는 이야기를 적어 볼래?",
+        "chat_opening_placeholder_age_20대": "오늘 마음속 이야기를 적어 보세요…",
+        "chat_opening_placeholder_age_30대": "지금 마음속 이야기를 적어 보세요…",
+        "chat_opening_placeholder_age_40대": "오늘 전하고 싶은 이야기를 적어 보세요…",
+        "chat_opening_placeholder_age_50대": "편하게 이야기를 적어 보세요…",
+        "chat_opening_placeholder_age_60대_이상": "천천히, 오늘의 이야기를 적어 보세요…",
+        "err_sheets_busy": (
+            "잠시 접속이 많아 기록이 지연되었습니다. "
+            "잠시 후 다시 보내 주시거나, 같은 내용이 중복되지 않았는지 확인해 주세요."
         ),
         "sidebar_inquiry": "연구소에 문의하기",
         "inquiry_type_label": "문의 유형",
@@ -306,11 +423,14 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "midpoint_char_mobile_hint": "On mobile, about 1,000 characters is often enough.",
         "midpoint_char_over": "You can enter up to {limit:,} characters.",
-        "chat_ph_collect": "Write what's on your mind…",
+        "chat_ph_collect": "Share what's on your heart today…",
         "chat_ph_giant": "Continue your story…",
-        "opening": (
-            "Shall we begin with a **memory that warms your heart**?\n\n"
-            "A joyful moment, a small achievement, or a memory you wish to keep."
+        "chat_opening_placeholder": (
+            "What story is sitting largest in your heart today?"
+        ),
+        "err_sheets_busy": (
+            "Many people are connected right now; saving was delayed. "
+            "Please try again shortly, or check that the same message was not sent twice."
         ),
         "sidebar_inquiry": "Contact the lab",
         "inquiry_type_label": "Inquiry type",
@@ -566,6 +686,10 @@ TEXTS: dict[str, dict[str, str]] = {
     },
 }
 
+from i18n_opening import merge_opening_i18n
+
+merge_opening_i18n(TEXTS)
+
 
 def get_lang() -> str:
     code = st.session_state.get("lang", "ko")
@@ -574,7 +698,12 @@ def get_lang() -> str:
 
 def t(key: str, lang: str | None = None) -> str:
     code = lang or get_lang()
-    return TEXTS.get(code, TEXTS["ko"]).get(key, TEXTS["ko"].get(key, key))
+    bucket = TEXTS.get(code, TEXTS["ko"])
+    if key in bucket:
+        return bucket[key]
+    if code not in ("ko", "en") and key in TEXTS.get("en", {}):
+        return TEXTS["en"][key]
+    return TEXTS["ko"].get(key, key)
 
 
 def render_language_selector(

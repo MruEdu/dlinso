@@ -5,11 +5,49 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
+import time
 from pathlib import Path
 from typing import Any
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+MAX_SHEETS_RETRIES = 5
+RETRYABLE_HTTP_STATUS = frozenset({429, 500, 502, 503})
+SHEETS_RATE_LIMIT_MARKER = "SHEETS_RATE_LIMIT"
+
+
+def execute_sheets_request(request: Any, *, max_attempts: int = MAX_SHEETS_RETRIES) -> Any:
+    """동시 접속·할당량 초과 시 짧은 대기 후 재시도."""
+    last_error: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            return request.execute()
+        except HttpError as exc:
+            last_error = exc
+            status = int(getattr(exc.resp, "status", 0) or 0)
+            if status in RETRYABLE_HTTP_STATUS and attempt < max_attempts - 1:
+                time.sleep((2**attempt) * 0.4 + random.uniform(0.05, 0.35))
+                continue
+            if status == 429:
+                raise RuntimeError(SHEETS_RATE_LIMIT_MARKER) from exc
+            raise
+        except Exception as exc:
+            last_error = exc
+            raise
+    if last_error:
+        raise last_error
+    raise RuntimeError("Google Sheets request failed")
+
+
+def format_sheets_error(exc: BaseException) -> str:
+    if SHEETS_RATE_LIMIT_MARKER in str(exc):
+        return SHEETS_RATE_LIMIT_MARKER
+    if isinstance(exc, HttpError) and int(getattr(exc.resp, "status", 0) or 0) == 429:
+        return SHEETS_RATE_LIMIT_MARKER
+    return str(exc)
 
 from env_config import (
     apply_secrets_to_environ,
@@ -197,13 +235,11 @@ class SheetsLogger:
         if self._service is None:
             return
         try:
-            meta = (
-                self._service.spreadsheets()
-                .get(
+            meta = execute_sheets_request(
+                self._service.spreadsheets().get(
                     spreadsheetId=self.sheet_id,
                     fields="spreadsheetId,sheets.properties.title",
                 )
-                .execute()
             )
             self._sheet_titles = [
                 s["properties"]["title"] for s in meta.get("sheets", [])
@@ -218,9 +254,8 @@ class SheetsLogger:
         if title in self._sheet_titles or self._service is None:
             return
         try:
-            (
-                self._service.spreadsheets()
-                .batchUpdate(
+            execute_sheets_request(
+                self._service.spreadsheets().batchUpdate(
                     spreadsheetId=self.sheet_id,
                     body={
                         "requests": [
@@ -228,10 +263,9 @@ class SheetsLogger:
                         ]
                     },
                 )
-                .execute()
             )
             self._sheet_titles.append(title)
-            (
+            execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .update(
@@ -240,7 +274,6 @@ class SheetsLogger:
                     valueInputOption="USER_ENTERED",
                     body={"values": [header]},
                 )
-                .execute()
             )
         except Exception:  # noqa: BLE001
             pass
@@ -249,14 +282,13 @@ class SheetsLogger:
         if not self.is_connected:
             return []
         try:
-            result = (
+            result = execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .get(
                     spreadsheetId=self.sheet_id,
                     range=self._main_range(f"A2:{main_sheet_last_column()}"),
                 )
-                .execute()
             )
             return result.get("values", [])
         except Exception:  # noqa: BLE001
@@ -292,14 +324,13 @@ class SheetsLogger:
         if not self.is_connected or sheet_title not in self._sheet_titles:
             return []
         try:
-            result = (
+            result = execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .get(
                     spreadsheetId=self.sheet_id,
                     range=self._range(sheet_title, f"A2:{last_col}"),
                 )
-                .execute()
             )
             return result.get("values", [])
         except Exception:  # noqa: BLE001
@@ -336,7 +367,7 @@ class SheetsLogger:
     ) -> None:
         last_col = self._participants_last_col()
         if row_number is not None:
-            (
+            execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .update(
@@ -347,10 +378,9 @@ class SheetsLogger:
                     valueInputOption="USER_ENTERED",
                     body={"values": [values]},
                 )
-                .execute()
             )
             return
-        (
+        execute_sheets_request(
             self._service.spreadsheets()
             .values()
             .append(
@@ -360,7 +390,6 @@ class SheetsLogger:
                 insertDataOption="INSERT_ROWS",
                 body={"values": [values]},
             )
-            .execute()
         )
 
     def record_visit(
@@ -528,15 +557,14 @@ class SheetsLogger:
         try:
             last_col = main_sheet_last_column()
             header_range = self._main_range(f"A1:{last_col}1")
-            result = (
+            result = execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .get(spreadsheetId=self.sheet_id, range=header_range)
-                .execute()
             )
             values = result.get("values", [])
             if not values or values[0] != HEADER_ROW:
-                (
+                execute_sheets_request(
                     self._service.spreadsheets()
                     .values()
                     .update(
@@ -545,14 +573,13 @@ class SheetsLogger:
                         valueInputOption="USER_ENTERED",
                         body={"values": [HEADER_ROW]},
                     )
-                    .execute()
                 )
             self._col = {h: i for i, h in enumerate(HEADER_ROW)}
             self._ensure_sheet_exists(INQUIRIES_SHEET, INQUIRIES_HEADER)
             self._ensure_sheet_exists(PARTICIPANTS_SHEET, PARTICIPANTS_HEADER)
             return True, None
         except Exception as exc:  # noqa: BLE001
-            return False, str(exc)
+            return False, format_sheets_error(exc)
 
     def get_participant_turn_count(self, nickname: str) -> int:
         """참여자 시트의 누적 사용자 턴 수."""
@@ -713,14 +740,13 @@ class SheetsLogger:
         if not self.is_connected or INQUIRIES_SHEET not in self._sheet_titles:
             return {"reply": "", "inquiry_type": "general"}
         try:
-            result = (
+            result = execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .get(
                     spreadsheetId=self.sheet_id,
                     range=self._range(INQUIRIES_SHEET, "A2:I"),
                 )
-                .execute()
             )
             rows = result.get("values", [])
             i_type = self._inquiry_col_index("Inquiry_Type")
@@ -770,7 +796,7 @@ class SheetsLogger:
             row[6] = researcher_affiliation
             row[7] = researcher_contact
             row[8] = ""
-            (
+            execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .append(
@@ -782,11 +808,10 @@ class SheetsLogger:
                     insertDataOption="INSERT_ROWS",
                     body={"values": [row]},
                 )
-                .execute()
             )
             return True, None
         except Exception as exc:  # noqa: BLE001
-            return False, str(exc)
+            return False, format_sheets_error(exc)
 
     def log_conversation(
         self,
@@ -866,7 +891,7 @@ class SheetsLogger:
                 row[self._col["Turning_Points"]] = turning_points
 
             last_col = main_sheet_last_column()
-            (
+            execute_sheets_request(
                 self._service.spreadsheets()
                 .values()
                 .append(
@@ -876,26 +901,28 @@ class SheetsLogger:
                     insertDataOption="INSERT_ROWS",
                     body={"values": [row]},
                 )
-                .execute()
             )
-            self._upsert_participant_from_turn(
-                participant_id=code,
-                password_hash=password_hash or "",
-                lang=lang,
-                gender=gender,
-                age_group=age_group,
-                education=edu,
-                user_message=user_message,
-                assistant_message=assistant_message,
-                admin_reply=admin_reply,
-                profile=profile,
-                life_context=life_context,
-                narrative_stage=narrative_stage,
-                count_as_turn=not self._is_system_marker_message(user_message),
-            )
+            try:
+                self._upsert_participant_from_turn(
+                    participant_id=code,
+                    password_hash=password_hash or "",
+                    lang=lang,
+                    gender=gender,
+                    age_group=age_group,
+                    education=edu,
+                    user_message=user_message,
+                    assistant_message=assistant_message,
+                    admin_reply=admin_reply,
+                    profile=profile,
+                    life_context=life_context,
+                    narrative_stage=narrative_stage,
+                    count_as_turn=not self._is_system_marker_message(user_message),
+                )
+            except Exception:  # noqa: BLE001
+                pass
             return True, None
         except Exception as exc:  # noqa: BLE001
-            return False, str(exc)
+            return False, format_sheets_error(exc)
 
     def log_registration(
         self,

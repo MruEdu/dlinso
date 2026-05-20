@@ -43,8 +43,6 @@ from personas import (
     PHASE_COLLECT,
     PHASE_GIANT,
     SERVICE_TITLE,
-    build_giant_system_prompt,
-    build_phase1_system_prompt,
     build_returning_greeting,
     detect_distress,
     get_active_display,
@@ -75,15 +73,17 @@ from maieutic_engine import (
     merge_text_and_image,
 )
 from narrative_engine import generate_humanistic_midpoint_report, translate_to_korean
-from sheets_logger import SheetsLogger, hash_password
+from core.views import VIEW_APP, VIEW_INQUIRY, VIEW_INTRO
+from opening_copy import resolve_opening_message, resolve_opening_placeholder
+from prompts.registry import build_mode_system_addon
+from sheets_logger import SHEETS_RATE_LIMIT_MARKER, SheetsLogger, hash_password
+from ui.age_entry import render_age_group_picker, render_mode_roadmap
 
 os.chdir(APP_DIR)
 
 PAGE_TITLE = "dlinso"
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
-VIEW_INTRO = "intro"
-VIEW_APP = "app"
-VIEW_INQUIRY = "inquiry"
+# VIEW_* → core.views
 SHEETS_LOGGER_CACHE_VERSION = 4
 
 # st.html iframe에는 앱 전역 CSS가 적용되지 않음 — 헤더·프로필 칩 전용
@@ -694,10 +694,21 @@ CUSTOM_CSS = """
         background: #fff9f4;
         border: 1px dashed rgba(160, 140, 110, 0.4);
         border-radius: 12px;
-        padding: 1.5rem 1.25rem;
+        padding: 1.25rem 1.1rem;
         color: #5c5048;
-        text-align: center;
-        line-height: 1.8;
+        text-align: left;
+        line-height: 1.75;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    @media (max-width: 768px) {
+        .opening-guide {
+            font-size: 0.92rem;
+            padding: 1rem 0.95rem;
+        }
+        div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) textarea {
+            scroll-margin-bottom: 6rem;
+        }
     }
     .life-summary-box {
         background: linear-gradient(160deg, #fffef9 0%, #f5ebe0 100%);
@@ -956,6 +967,60 @@ CUSTOM_CSS = """
         background: linear-gradient(165deg, #f0f5f2 0%, #e4ece7 100%);
         border-color: rgba(90, 130, 105, 0.25);
     }
+    .dlinso-section-label {
+        color: #c4b8e8;
+        font-size: 0.78rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin: 1.25rem 0 0.5rem;
+        font-weight: 600;
+    }
+    .dlinso-mode-chip {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        padding: 0.55rem 0.45rem;
+        border-radius: 10px;
+        border: 1px solid rgba(157, 142, 207, 0.25);
+        min-height: 3.2rem;
+    }
+    .dlinso-mode-chip--on {
+        background: rgba(120, 180, 140, 0.12);
+        border-color: rgba(120, 180, 140, 0.45);
+    }
+    .dlinso-mode-chip--off {
+        opacity: 0.55;
+    }
+    .dlinso-mode-label {
+        color: #ebe6f8;
+        font-size: 0.72rem;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+    .dlinso-mode-tag {
+        color: #8fd4a8;
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+    }
+    .dlinso-mode-chip--off .dlinso-mode-tag {
+        color: #9a92b0;
+    }
+    .dlinso-mode-desc {
+        display: none;
+    }
+    @media (min-width: 720px) {
+        .dlinso-mode-desc {
+            display: block;
+            color: #8a829c;
+            font-size: 0.65rem;
+            line-height: 1.35;
+        }
+    }
+    .dlinso-age-entry-wrap {
+        margin-top: 0.5rem;
+        padding: 0.75rem 0 0.25rem;
+        border-top: 1px solid rgba(157, 142, 207, 0.18);
+    }
 </style>
 """
 
@@ -986,7 +1051,7 @@ def render_lab_footer(*, intro_bridge: bool = False) -> None:
 
 
 def render_intro() -> None:
-    """홈(소개) — 한 화면, 짧은 문구만 (iframe 없음)."""
+    """홈(소개) — 소개 문구, 브랜치 로드맵, 연령대 버튼 진입."""
     _html_layout_marker("dlinso-intro-marker")
     panel = (
         '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
@@ -1000,6 +1065,10 @@ def render_intro() -> None:
         "</div>"
     )
     _render_html_fragment(panel)
+    render_mode_roadmap(compact=True)
+    st.markdown('<div class="dlinso-age-entry-wrap">', unsafe_allow_html=True)
+    render_age_group_picker(key_prefix="intro_age", navigate_on_select=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _apply_view_nav(target: str) -> None:
@@ -1107,6 +1176,12 @@ def render_inquiry_fab(*, above_chat_input: bool = True) -> None:
         st.rerun()
 
 
+def _sheet_save_warning(err: str) -> str:
+    if err == SHEETS_RATE_LIMIT_MARKER:
+        return t("err_sheets_busy")
+    return f"시트 저장 실패: {err}"
+
+
 def _sheets_error_message(sheets: SheetsLogger) -> str:
     """연결 실패 시 사용자용 안내 (상세 오류 + 설정 방법)."""
     lines = [t("err_sheets")]
@@ -1161,7 +1236,7 @@ def _apply_preview_session() -> None:
     st.session_state.onboarding_complete = True
     st.session_state.participant_id = "미리보기"
     st.session_state.gender = "기타"
-    st.session_state.age_group = "30-40대"
+    st.session_state.age_group = "30대"
     st.session_state.life_stage = "성인(일반)"
     st.session_state.password_hash = hash_password("preview")
     st.session_state.is_returning_user = False
@@ -1202,6 +1277,8 @@ def _init_session_state() -> None:
         "narrative_themes": "",
         "metaphors": "",
         "turning_points": "",
+        "app_mode": "lifespan",
+        "entry_age_group": "",
         "current_view": VIEW_APP,
         "pending_user_prompt": "",
         "pending_turn": None,
@@ -1292,6 +1369,7 @@ def _activate_session(
         st.session_state.messages = [dict(m) for m in restored_messages]
     else:
         st.session_state.messages = []
+        st.session_state.pop("_chat_input_focused", None)
         for turn in recent_turns or []:
             st.session_state.messages.append(
                 {"role": "user", "content": turn["user"], "display": turn["user"]}
@@ -1493,7 +1571,7 @@ def init_gemini() -> tuple[bool, str | None]:
 
 
 def build_system_instruction() -> str:
-    age = st.session_state.age_group or "30-40대"
+    age = st.session_state.age_group or "30대"
     life_stage = st.session_state.life_stage or "성인(일반)"
     phase = st.session_state.phase
     summary = st.session_state.get("context_summary", "").strip()
@@ -1501,24 +1579,19 @@ def build_system_instruction() -> str:
     lang = get_lang()
     base = build_global_maieutic_system_instruction(lang)
 
-    if phase == PHASE_GIANT and st.session_state.active_giant:
-        base += "\n\n" + build_giant_system_prompt(
-            st.session_state.active_giant,
-            age,
-            life_stage,
-            st.session_state.positive_resources,
-            st.session_state.current_concern,
-            lang=lang,
-        )
-    else:
-        base += "\n\n" + build_phase1_system_prompt(
-            age,
-            life_stage,
-            lang=lang,
-            is_returning=st.session_state.get("is_returning_user", False),
-            last_topic=st.session_state.get("last_visit_topic", ""),
-            nickname=st.session_state.get("participant_id", ""),
-        )
+    base += "\n\n" + build_mode_system_addon(
+        st.session_state.get("app_mode", "lifespan"),
+        phase,
+        giant_key=st.session_state.active_giant,
+        age_group=age,
+        life_stage=life_stage,
+        positive_resources=st.session_state.positive_resources,
+        current_concern=st.session_state.current_concern,
+        lang=lang,
+        is_returning=st.session_state.get("is_returning_user", False),
+        last_topic=st.session_state.get("last_visit_topic", ""),
+        nickname=st.session_state.get("participant_id", ""),
+    )
 
     if summary:
         base += f"\n\n[지금까지의 이야기 요약]\n{summary}"
@@ -1744,6 +1817,7 @@ def _reset_chat_state() -> None:
             st.session_state[key] = 0.0
         else:
             st.session_state[key] = 0 if key == "diet_applied_count" else ""
+    st.session_state.pop("_chat_input_focused", None)
 
 
 def render_chat_toolbar(
@@ -1829,6 +1903,8 @@ def reset_user_session() -> None:
         "gender": "",
         "age_group": "",
         "life_stage": "",
+        "entry_age_group": "",
+        "app_mode": "lifespan",
         "password_hash": "",
         "is_returning_user": False,
         "preview_mode": False,
@@ -1849,14 +1925,33 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
     with tab_new:
         st.markdown(t("key_hint"))
+        st.caption(t("age_entry_onboarding_hint"))
+        render_age_group_picker(
+            key_prefix="onboard_age",
+            navigate_on_select=False,
+        )
         consent = st.checkbox(t("consent_check"), key="consent_new")
+        preset_age = (st.session_state.get("entry_age_group") or "").strip()
+        age_index = (
+            AGE_GROUPS.index(preset_age) if preset_age in AGE_GROUPS else 0
+        )
+        preset_stage = (st.session_state.get("life_stage") or "").strip()
+        stage_index = (
+            LIFE_STAGE_OPTIONS.index(preset_stage)
+            if preset_stage in LIFE_STAGE_OPTIONS
+            else 0
+        )
         with st.form("signup_form"):
             nickname = st.text_input(t("nickname"), placeholder="…")
             password = st.text_input(t("password"), type="password")
             password2 = st.text_input(t("password_confirm"), type="password")
             gender = st.selectbox(t("gender"), GENDER_OPTIONS)
-            age_group = st.selectbox(t("age"), AGE_GROUPS)
-            life_stage = st.selectbox(t("education"), LIFE_STAGE_OPTIONS)
+            age_group = st.selectbox(
+                t("age"), AGE_GROUPS, index=age_index
+            )
+            life_stage = st.selectbox(
+                t("education"), LIFE_STAGE_OPTIONS, index=stage_index
+            )
             signup = st.form_submit_button(
                 t("btn_start"),
                 type="primary",
@@ -2022,7 +2117,12 @@ def render_chat_area(display: dict) -> None:
             return
 
     if not st.session_state.messages:
-        opening = t("opening").replace("\n\n", "<br><br>")
+        opening = resolve_opening_message(
+            t=t,
+            age_group=st.session_state.get("age_group", ""),
+            gender=st.session_state.get("gender", ""),
+            life_stage=st.session_state.get("life_stage", ""),
+        ).replace("\n\n", "<br><br>")
         st.markdown(
             f'<div class="opening-guide">{opening}</div>',
             unsafe_allow_html=True,
@@ -2337,7 +2437,7 @@ def handle_chat_turn(
             turning_points=st.session_state.get("turning_points", ""),
         )
         if not ok:
-            st.warning(f"시트 저장 실패: {err}")
+            st.warning(_sheet_save_warning(err))
 
     if st.session_state.get("is_returning_user"):
         st.session_state.is_returning_user = False
@@ -2542,7 +2642,7 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
             turning_points=stats_json,
         )
         if not ok:
-            st.warning(f"시트 저장 실패: {err}")
+            st.warning(_sheet_save_warning(err))
 
     st.rerun()
 
@@ -2594,6 +2694,34 @@ def _render_midpoint_unlock_ui(prog: dict[str, Any]) -> None:
     ):
         st.session_state.pending_midpoint_analysis = True
         st.rerun()
+
+
+def _inject_chat_input_focus() -> None:
+    """첫 대화 화면 — 하단 입력창으로 포커스·스크롤."""
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            const areas = doc.querySelectorAll("textarea");
+            for (let i = areas.length - 1; i >= 0; i--) {
+                const ta = areas[i];
+                if (!ta || ta.offsetParent === null) continue;
+                const ph = (ta.getAttribute("placeholder") || "").trim();
+                if (!ph) continue;
+                ta.focus({ preventScroll: false });
+                try {
+                    ta.scrollIntoView({ behavior: "smooth", block: "center" });
+                } catch (e) {
+                    ta.scrollIntoView();
+                }
+                break;
+            }
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 
 def _is_mobile_client() -> bool:
@@ -2685,7 +2813,15 @@ def render_chat_composer_body() -> bool:
         return False
 
     alt_nonce = int(st.session_state.get("chat_composer_nonce", 0))
-    guide_placeholder = t("chat_composer_guide")
+    if not st.session_state.messages:
+        guide_placeholder = resolve_opening_placeholder(
+            t=t,
+            age_group=st.session_state.get("age_group", ""),
+            gender=st.session_state.get("gender", ""),
+            life_stage=st.session_state.get("life_stage", ""),
+        )
+    else:
+        guide_placeholder = t("chat_composer_guide")
     photo = None
 
     gauge_prog = _render_reflection_depth_gauge()
@@ -2740,6 +2876,12 @@ def render_chat_composer_body() -> bool:
         _bump_chat_composer_nonce()
         st.rerun()
         return True
+
+    if not st.session_state.messages and not st.session_state.get(
+        "_chat_input_focused"
+    ):
+        st.session_state._chat_input_focused = True
+        _inject_chat_input_focus()
     return False
 
 

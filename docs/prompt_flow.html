@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dlinso — 프롬프트 흐름 · Prompt Flow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Noto Sans KR", sans-serif;
+            background: #1a1625;
+            color: #c4b8e0;
+            min-height: 100vh;
+            padding: 2rem 1.25rem 3rem;
+            background: radial-gradient(
+                ellipse 90% 70% at 50% 20%,
+                #2a2438 0%,
+                #1a1625 65%
+            );
+        }
+
+        .wrap {
+            max-width: 56rem;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: clamp(1.1rem, 3.5vw, 1.35rem);
+            font-weight: 500;
+            color: #ece6f8;
+            margin-bottom: 0.35rem;
+            line-height: 1.5;
+        }
+
+        h1 .en {
+            display: block;
+            font-size: 0.92em;
+            font-weight: 400;
+            color: #b8b0cc;
+            margin-top: 0.2rem;
+        }
+
+        .subtitle {
+            font-size: 0.88rem;
+            color: #9a92b0;
+            line-height: 1.7;
+            max-width: 40rem;
+            margin: 0 auto;
+        }
+
+        .subtitle .en {
+            display: block;
+            margin-top: 0.45rem;
+            font-size: 0.92em;
+            color: #7d758f;
+        }
+
+        .subtitle code,
+        .subtitle strong {
+            color: #d4c8f0;
+        }
+
+        .subtitle code {
+            background: rgba(157, 142, 207, 0.12);
+            padding: 0.1em 0.35em;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .diagram-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(157, 142, 207, 0.25);
+            border-radius: 16px;
+            padding: 1.5rem 0.75rem 2rem;
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .legend {
+            margin-top: 2rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .legend h2 {
+            font-size: 0.78rem;
+            letter-spacing: 0.1em;
+            color: #8fd4a8;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            line-height: 1.5;
+        }
+
+        .legend h2 .en {
+            display: block;
+            font-size: 0.95em;
+            color: #6fa882;
+            letter-spacing: 0.06em;
+            margin-top: 0.15rem;
+        }
+
+        .legend ul {
+            list-style: none;
+            font-size: 0.86rem;
+            line-height: 1.55;
+            color: #b8b0cc;
+        }
+
+        .legend li {
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            border-left: 3px solid rgba(157, 142, 207, 0.4);
+            background: rgba(0, 0, 0, 0.15);
+            margin-bottom: 0.4rem;
+        }
+
+        .legend li .en {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.92em;
+            color: #8a829c;
+            line-height: 1.5;
+        }
+
+        .legend code {
+            font-size: 0.82em;
+            color: #d4c8f0;
+            background: rgba(157, 142, 207, 0.12);
+            padding: 0.1em 0.35em;
+            border-radius: 4px;
+        }
+
+        footer {
+            margin-top: 2.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #6d6580;
+            line-height: 1.6;
+        }
+
+        footer .en {
+            display: block;
+            margin-top: 0.2rem;
+        }
+
+        .mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <h1>
+                dlinso 프롬프트 조립 흐름
+                <span class="en">dlinso Prompt Assembly Flow</span>
+            </h1>
+            <p class="subtitle">
+                <strong>app.py</strong>가 매 대화 턴마다 시스템 지시문을 만들고,
+                브랜치 <code>app_mode</code>에 따라 모듈이 프롬프트 조각을 이어 붙입니다.
+                <span class="en">
+                    On each turn, <strong>app.py</strong> builds the system instruction;
+                    modules append prompt fragments based on branch <code>app_mode</code>.
+                </span>
+            </p>
+        </header>
+
+        <section class="diagram-card" aria-label="프롬프트 흐름도 · Prompt flow diagram">
+            <pre class="mermaid">
+flowchart TB
+    subgraph UI["Streamlit · app.py"]
+        A["시스템 지시문 조립<br/>build_system_instruction()"]
+        A --> B["글로벌 정원사 기반 지시<br/>Global Garden Guide base<br/>maieutic_engine"]
+    end
+
+    B --> C["모드별 프롬프트 라우팅<br/>build_mode_system_addon()<br/>prompts/registry.py"]
+
+    C --> D{"앱 모드 · app_mode"}
+
+    D -->|"생애사 · lifespan<br/>Active"| E["생애사적 대화 프롬프트<br/>Life-narrative prompts<br/>prompts/lifespan.py"]
+    E --> F{"대화 단계 · phase"}
+    F -->|"회상 수집 · collect"| G["1단계 회상 프롬프트<br/>Phase 1 recall prompt<br/>personas · build_phase1_system_prompt"]
+    F -->|"거장 대화 · giant"| H["2단계 거장 프롬프트<br/>Phase 2 giant prompt<br/>personas · build_giant_system_prompt"]
+
+    D -->|"심리·강점 · assessment<br/>Coming soon"| I["검사 스텁 · Assessment stub<br/>prompts/assessment.py"]
+    D -->|"나러티브 상담 · counseling<br/>Coming soon"| J["상담 스텁 · Counseling stub<br/>prompts/counseling.py"]
+    D -->|"연구용 · research<br/>Coming soon"| K["연구 스텁 · Research stub<br/>prompts/research.py"]
+
+    G --> L["최종 시스템 지시문<br/>Final system instruction"]
+    H --> L
+    I --> L
+    J --> L
+    K --> L
+
+    B --> M["맥락·단계 보강<br/>Context & phase addons<br/>story_thread / summary"]
+    M --> L
+
+    L --> N["응답 생성 · Response generation<br/>Gemini · shown as Dialogue in UI"]
+
+    style D fill:#2d2640,stroke:#9d8ecf,color:#ece6f8
+    style E fill:#1e3a2a,stroke:#8fd4a8,color:#ece6f8
+    style G fill:#252038,stroke:#7d6fa8,color:#ece6f8
+    style H fill:#252038,stroke:#7d6fa8,color:#ece6f8
+    style I fill:#2a2438,stroke:#6d6580,color:#9a92b0
+    style J fill:#2a2438,stroke:#6d6580,color:#9a92b0
+    style K fill:#2a2438,stroke:#6d6580,color:#9a92b0
+    style L fill:#3d2f55,stroke:#c4b8e8,color:#fff
+            </pre>
+        </section>
+
+        <section class="legend">
+            <h2>
+                파일 역할
+                <span class="en">File roles</span>
+            </h2>
+            <ul>
+                <li>
+                    <code>app.py</code> — 세션(연령·생애주기·phase)을 읽고 <code>build_system_instruction()</code> 호출
+                    <span class="en">Reads session (age, life stage, phase) and calls <code>build_system_instruction()</code></span>
+                </li>
+                <li>
+                    <code>modes/registry.py</code> — lifespan / assessment / counseling / research 브랜치 메타데이터
+                    <span class="en">Branch metadata for lifespan, assessment, counseling, and research modes</span>
+                </li>
+                <li>
+                    <code>prompts/registry.py</code> — <code>app_mode</code>에 맞는 프롬프트 모듈로 위임
+                    <span class="en">Delegates to the prompt module matching <code>app_mode</code></span>
+                </li>
+                <li>
+                    <code>prompts/lifespan.py</code> — 현재 활성: Phase1(회상) · Giant(거장) 조각 조립
+                    <span class="en">Currently active: assembles Phase 1 (recall) and Giant phase fragments</span>
+                </li>
+                <li>
+                    <code>personas.py</code> — 연령·학력 말투, 거장 페르소나 문구(실제 본문)
+                    <span class="en">Age/education tone and giant persona copy (core prompt text)</span>
+                </li>
+            </ul>
+        </section>
+
+        <footer>
+            dlinso · docs/prompt_flow.html
+            <span class="en">Bilingual diagram · Korean / English</span>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: "dark",
+            themeVariables: {
+                primaryColor: "#2d2640",
+                primaryTextColor: "#ece6f8",
+                primaryBorderColor: "#9d8ecf",
+                lineColor: "#7d6fa8",
+                secondaryColor: "#1e3a2a",
+                tertiaryColor: "#252038",
+                fontFamily: '"Noto Sans KR", sans-serif'
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: "basis",
+                padding: 18,
+                nodeSpacing: 28,
+                rankSpacing: 40
+            }
+        });
+    </script>
+</body>
+</html>

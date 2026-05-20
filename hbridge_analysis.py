@@ -596,7 +596,8 @@ def resolve_report_voice(life_stage: str, age_group: str = "") -> str:
         return "adult"
     if stage in ("성인(일반)", "은퇴 후 삶"):
         return "adult"
-    if "10-20" in age_group:
+    ag = (age_group or "").strip()
+    if ag in ("10대", "20대") or "10-20" in ag:
         return "secondary"
     return "adult"
 

@@ -48,7 +48,7 @@ def main() -> int:
                 password_hash="sha256:test",
                 lang="en",
                 gender="기타",
-                age_group="30-40대",
+                age_group="30대",
                 education="성인(일반)",
                 user_message_ko="[연동 테스트]",
                 assistant_message_ko="dlinso 시트 로깅 점검 완료",
