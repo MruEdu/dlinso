@@ -77,7 +77,7 @@ from core.views import VIEW_APP, VIEW_INQUIRY, VIEW_INTRO
 from opening_copy import resolve_opening_message, resolve_opening_placeholder
 from prompts.registry import build_mode_system_addon
 from sheets_logger import SHEETS_RATE_LIMIT_MARKER, SheetsLogger, hash_password
-from ui.age_entry import render_age_group_picker, render_mode_roadmap
+from ui.age_entry import render_current_age_context, render_mode_roadmap
 
 os.chdir(APP_DIR)
 
@@ -164,6 +164,11 @@ HERO_CARD_INLINE_STYLE = """
 """
 
 TOKEN_DIET_MESSAGE_THRESHOLD = 28
+
+
+def _beta_badge_html() -> str:
+    label = html.escape((t("beta_badge") or "Beta").strip())
+    return f'<span class="beta-badge" title="{label}">{label}</span>'
 
 
 def _html_layout_marker(*css_classes: str) -> None:
@@ -803,6 +808,19 @@ CUSTOM_CSS = """
         margin-top: 0.1rem;
         line-height: 1.15;
     }
+    .hub-beta-row {
+        margin: 0.35rem 0 0.5rem;
+    }
+    .hub-page-title {
+        margin: 0 0 0.35rem;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #4a3f6b;
+    }
+    .dlinso-intro-headline .beta-badge {
+        margin-left: 0.5rem;
+        vertical-align: 0.2em;
+    }
     .beta-badge {
         display: inline-block;
         vertical-align: middle;
@@ -1016,10 +1034,15 @@ CUSTOM_CSS = """
             line-height: 1.35;
         }
     }
-    .dlinso-age-entry-wrap {
-        margin-top: 0.5rem;
-        padding: 0.75rem 0 0.25rem;
-        border-top: 1px solid rgba(157, 142, 207, 0.18);
+    .dlinso-current-age-context {
+        color: #9a92b0;
+        font-size: 0.82rem;
+        line-height: 1.55;
+        margin: 0 0 0.75rem;
+        padding: 0.5rem 0.65rem;
+        border-radius: 8px;
+        background: rgba(157, 142, 207, 0.08);
+        border: 1px solid rgba(157, 142, 207, 0.15);
     }
 </style>
 """
@@ -1051,11 +1074,12 @@ def render_lab_footer(*, intro_bridge: bool = False) -> None:
 
 
 def render_intro() -> None:
-    """홈(소개) — 소개 문구, 브랜치 로드맵, 연령대 버튼 진입."""
+    """홈(소개) — 소개 문구, 브랜치 로드맵."""
     _html_layout_marker("dlinso-intro-marker")
     panel = (
         '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
-        f'<h2 class="dlinso-intro-headline">{html.escape(t("intro_headline"))}</h2>'
+        f'<h2 class="dlinso-intro-headline">{html.escape(t("intro_headline"))}'
+        f"{_beta_badge_html()}</h2>"
         f'<p class="dlinso-intro-sub">{html.escape(t("intro_sub"))}</p>'
         '<div class="dlinso-intro-guide">'
         f'<p class="dlinso-intro-guide-label">{html.escape(t("intro_guide_label"))}</p>'
@@ -1066,9 +1090,6 @@ def render_intro() -> None:
     )
     _render_html_fragment(panel)
     render_mode_roadmap(compact=True)
-    st.markdown('<div class="dlinso-age-entry-wrap">', unsafe_allow_html=True)
-    render_age_group_picker(key_prefix="intro_age", navigate_on_select=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _apply_view_nav(target: str) -> None:
@@ -1099,7 +1120,7 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
 
     with cols[idx]:
         st.markdown(
-            '<span class="hybrid-brand">🌿 dlinso</span>',
+            f'<span class="hybrid-brand">🌿 dlinso</span>{_beta_badge_html()}',
             unsafe_allow_html=True,
         )
     idx += 1
@@ -1278,7 +1299,6 @@ def _init_session_state() -> None:
         "metaphors": "",
         "turning_points": "",
         "app_mode": "lifespan",
-        "entry_age_group": "",
         "current_view": VIEW_APP,
         "pending_user_prompt": "",
         "pending_turn": None,
@@ -1832,7 +1852,8 @@ def render_chat_toolbar(
         with left:
             companion = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
             st.markdown(
-                f'<span class="phase-badge">{companion}와 함께</span>',
+                f'<span class="phase-badge">{companion}와 함께</span>'
+                f"{_beta_badge_html()}",
                 unsafe_allow_html=True,
             )
             if st.session_state.preview_mode:
@@ -1903,7 +1924,6 @@ def reset_user_session() -> None:
         "gender": "",
         "age_group": "",
         "life_stage": "",
-        "entry_age_group": "",
         "app_mode": "lifespan",
         "password_hash": "",
         "is_returning_user": False,
@@ -1925,33 +1945,17 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
     with tab_new:
         st.markdown(t("key_hint"))
-        st.caption(t("age_entry_onboarding_hint"))
-        render_age_group_picker(
-            key_prefix="onboard_age",
-            navigate_on_select=False,
-        )
+        render_current_age_context(placement="onboarding")
         consent = st.checkbox(t("consent_check"), key="consent_new")
-        preset_age = (st.session_state.get("entry_age_group") or "").strip()
-        age_index = (
-            AGE_GROUPS.index(preset_age) if preset_age in AGE_GROUPS else 0
-        )
-        preset_stage = (st.session_state.get("life_stage") or "").strip()
-        stage_index = (
-            LIFE_STAGE_OPTIONS.index(preset_stage)
-            if preset_stage in LIFE_STAGE_OPTIONS
-            else 0
-        )
         with st.form("signup_form"):
             nickname = st.text_input(t("nickname"), placeholder="…")
             password = st.text_input(t("password"), type="password")
             password2 = st.text_input(t("password_confirm"), type="password")
             gender = st.selectbox(t("gender"), GENDER_OPTIONS)
-            age_group = st.selectbox(
-                t("age"), AGE_GROUPS, index=age_index
-            )
-            life_stage = st.selectbox(
-                t("education"), LIFE_STAGE_OPTIONS, index=stage_index
-            )
+            age_group = st.selectbox(t("age_current"), AGE_GROUPS)
+            st.caption(t("age_field_help"))
+            life_stage = st.selectbox(t("education"), LIFE_STAGE_OPTIONS)
+            st.caption(t("education_field_help"))
             signup = st.form_submit_button(
                 t("btn_start"),
                 type="primary",
@@ -2046,10 +2050,14 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
 
 def render_hub_slogan_banner() -> None:
-    """서비스 슬로건 — 짧은 한 줄."""
+    """서비스 슬로건 — 짧은 한 줄 + 베타 표시."""
     slogan_md = t("hub_slogan").strip()
     if slogan_md:
         st.markdown(slogan_md)
+    st.markdown(
+        f'<p class="hub-beta-row">{_beta_badge_html()}</p>',
+        unsafe_allow_html=True,
+    )
     beta_note = t("hub_slogan_beta_note").strip()
     if beta_note:
         st.caption(beta_note)
@@ -2117,6 +2125,7 @@ def render_chat_area(display: dict) -> None:
             return
 
     if not st.session_state.messages:
+        render_current_age_context(placement="chat")
         opening = resolve_opening_message(
             t=t,
             age_group=st.session_state.get("age_group", ""),
@@ -2940,7 +2949,11 @@ def _run_app() -> None:
     if not is_ready_for_chat():
         with st.container():
             _html_layout_marker("app-content-pad-marker")
-            st.markdown(f"### {t('app_title')}", unsafe_allow_html=True)
+            st.markdown(
+                f'<h3 class="hub-page-title">🌿 {html.escape(t("app_title"))}'
+                f"{_beta_badge_html()}</h3>",
+                unsafe_allow_html=True,
+            )
             render_hub_slogan_banner()
             render_onboarding(sheets)
             render_lab_footer()

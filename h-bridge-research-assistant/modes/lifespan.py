@@ -21,15 +21,3 @@ def suggest_life_stage(age_group: str) -> str:
         return stage
     return "성인(일반)"
 
-
-def select_age_entry(age_group: str) -> None:
-    """연령대 진입 — 세션에 생애사 모드·프로필 초안을 기록."""
-    import streamlit as st
-
-    from modes.registry import MODE_LIFESPAN
-
-    age = (age_group or "").strip()
-    st.session_state.app_mode = MODE_LIFESPAN
-    st.session_state.entry_age_group = age
-    st.session_state.age_group = age
-    st.session_state.life_stage = suggest_life_stage(age)

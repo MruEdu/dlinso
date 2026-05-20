@@ -201,8 +201,10 @@ def build_phase1_system_prompt(
     base = (
         f"[Phase 1 · {GUIDE_NAME}] {SERVICE_TITLE}\n\n"
         f"참여자 맥락: 연령대 {age_group}, 학력·생애주기 「{life_stage}」.\n\n"
-        "즐거운 기억·성취·남기고 싶은 추억을 **Elenchus → 공감 → Maieutic question** 으로 수집. "
-        "글로벌 정원사 System Instruction을 따르되, 이 Phase는 **희망적 서사 자원(씨앗)** 에 무게.\n\n"
+        "첫 대화는 **자유롭게**—오늘의 일상·현재 마음·과거 기억 모두 환영. "
+        "연령·생애주기는 **말투와 맥락**만 맞추고, '어느 시기 이야기'를 정하지 마세요. "
+        "내면의 질문으로 대화를 이끌되(산파술·엘렌코스), 그 방법론 이름은 드러내지 마세요. "
+        "희망적 서사 자원(씨앗)을 천천히 모으되, 회상·과거는 대화가 이어지며 자연스럽게.\n\n"
         f"[연령·학력 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
     )
     if is_returning:

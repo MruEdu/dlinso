@@ -1,13 +1,11 @@
-"""연령대 버튼·브랜치 로드맵 UI."""
+"""현재 연령·생애주기 표시(프로필) — 시기 선택 UI 없음."""
 
 from __future__ import annotations
 
 import streamlit as st
 
 from i18n import t
-from modes.lifespan import select_age_entry
 from modes.registry import APP_MODES, AppModeSpec
-from personas import AGE_GROUPS
 
 
 def render_mode_roadmap(*, compact: bool = False) -> None:
@@ -39,49 +37,26 @@ def _render_mode_chip(spec: AppModeSpec, *, compact: bool) -> None:
     )
 
 
-def render_age_group_picker(
-    *,
-    key_prefix: str = "age_entry",
-    navigate_on_select: bool = True,
-) -> str | None:
+def render_current_age_context(*, placement: str = "chat") -> None:
     """
-    연령대 그리드 버튼.
-    선택 시 select_age_entry() 후 선택된 연령대 문자열 반환.
+    가입 시 저장한 **현재** 연령·생애주기를 안내 (시기 선택 아님).
+    placement: 'chat' | 'onboarding'
     """
+    age = (st.session_state.get("age_group") or "").strip()
+    stage = (st.session_state.get("life_stage") or "").strip()
+    if placement == "onboarding":
+        st.caption(t("profile_save_hint"))
+        return
+    if not age and not stage:
+        return
+    line = t("chat_age_context_caption").format(
+        age=age or "—",
+        stage=stage or "—",
+    )
     st.markdown(
-        f'<p class="dlinso-section-label">{html_escape(t("age_entry_title"))}</p>',
+        f'<p class="dlinso-current-age-context">{html_escape(line)}</p>',
         unsafe_allow_html=True,
     )
-    st.caption(t("age_entry_sub"))
-
-    selected: str | None = None
-    n = len(AGE_GROUPS)
-    row_size = 3 if n > 4 else n
-    for row_start in range(0, n, row_size):
-        row_ages = AGE_GROUPS[row_start : row_start + row_size]
-        cols = st.columns(len(row_ages), gap="small")
-        for col, age in zip(cols, row_ages, strict=True):
-            with col:
-                if st.button(
-                    age,
-                    key=f"{key_prefix}_{age}",
-                    use_container_width=True,
-                    type="primary"
-                    if st.session_state.get("entry_age_group") == age
-                    else "secondary",
-                ):
-                    select_age_entry(age)
-                    selected = age
-                    if navigate_on_select:
-                        from core.views import VIEW_APP
-
-                        st.session_state.current_view = VIEW_APP
-                    st.rerun()
-
-    preset = (st.session_state.get("entry_age_group") or "").strip()
-    if preset:
-        st.caption(t("age_entry_selected").format(age=preset))
-    return selected
 
 
 def html_escape(text: str) -> str:

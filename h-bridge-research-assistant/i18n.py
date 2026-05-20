@@ -36,13 +36,13 @@ FOOTER_BANNER: dict[str, str] = {
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
-        "beta_badge": "Beta 1.0",
+        "beta_badge": "베타 1.0",
         "hub_eyebrow": "",
         "hub_tagline": "",
         "hub_slogan": (
             "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. **dlinso**"
         ),
-        "hub_slogan_beta_note": "",
+        "hub_slogan_beta_note": "베타 버전입니다. 기능과 문구가 계속 다듬어지고 있어요.",
         "intro_headline": (
             "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
         ),
@@ -90,7 +90,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "go_life_story": "📖 나의 이야기 · 가입/로그인",
         "mode_roadmap_title": "dlinso 여정",
         "mode_lifespan_label": "생애사적 대화",
-        "mode_lifespan_desc": "연령·시기에 맞춰 과거를 회상하고 서사를 인출합니다.",
+        "mode_lifespan_desc": "지금의 말투로 대화하며, 이어지는 이야기 속에서 삶의 서사를 함께 만듭니다.",
         "mode_assessment_label": "심리·강점",
         "mode_assessment_desc": "대화 속에서 마음 상태와 강점을 살펴봅니다.",
         "mode_counseling_label": "나러티브 상담",
@@ -99,10 +99,22 @@ TEXTS: dict[str, dict[str, str]] = {
         "mode_research_desc": "질적 연구를 위한 데이터 수집·구조화입니다.",
         "mode_tag_active": "지금",
         "mode_tag_soon": "준비 중",
-        "age_entry_title": "어느 시기의 이야기부터 시작할까요?",
-        "age_entry_sub": "연령대를 누르면 그 시기에 맞는 말투로 대화가 열립니다.",
-        "age_entry_selected": "선택한 시기: **{age}** — 가입 후 바로 이어갈 수 있어요.",
-        "age_entry_onboarding_hint": "연령대를 고르시면 아래 가입 정보에 자동 반영됩니다.",
+        "age_current": "현재 연령대",
+        "age_field_help": (
+            "가입 정보로 저장되며, 대화의 말투와 맥락에만 사용됩니다. "
+            "어느 시기의 이야기를 할지 정하는 항목이 아닙니다."
+        ),
+        "education_field_help": (
+            "현재의 생활 단계를 알려 주시면, 맞는 말투로 동행합니다."
+        ),
+        "profile_save_hint": (
+            "아래에 **현재** 연령·생애 단계를 입력해 주세요. "
+            "첫 대화는 지금이든 과거든 자유롭게 시작하시면 됩니다."
+        ),
+        "chat_age_context_caption": (
+            "현재 연령 {age} · 생애 단계 {stage} — 이 맞춤 말투로 대화합니다. "
+            "오늘의 일상이든 과거의 기억이든, 떠오르는 대로 편하게 적어 주세요."
+        ),
         "intro_whisper": "📖 나의 이야기 — 그곳에서 열립니다.",
         "intro_hint": "이야기는 **📖 나의 이야기**에서 열립니다.",
         "reset_session": "🔄 처음부터 (세션 초기화)",
@@ -132,7 +144,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "chat_photo_row_caption": "📷 사진 (선택)",
         "chat_photo_label": "사진 업로드",
-        "chat_photo_hint": "📷 사진의 색·구도·사물을 읽고, 마음의 정원사가 씨앗이 될 질문으로 이어갑니다.",
+        "chat_photo_hint": "📷 사진의 색·구도·분위기를 읽고, 대화를 이어갑니다.",
         "chat_alt_send": "보내기",
         "midpoint_analysis_btn": (
             "지금까지의 대화 중간 정리 및 나만의 마음 지도 확인"
@@ -164,14 +176,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "chat_ph_collect": "오늘 마음속 이야기를 적어 보세요…",
         "chat_ph_giant": "이어서 적어 보세요…",
         "chat_opening_placeholder": (
-            "오늘 마음속에 가장 크게 자리 잡은 이야기를 적어 보세요…"
+            "지금 떠오르는 말을 자유롭게 적어 보세요…"
         ),
         "opening": (
             "반가워요! 당신의 **마음의 정원사** dlinso입니다.\n\n"
-            "우리는 대화를 통해 당신의 삶 속에 숨겨진 보물을 함께 찾아볼 거예요.\n\n"
-            "오늘 당신의 마음속에 가장 크게 자리 잡고 있는 이야기는 무엇인가요? "
-            "작은 일상의 조각도 괜찮아요.\n\n"
-            "당신의 이야기를 들려주세요."
+            "오늘의 하루, 지금 마음, 혹은 떠오르는 옛날 이야기—무엇이든 괜찮아요. "
+            "정해진 주제 없이, 편한 속도로 시작해 주세요.\n\n"
+            "먼저 떠오르는 한 가지를 들려주시면, 대화가 이어집니다."
         ),
         "opening_stage_초등학생": (
             "반가워요! **마음의 정원사** dlinso예요.\n\n"
@@ -352,7 +363,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "Discover your treasure through dialogue — your life as art. **dlinso**"
         ),
-        "hub_slogan_beta_note": "",
+        "hub_slogan_beta_note": "Beta release — features and copy are still evolving.",
         "lang_label": "Language",
         "tab_new": "First visit",
         "tab_return": "Continue",
@@ -368,6 +379,25 @@ TEXTS: dict[str, dict[str, str]] = {
         "password_confirm": "Confirm password",
         "gender": "Gender",
         "age": "Age group",
+        "age_current": "Current age group",
+        "age_field_help": (
+            "Saved in your profile for tone and context only—not to pick which era to discuss."
+        ),
+        "education_field_help": (
+            "Your current life stage helps us match tone as we walk alongside you."
+        ),
+        "profile_save_hint": (
+            "Enter your **current** age and life stage below. "
+            "Your first message can be about today or long ago—whatever comes to mind."
+        ),
+        "chat_age_context_caption": (
+            "Current age {age} · life stage {stage} — we match this tone. "
+            "Write freely about today or the past."
+        ),
+        "mode_lifespan_label": "Life-narrative dialogue",
+        "mode_lifespan_desc": (
+            "Dialogue in a tone that fits you now; your story unfolds as we talk."
+        ),
         "education": "Education / life stage",
         "nav_home": "🏠 dlinso",
         "nav_consult": "📖 My story",
@@ -395,7 +425,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "chat_photo_row_caption": "📷 Photo (optional)",
         "chat_photo_label": "Upload photo",
-        "chat_photo_hint": "📷 We read color, composition, and objects — then ask a maieutic question.",
+        "chat_photo_hint": "📷 We read color, composition, and mood — then continue the dialogue.",
         "chat_alt_send": "Send",
         "midpoint_analysis_btn": (
             "Mid-conversation summary & your mind map"

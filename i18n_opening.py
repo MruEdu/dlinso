@@ -7,10 +7,9 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     "en": {
         "opening": (
             "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
-            "Through our dialogue, we'll look for the treasures hidden in your life.\n\n"
-            "What story is taking up the most space in your heart today? "
-            "Even a small piece of daily life is welcome.\n\n"
-            "We're listening."
+            "Today, right now, or a memory from long ago—whatever surfaces is welcome. "
+            "No fixed topic; start at your own pace.\n\n"
+            "Share whatever comes to mind first, and we'll take it from there."
         ),
         "opening_stage_초등학생": (
             "Hi! I'm **dlinso**, your Mind Gardener.\n\n"
@@ -93,9 +92,7 @@ OPENING_I18N: dict[str, dict[str, str]] = {
         "opening_gender_note_기타": (
             "Any words are welcome. Tell your story at your own pace."
         ),
-        "chat_opening_placeholder": (
-            "What story is sitting largest in your heart today?"
-        ),
+        "chat_opening_placeholder": "Write freely whatever comes to mind…",
         "chat_opening_placeholder_stage_초등학생": (
             "What's the first story you think of today?"
         ),
@@ -120,10 +117,9 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     "mn": {
         "opening": (
             "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
-            "Яриагаар амьдралынхаа нууц эрдэнэсийг хамтдаа олно.\n\n"
-            "Өнөөдөр зүрхэнд хамгийн том байрлаж буй түүх юу вэ? "
-            "Жижиг өдөр тутмын зүйл ч болно.\n\n"
-            "Ярьж өгнө үү."
+            "Өнөөдөр, одоо, эсвэл өнгөрсөн дурсамж—юу ч болно. "
+            "Сэдэв сонгохгүй, өөрийн хурдаар эхэлнэ үү.\n\n"
+            "Эхлээд санаанд орсон зүйлээ хэлээрэй."
         ),
         "opening_stage_초등학생": (
             "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
@@ -204,10 +200,9 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     "ja": {
         "opening": (
             "こんにちは。**心の庭師** dlinso です。\n\n"
-            "対話を通して、あなたの人生に隠れた宝物を一緒に探します。\n\n"
-            "今日、心いちばんに残っている物語は何ですか？"
-            "小さな日常の一片でも大丈夫です。\n\n"
-            "お聞かせください。"
+            "今日のこと、いまの気持ち、昔の記憶—どれでも大丈夫です。"
+            "決まったテーマはありません。自分のペースで始めてください。\n\n"
+            "まず浮かんだことをひとつ、聞かせてください。"
         ),
         "opening_stage_초등학생": (
             "こんにちは。**心の庭師** dlinso です。\n\n"
@@ -288,10 +283,9 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     "zh": {
         "opening": (
             "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
-            "我们将通过对谈，一起寻找你生命中隐藏的宝藏。\n\n"
-            "今天，心里占最大位置的故事是什么？"
-            "日常的一小片也可以。\n\n"
-            "请慢慢说给我们听。"
+            "今天的事、此刻的心情、过去的记忆—都可以。"
+            "没有固定主题，请按自己的节奏开始。\n\n"
+            "先说说最先浮现的一件事就好。"
         ),
         "opening_stage_초등학생": (
             "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
@@ -372,10 +366,9 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     "vi": {
         "opening": (
             "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
-            "Qua đối thoại, chúng ta sẽ cùng tìm những kho báu ẩn trong đời bạn.\n\n"
-            "Hôm nay, câu chuyện nào chiếm chỗ lớn nhất trong tim bạn? "
-            "Một mảnh nhỏ trong ngày cũng được.\n\n"
-            "Hãy kể cho chúng tôi nghe."
+            "Hôm nay, lúc này, hay ký ức xưa—đều được. "
+            "Không có chủ đề cố định; hãy bắt đầu theo nhịp của bạn.\n\n"
+            "Hãy kể điều đầu tiên nghĩ đến, rồi chúng ta sẽ cùng đi tiếp."
         ),
         "opening_stage_초등학생": (
             "Chào bạn! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
@@ -456,8 +449,83 @@ OPENING_I18N: dict[str, dict[str, str]] = {
 }
 
 
+PROFILE_I18N: dict[str, dict[str, str]] = {
+    "mn": {
+        "age_current": "Одоогийн насны бүлэг",
+        "age_field_help": (
+            "Профайлд хадгалагдаж, зөвхөн ярианы аянд ашиглагдана—"
+            "ямар үеийн түүх ярихыг сонгох биш."
+        ),
+        "education_field_help": "Одоогийн амьдралын үеийг мэдээлнэ үү.",
+        "profile_save_hint": (
+            "Доор **одоогийн** нас, амьдралын үеээ оруулна уу. "
+            "Эхний мессеж өнөөдөр эсвэл өнгөрсөн—аль аль нь болно."
+        ),
+        "chat_age_context_caption": (
+            "Одоогийн нас {age} · үе {stage} — энэ аяар ярина. "
+            "Өнөөдөр эсвэл өнгөрсөн—чөлөөтэй бичнэ үү."
+        ),
+        "chat_opening_placeholder": "Санаанд орсон зүйлээ чөлөөтэй бичээрэй…",
+    },
+    "ja": {
+        "age_current": "現在の年代",
+        "age_field_help": (
+            "プロフィールに保存され、話し方のトーンにのみ使います。"
+            "どの時代の話をするか選ぶ項目ではありません。"
+        ),
+        "education_field_help": "いまの生活段階に合わせて寄り添います。",
+        "profile_save_hint": (
+            "下に**現在**の年代・ライフステージを入力してください。"
+            "最初の一言は今日でも昔でも構いません。"
+        ),
+        "chat_age_context_caption": (
+            "現在 {age} · {stage} — このトーンで対話します。"
+            "今日でも過去でも、思いつくまま書いてください。"
+        ),
+        "chat_opening_placeholder": "思いつくことを自由に書いてください…",
+    },
+    "zh": {
+        "age_current": "当前年龄段",
+        "age_field_help": (
+            "保存在个人资料中，仅用于对话语气与语境——"
+            "不是选择要谈哪个时期。"
+        ),
+        "education_field_help": "告知当前生活阶段，以便匹配语气。",
+        "profile_save_hint": (
+            "请在下方填写**当前**年龄与生活阶段。"
+            "第一条消息可以是今天或往昔，均可。"
+        ),
+        "chat_age_context_caption": (
+            "当前年龄 {age} · 阶段 {stage} — 以此语气对话。"
+            "今天或过去，随意写下所想。"
+        ),
+        "chat_opening_placeholder": "自由写下此刻浮现的话…",
+    },
+    "vi": {
+        "age_current": "Nhóm tuổi hiện tại",
+        "age_field_help": (
+            "Lưu trong hồ sơ, chỉ dùng cho giọng điệu—"
+            "không phải chọn thời kỳ nào để kể."
+        ),
+        "education_field_help": "Giai đoạn đời hiện tại giúp chúng tôi đồng hành đúng giọng.",
+        "profile_save_hint": (
+            "Nhập **hiện tại** tuổi và giai đoạn đời bên dưới. "
+            "Tin nhắn đầu có thể về hôm nay hay quá khứ."
+        ),
+        "chat_age_context_caption": (
+            "Tuổi hiện tại {age} · giai đoạn {stage} — đối thoại theo giọng này. "
+            "Hôm nay hay quá khứ, cứ viết tự do."
+        ),
+        "chat_opening_placeholder": "Viết tự do điều đang nghĩ…",
+    },
+}
+
+
 def merge_opening_i18n(texts: dict[str, dict[str, str]]) -> None:
-    """TEXTS dict에 맞춤 opening 키를 병합."""
+    """TEXTS dict에 맞춤 opening·프로필 안내 키를 병합."""
     for lang, entries in OPENING_I18N.items():
+        if lang in texts:
+            texts[lang].update(entries)
+    for lang, entries in PROFILE_I18N.items():
         if lang in texts:
             texts[lang].update(entries)
