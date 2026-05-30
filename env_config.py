@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -70,6 +71,12 @@ DEFAULT_DATABASE_PATH = APP_DIR / "data" / "dlinso.db"
 DEFAULT_ISOLATION_DATABASE_PATH = APP_DIR / "data" / "isolation.db"
 DATA_DIR = APP_DIR / "data"
 
+_WIN_ABS_PATH_RE = re.compile(r"^[A-Za-z]:[/\\]")
+
+
+def _looks_like_windows_absolute(raw: str) -> bool:
+    return bool(_WIN_ABS_PATH_RE.match((raw or "").strip()))
+
 
 def is_streamlit_cloud() -> bool:
     """Streamlit Community Cloud 등 호스팅 환경 감지."""
@@ -79,11 +86,14 @@ def is_streamlit_cloud() -> bool:
     return host.endswith(".streamlit.app") or "streamlit" in host
 
 
-def _path_unusable_on_this_host(path: Path) -> bool:
+def _path_unusable_on_this_host(path: Path, raw: str = "") -> bool:
     """
     Windows 절대 경로(E:\\...)가 Linux(Cloud)에서 쓰이거나,
     로컬에서도 부모 폴더가 없으면 프로젝트 data/ 로 대체.
     """
+    text = (raw or str(path)).strip()
+    if _looks_like_windows_absolute(text) and os.name != "nt":
+        return True
     if path.drive and os.name != "nt":
         return True
     try:
@@ -98,15 +108,23 @@ def _path_unusable_on_this_host(path: Path) -> bool:
 def resolve_storage_path(raw: str, default: Path) -> Path:
     """
     DB 등 저장 경로 — 상대 경로는 APP_DIR 기준.
-    .env 에 남은 E:\\work\\... 절대 경로는 Cloud/이전 PC 에서 자동 폴백.
+    .env 에 남은 E:\\work\\... / E:/work/... 는 Cloud(Linux)에서 data/*.db 로 폴백.
     """
     text = (raw or "").strip()
     if not text:
         return default
+    # Linux: E:/... 는 is_absolute()=False 가 되어 APP_DIR/E:/... 로 깨지는 경우 방지
+    if _looks_like_windows_absolute(text) and os.name != "nt":
+        win_name = Path(text.replace("\\", "/")).name
+        if win_name.lower().endswith(".db"):
+            fallback = DATA_DIR / win_name
+            fallback.parent.mkdir(parents=True, exist_ok=True)
+            return fallback
+        return default
     path = Path(text)
     if not path.is_absolute():
         return APP_DIR / path
-    if _path_unusable_on_this_host(path):
+    if _path_unusable_on_this_host(path, text):
         if path.suffix.lower() == ".db":
             fallback = DATA_DIR / path.name
             fallback.parent.mkdir(parents=True, exist_ok=True)

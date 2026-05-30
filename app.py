@@ -19,6 +19,7 @@ from env_config import (
     get_database_path,
     get_isolation_database_path,
     get_llm_provider,
+    is_streamlit_cloud,
 )
 
 apply_secrets_to_environ()
@@ -251,9 +252,14 @@ def _llm_user_error(exc: BaseException) -> str:
     low = msg.lower()
     if isinstance(exc, LLMNotConfiguredError):
         if get_llm_provider() == "upstage":
+            if is_streamlit_cloud():
+                return (
+                    "UPSTAGE_API_KEY가 설정되지 않았습니다. "
+                    "Streamlit Cloud **Settings → Secrets**에 키를 추가한 뒤 **Reboot app** 하세요."
+                )
             return (
                 "UPSTAGE_API_KEY가 설정되지 않았습니다. "
-                f"프로젝트 루트 `{ENV_PATH.name}` 파일을 확인하세요."
+                f"`.env` 또는 `.streamlit/secrets.toml` ({ENV_PATH.name})을 확인하세요."
             )
         return t("err_dialogue_unavailable")
     if "leaked" in low or ("403" in msg and "api key" in low):
