@@ -92,28 +92,98 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active):not(:has(.d
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .block-container {{
     padding-top: 0 !important;
+    padding-left: max(0.5rem, env(safe-area-inset-left)) !important;
+    padding-right: max(0.5rem, env(safe-area-inset-right)) !important;
+    padding-bottom: 1rem !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .block-container {{
     max-width: 940px !important;
     padding-top: 0 !important;
-    padding-bottom: 2.5rem !important;
+    padding-bottom: 1.75rem !important;
 }}
-div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) header[data-testid="stHeader"] {{
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) header[data-testid="stHeader"],
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) [data-testid="stToolbar"],
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) [data-testid="stStatusWidget"] {{
     height: 0 !important;
     min-height: 0 !important;
     visibility: hidden !important;
+    display: none !important;
 }}
-div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker)
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) > section.main {{
+    padding-top: 0 !important;
+}}
+/* 하이브리드 네비 — 랜딩 전용 초소형 */
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {{
-    padding-top: 0.1rem !important;
-    padding-bottom: 0.25rem !important;
-    margin-bottom: 0.1rem !important;
+    padding: 0.12rem 0.35rem 0.15rem !important;
+    margin: 0 !important;
+    box-shadow: 0 1px 6px rgba(50, 40, 70, 0.05) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .hybrid-brand {{
+    line-height: 1.1 !important;
+    font-size: clamp(0.8rem, 2.4vw, 0.92rem) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button {{
+    min-height: 1.85rem !important;
+    padding: 0.22rem 0.18rem !important;
+    font-size: clamp(0.68rem, 2.6vw, 0.84rem) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {{
+    gap: 0.08rem !important;
+    align-items: center !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) [data-testid="stVerticalBlock"] {{
+    gap: 0 !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) div.element-container {{
+    margin-bottom: 0 !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero--lifted {{
+    animation: none !important;
+    transform: none !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
+    font-size: clamp(1.75rem, 5vw, 2.65rem) !important;
+    line-height: 1.05 !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
-    margin-top: 0.35rem !important;
+    margin-top: 0.12rem !important;
+    font-size: clamp(1.05rem, 3vw, 1.55rem) !important;
+    line-height: 1.22 !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-about-panel {{
-    margin-top: 0.35rem !important;
+    margin: 0.15rem auto 0.55rem !important;
+    padding: 0.75rem 0.85rem 0.7rem !important;
+}}
+@media (max-width: 600px) {{
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {{
+        padding: 0 0.15rem 0.08rem !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button {{
+        min-height: 1.65rem !important;
+        padding: 0.15rem 0.08rem !important;
+        font-size: 0.62rem !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .hybrid-brand {{
+        font-size: 0.72rem !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .block-container {{
+        padding-left: 0.3rem !important;
+        padding-right: 0.3rem !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
+        font-size: clamp(1.45rem, 7.5vw, 1.85rem) !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
+        font-size: clamp(0.95rem, 4.2vw, 1.25rem) !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
+        padding: 0 0.35rem 0 !important;
+    }}
 }}
 
 .dlinso-intro-atmosphere {{
@@ -232,8 +302,8 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     padding: 1.25rem 1rem 0.15rem;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
-    padding: 0.15rem 1rem 0 !important;
-    margin-bottom: 0 !important;
+    padding: 0 0.65rem 0 !important;
+    margin: 0 auto !important;
 }}
 .dlinso-brand-hero {{
     position: relative; z-index: 2;
