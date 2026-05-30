@@ -13,6 +13,7 @@ from env_config import (
     get_database_path,
     get_supabase_key,
     get_supabase_url,
+    is_streamlit_cloud,
     korea_now_str,
     resolve_storage_path,
 )
@@ -187,13 +188,18 @@ class DatabaseManager:
 
     def nickname_exists(self, nickname: str) -> bool:
         nick = nickname.strip()
-        if not nick or not self.is_connected:
+        if not nick:
             return False
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT 1 FROM users WHERE nickname = ?", (nick,)
-            ).fetchone()
-            return row is not None
+        if self.is_connected:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM users WHERE nickname = ?", (nick,)
+                ).fetchone()
+                if row:
+                    return True
+        if is_supabase_configured():
+            return supabase_nickname_exists(nick)
+        return False
 
     def get_participant_turn_count(self, nickname: str) -> int:
         nick = nickname.strip()
@@ -312,6 +318,16 @@ class DatabaseManager:
         return entries, has_midpoint, logged_user_turns
 
     def find_returning_user(
+        self, nickname: str, password: str
+    ) -> dict[str, Any] | None:
+        found = self._find_returning_user_sqlite(nickname, password)
+        if found:
+            return found
+        if is_supabase_configured():
+            return find_returning_user_from_supabase(nickname, password)
+        return None
+
+    def _find_returning_user_sqlite(
         self, nickname: str, password: str
     ) -> dict[str, Any] | None:
         nick = nickname.strip()
@@ -434,6 +450,8 @@ class DatabaseManager:
                         nick,
                     ),
                 )
+            if is_supabase_configured():
+                sync_user_to_supabase_from_sqlite(self, nick)
             return True, None
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)
@@ -704,6 +722,36 @@ class DatabaseManager:
                         nick,
                     ),
                 )
+            cloud_sync_after_log_conversation(
+                nickname=nick,
+                password_hash=password_hash,
+                lang=lang,
+                gender=gender,
+                age_group=age_group,
+                life_stage=edu,
+                user_message=user_message,
+                assistant_message=assistant_message,
+                user_message_ko=u_ko,
+                assistant_message_ko=a_ko,
+                turn_type=turn_type,
+                module_type=(module_type or "lifespan").strip() or "lifespan",
+                learning_audience=(learning_audience or "").strip(),
+                is_midpoint=is_midpoint,
+                is_system=is_system,
+                profile=profile,
+                life_context=life_context,
+                narrative_stage=narrative_stage,
+                narrative_themes=narrative_themes,
+                metaphors=metaphors,
+                turning_points=turning_points,
+                current_concern=current_concern,
+                summoned_narrative=summoned_narrative,
+                learning_signals_json=(learning_signals_json or "")[:8000],
+                visit_count=visit_no,
+                total_turn_count=turns,
+                last_user_snippet=user_snip,
+                last_assistant_snippet=assist_snip,
+            )
             return True, None
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)
@@ -868,8 +916,9 @@ def log_isolation_turn_dual(
         signals_json or str(log_kwargs.get("isolation_signals_json") or "") or ""
     )[:8000]
     log_kwargs = dict(log_kwargs)
+    log_kwargs.pop("isolation_signals_json", None)
+    log_kwargs.pop("nickname", None)
     log_kwargs.setdefault("module_type", "isolation")
-    log_kwargs["isolation_signals_json"] = sig
 
     if not db.is_connected:
         return False, db.error_message or "database not connected"
@@ -893,3 +942,417 @@ def log_isolation_turn_dual(
         )
         notify_supabase_sync(sb_ok, sb_err)
     return ok, err
+
+
+# ---------------------------------------------------------------------------
+# Supabase — 여정 · 학습 클라우드 저장 + 재로그인 복원
+# ---------------------------------------------------------------------------
+
+DLINSO_USERS_TABLE = "dlinso_users"
+DLINSO_TURNS_TABLE = "dlinso_conversation_turns"
+
+
+def _cloud_sync_modules() -> frozenset[str]:
+    return frozenset({"lifespan", "learning"})
+
+
+def sync_user_to_supabase(
+    *,
+    nickname: str,
+    password_hash: str = "",
+    lang: str = "ko",
+    gender: str = "",
+    age_group: str = "",
+    life_stage: str = "",
+    visit_count: int = 1,
+    total_turn_count: int = 0,
+    agency: float = 50,
+    reflection_depth: float = 50,
+    emotional_richness: float = 50,
+    relational_connection: float = 50,
+    life_context: str = "",
+    narrative_stage: str = "",
+    last_user_snippet: str = "",
+    last_assistant_snippet: str = "",
+    first_visit_at: str | None = None,
+    last_visit_at: str | None = None,
+) -> tuple[bool, str | None]:
+    client = get_supabase_client()
+    if client is None:
+        return False, "Supabase 미설정"
+
+    nick = (nickname or "").strip()
+    if not nick:
+        return False, "nickname empty"
+
+    now_iso = korea_now_str()
+    row: dict[str, Any] = {
+        "nickname": nick,
+        "password_hash": password_hash or "",
+        "lang": lang or "ko",
+        "gender": gender or "",
+        "age_group": age_group or "",
+        "life_stage": life_stage or "",
+        "visit_count": int(visit_count),
+        "total_turn_count": int(total_turn_count),
+        "agency": float(agency),
+        "reflection_depth": float(reflection_depth),
+        "emotional_richness": float(emotional_richness),
+        "relational_connection": float(relational_connection),
+        "life_context": life_context or "",
+        "narrative_stage": narrative_stage or "",
+        "last_user_snippet": (last_user_snippet or "")[:280],
+        "last_assistant_snippet": (last_assistant_snippet or "")[:280],
+        "last_visit_at": last_visit_at or now_iso,
+        "updated_at": now_iso,
+    }
+    if first_visit_at:
+        row["first_visit_at"] = first_visit_at
+    try:
+        client.table(DLINSO_USERS_TABLE).upsert(row, on_conflict="nickname").execute()
+        return True, None
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
+def sync_user_to_supabase_from_sqlite(db: "DatabaseManager", nickname: str) -> None:
+    nick = (nickname or "").strip()
+    if not nick or not db.is_connected or not is_supabase_configured():
+        return
+    try:
+        with db._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE nickname = ?", (nick,)
+            ).fetchone()
+        if not row:
+            return
+        sync_user_to_supabase(
+            nickname=nick,
+            password_hash=str(row["password_hash"] or ""),
+            lang=str(row["lang"] or "ko"),
+            gender=str(row["gender"] or ""),
+            age_group=str(row["age_group"] or ""),
+            life_stage=str(row["life_stage"] or ""),
+            visit_count=int(row["visit_count"] or 1),
+            total_turn_count=int(row["total_turn_count"] or 0),
+            agency=float(row["agency"] or 50),
+            reflection_depth=float(row["reflection_depth"] or 50),
+            emotional_richness=float(row["emotional_richness"] or 50),
+            relational_connection=float(row["relational_connection"] or 50),
+            life_context=str(row["life_context"] or ""),
+            narrative_stage=str(row["narrative_stage"] or ""),
+            last_user_snippet=str(row["last_user_snippet"] or ""),
+            last_assistant_snippet=str(row["last_assistant_snippet"] or ""),
+            first_visit_at=str(row["first_visit_at"] or "") or None,
+            last_visit_at=str(row["last_visit_at"] or "") or None,
+        )
+    except Exception:  # noqa: BLE001
+        return
+
+
+def sync_conversation_turn_to_supabase(
+    *,
+    nickname: str,
+    module_type: str,
+    turn_type: str,
+    user_input: str,
+    ai_response: str,
+    user_input_ko: str = "",
+    ai_response_ko: str = "",
+    learning_audience: str = "",
+    is_midpoint: bool = False,
+    is_system: bool = False,
+    metadata_json: dict[str, Any] | None = None,
+) -> tuple[bool, str | None]:
+    client = get_supabase_client()
+    if client is None:
+        return False, "Supabase 미설정"
+
+    nick = (nickname or "").strip()
+    if not nick:
+        return False, "nickname empty"
+
+    row = {
+        "nickname": nick,
+        "module_type": (module_type or "lifespan").strip() or "lifespan",
+        "turn_type": (turn_type or "conversation").strip() or "conversation",
+        "user_input": user_input or "",
+        "ai_response": ai_response or "",
+        "user_input_ko": user_input_ko or "",
+        "ai_response_ko": ai_response_ko or "",
+        "learning_audience": (learning_audience or "").strip(),
+        "is_midpoint": bool(is_midpoint),
+        "is_system": bool(is_system),
+        "metadata_json": metadata_json or {},
+    }
+    try:
+        client.table(DLINSO_TURNS_TABLE).insert(row).execute()
+        return True, None
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
+def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
+    """여정·학습 — SQLite 성공 후 Supabase 이중 저장 (숲은 isolation_narratives 별도)."""
+    if not is_supabase_configured():
+        return
+
+    module_type = (kwargs.get("module_type") or "lifespan").strip() or "lifespan"
+    nick = (kwargs.get("nickname") or "").strip()
+    profile = kwargs.get("profile") or {}
+
+    sync_user_to_supabase(
+        nickname=nick,
+        password_hash=str(kwargs.get("password_hash") or ""),
+        lang=str(kwargs.get("lang") or "ko"),
+        gender=str(kwargs.get("gender") or ""),
+        age_group=str(kwargs.get("age_group") or ""),
+        life_stage=str(kwargs.get("life_stage") or ""),
+        visit_count=int(kwargs.get("visit_count") or 1),
+        total_turn_count=int(kwargs.get("total_turn_count") or 0),
+        agency=float(profile.get("agency", 50)),
+        reflection_depth=float(profile.get("reflection_depth", 50)),
+        emotional_richness=float(profile.get("emotional_richness", 50)),
+        relational_connection=float(profile.get("relational_connection", 50)),
+        life_context=str(kwargs.get("life_context") or ""),
+        narrative_stage=str(kwargs.get("narrative_stage") or ""),
+        last_user_snippet=str(kwargs.get("last_user_snippet") or ""),
+        last_assistant_snippet=str(kwargs.get("last_assistant_snippet") or ""),
+    )
+
+    if module_type not in _cloud_sync_modules():
+        return
+
+    metadata: dict[str, Any] = {
+        "life_context": kwargs.get("life_context") or "",
+        "narrative_stage": kwargs.get("narrative_stage") or "",
+        "narrative_themes": kwargs.get("narrative_themes") or "",
+        "metaphors": kwargs.get("metaphors") or "",
+        "turning_points": kwargs.get("turning_points") or "",
+        "current_concern": kwargs.get("current_concern") or "",
+        "summoned_narrative": kwargs.get("summoned_narrative") or "",
+        "learning_signals_json": _parse_signals_json(
+            str(kwargs.get("learning_signals_json") or "")
+        ),
+        "profile": {
+            "agency": float(profile.get("agency", 50)),
+            "reflection_depth": float(profile.get("reflection_depth", 50)),
+            "emotional_richness": float(profile.get("emotional_richness", 50)),
+            "relational_connection": float(profile.get("relational_connection", 50)),
+        },
+    }
+    sb_ok, sb_err = sync_conversation_turn_to_supabase(
+        nickname=nick,
+        module_type=module_type,
+        turn_type=str(kwargs.get("turn_type") or "conversation"),
+        user_input=str(kwargs.get("user_message") or ""),
+        ai_response=str(kwargs.get("assistant_message") or ""),
+        user_input_ko=str(kwargs.get("user_message_ko") or ""),
+        ai_response_ko=str(kwargs.get("assistant_message_ko") or ""),
+        learning_audience=str(kwargs.get("learning_audience") or ""),
+        is_midpoint=bool(kwargs.get("is_midpoint")),
+        is_system=bool(kwargs.get("is_system")),
+        metadata_json=metadata,
+    )
+    if is_streamlit_cloud():
+        notify_supabase_sync(sb_ok, sb_err)
+
+
+def supabase_nickname_exists(nickname: str) -> bool:
+    client = get_supabase_client()
+    nick = (nickname or "").strip()
+    if client is None or not nick:
+        return False
+    try:
+        resp = (
+            client.table(DLINSO_USERS_TABLE)
+            .select("nickname")
+            .eq("nickname", nick)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(resp, "data", None) or []
+        return bool(rows)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _turns_to_restore_payload(
+    turns: list[dict[str, Any]],
+    user_row: dict[str, Any],
+    password_hash: str,
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+    has_midpoint = False
+    logged_user_turns = 0
+    recent_turns: list[dict[str, str]] = []
+
+    for row in turns:
+        user_t = str(row.get("user_input") or "")
+        assist_t = str(row.get("ai_response") or "")
+        is_mid = bool(row.get("is_midpoint"))
+        is_sys = bool(row.get("is_system"))
+
+        if is_sys or (user_t.startswith("[") and not _is_midpoint_user_message(user_t)):
+            continue
+        if _is_midpoint_user_message(user_t) or is_mid:
+            has_midpoint = True
+            entries.append(
+                {
+                    "role": "assistant",
+                    "content": assist_t,
+                    "display": assist_t,
+                    "midpoint": True,
+                }
+            )
+            continue
+
+        logged_user_turns += 1
+        entries.append({"role": "user", "content": user_t, "display": user_t})
+        if assist_t:
+            entries.append(
+                {"role": "assistant", "content": assist_t, "display": assist_t}
+            )
+        recent_turns.append({"user": user_t, "assistant": assist_t})
+
+    max_msgs = MAX_RESTORE_TURNS * 2 + (2 if has_midpoint else 0)
+    if len(entries) > max_msgs:
+        entries = entries[-max_msgs:]
+    if len(recent_turns) > MAX_RESTORE_TURNS:
+        recent_turns = recent_turns[-MAX_RESTORE_TURNS:]
+
+    last_module_type = "lifespan"
+    last_learning_audience = ""
+    if turns:
+        last_module_type = (
+            str(turns[-1].get("module_type") or "lifespan").strip() or "lifespan"
+        )
+        last_learning_audience = str(turns[-1].get("learning_audience") or "").strip()
+
+    nick = str(user_row.get("nickname") or "")
+    return {
+        "profile": {
+            "participant_id": nick,
+            "password_hash": password_hash,
+            "lang": str(user_row.get("lang") or "ko"),
+            "gender": str(user_row.get("gender") or ""),
+            "age_group": str(user_row.get("age_group") or ""),
+            "life_stage": str(user_row.get("life_stage") or ""),
+        },
+        "recent_turns": recent_turns,
+        "restored_messages": entries,
+        "total_turn_count": max(
+            int(user_row.get("total_turn_count") or 0), logged_user_turns
+        ),
+        "has_midpoint": has_midpoint,
+        "last_topic": recent_turns[-1]["user"][:100] if recent_turns else "",
+        "admin_reply": "",
+        "admin_reply_type": "general",
+        "last_module_type": last_module_type,
+        "last_learning_audience": last_learning_audience,
+    }
+
+
+def find_returning_user_from_supabase(
+    nickname: str, password: str
+) -> dict[str, Any] | None:
+    client = get_supabase_client()
+    nick = (nickname or "").strip()
+    pw_hash = hash_password(password)
+    if client is None or not nick:
+        return None
+    try:
+        user_resp = (
+            client.table(DLINSO_USERS_TABLE)
+            .select("*")
+            .eq("nickname", nick)
+            .eq("password_hash", pw_hash)
+            .limit(1)
+            .execute()
+        )
+        users = getattr(user_resp, "data", None) or []
+        if not users:
+            return None
+        user_row = users[0]
+
+        turns_resp = (
+            client.table(DLINSO_TURNS_TABLE)
+            .select("*")
+            .eq("nickname", nick)
+            .order("created_at")
+            .execute()
+        )
+        turns = getattr(turns_resp, "data", None) or []
+        if turns:
+            return _turns_to_restore_payload(turns, user_row, pw_hash)
+
+        iso_turns = _fetch_isolation_turns_from_supabase(client, nick)
+        if iso_turns:
+            return _isolation_turns_to_restore_payload(iso_turns, user_row, pw_hash)
+        return _turns_to_restore_payload([], user_row, pw_hash)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _fetch_isolation_turns_from_supabase(client: Any, nickname: str) -> list[dict[str, Any]]:
+    try:
+        resp = (
+            client.table(ISOLATION_NARRATIVES_TABLE)
+            .select("*")
+            .eq("nickname", nickname)
+            .order("created_at")
+            .execute()
+        )
+        return list(getattr(resp, "data", None) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _isolation_turns_to_restore_payload(
+    turns: list[dict[str, Any]],
+    user_row: dict[str, Any],
+    password_hash: str,
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+    recent_turns: list[dict[str, str]] = []
+    for row in turns:
+        user_t = str(row.get("user_input") or "")
+        assist_t = str(row.get("ai_response") or "")
+        if not user_t and not assist_t:
+            continue
+        logged = bool(user_t and not user_t.startswith("["))
+        if user_t:
+            entries.append({"role": "user", "content": user_t, "display": user_t})
+        if assist_t:
+            entries.append(
+                {"role": "assistant", "content": assist_t, "display": assist_t}
+            )
+        if logged:
+            recent_turns.append({"user": user_t, "assistant": assist_t})
+
+    max_msgs = MAX_RESTORE_TURNS * 2
+    if len(entries) > max_msgs:
+        entries = entries[-max_msgs:]
+    if len(recent_turns) > MAX_RESTORE_TURNS:
+        recent_turns = recent_turns[-MAX_RESTORE_TURNS:]
+
+    nick = str(user_row.get("nickname") or "")
+    return {
+        "profile": {
+            "participant_id": nick,
+            "password_hash": password_hash,
+            "lang": str(user_row.get("lang") or "ko"),
+            "gender": str(user_row.get("gender") or ""),
+            "age_group": str(user_row.get("age_group") or ""),
+            "life_stage": str(user_row.get("life_stage") or ""),
+        },
+        "recent_turns": recent_turns,
+        "restored_messages": entries,
+        "total_turn_count": max(int(user_row.get("total_turn_count") or 0), len(recent_turns)),
+        "has_midpoint": False,
+        "last_topic": recent_turns[-1]["user"][:100] if recent_turns else "",
+        "admin_reply": "",
+        "admin_reply_type": "general",
+        "last_module_type": "isolation",
+        "last_learning_audience": "",
+    }

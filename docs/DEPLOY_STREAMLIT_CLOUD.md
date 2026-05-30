@@ -26,7 +26,7 @@ LLM_PROVIDER = "upstage"
 # GEMINI_MODEL = "gemini-2.5-flash"
 # LLM_PROVIDER = "gemini"
 
-# --- Supabase (숲 모듈 클라우드 저장) ---
+# --- Supabase (숲 · 여정 · 학습 — Cloud 영속 저장) ---
 [supabase]
 url = "https://xxxx.supabase.co"
 key = "sb_publishable_..." 
@@ -55,19 +55,27 @@ key = "sb_publishable_..."
 
 ## 4. Supabase 테이블
 
-배포 전 Supabase SQL Editor에서 `scripts/supabase_isolation_narratives.sql` 실행.
+배포 전 Supabase SQL Editor에서 **두 스크립트**를 실행하세요.
+
+1. `scripts/supabase_isolation_narratives.sql` — 숲 모듈
+2. `scripts/supabase_dlinso_cloud.sql` — **여정 · 학습** (재로그인·대화 복원)
+
+동일한 `[supabase] url` / `key` Secrets 를 사용합니다.
 
 ## 5. 로컬 경로 / SQLite on Cloud
 
 - 코드는 `APP_DIR/data/*.db` 를 기본으로 사용합니다.
 - `.env`에 `E:\work\...` 같은 Windows 절대 경로가 있어도 Cloud(Linux)에서는 **자동으로** `data/isolation.db` 등으로 폴백합니다.
-- Streamlit Cloud의 디스크는 **재시작 시 초기화**될 수 있습니다. 숲 모듈 영속 저장은 **Supabase**를 사용하세요.
+- Streamlit Cloud의 디스크는 **재시작 시 초기화**될 수 있습니다.
+- **숲** → `isolation_narratives` · **여정·학습** → `dlinso_users` + `dlinso_conversation_turns` (Supabase)
 
 ## 6. 배포 후 확인
 
-1. 홈 → **숲 · 연결의 서사** 진입
+1. 홈 → **학습 · 성장의 서사** 또는 **숲 · 연결의 서사** 진입
 2. 대화 1턴 전송
-3. Supabase Table Editor → `isolation_narratives` 행 추가 확인
+3. Supabase Table Editor 확인:
+   - 학습/여정: `dlinso_conversation_turns`
+   - 숲: `isolation_narratives`
 4. LLM 오류 시 Secrets의 `UPSTAGE_API_KEY` / `LLM_PROVIDER` 재확인 후 Reboot
 
 ## 7. 로컬 vs Cloud
@@ -75,7 +83,7 @@ key = "sb_publishable_..."
 | | 로컬 | Streamlit Cloud |
 |---|------|-----------------|
 | API 키 | `.streamlit/secrets.toml` 또는 `.env` | **Settings → Secrets** |
-| DB | `data/*.db` | `data/*.db` (임시) + Supabase |
+| DB | `data/*.db` | `data/*.db` (임시) + Supabase (전 모듈) |
 | 진입 | `run_app.bat` | 배포 URL |
 
 템플릿 파일: `.streamlit/secrets.toml.example`

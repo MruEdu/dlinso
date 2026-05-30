@@ -6,8 +6,8 @@ import html
 
 import streamlit as st
 
-from i18n import get_lang
-from modules.home_registry import BRAND_TAGLINE, LANDING_MODULES
+from i18n import get_lang, t
+from modules.home_registry import LANDING_MODULES
 
 
 def about_intro_panel_copy() -> dict[str, str]:
@@ -40,7 +40,7 @@ def about_intro_panel_copy() -> dict[str, str]:
 
 def about_intro_panel_html() -> str:
     c = about_intro_panel_copy()
-    tagline = html.escape(BRAND_TAGLINE)
+    tagline = html.escape(t("brand_tagline"))
     return (
         '<section class="dlinso-about-panel" aria-label="about dlinso">'
         f'<h2 class="dlinso-about-panel-title">{html.escape(c["title"])}</h2>'
@@ -92,7 +92,7 @@ def _render_about_body() -> None:
     st.markdown(c["philosophy"])
     st.markdown(
         f'<p style="color:#333333;font-size:1.02rem;margin:1rem 0;">'
-        f"「{BRAND_TAGLINE}」</p>",
+        f"「{html.escape(t('brand_tagline'))}」</p>",
         unsafe_allow_html=True,
     )
     st.markdown(f"**{c['modules_h']}**")

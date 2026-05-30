@@ -9,7 +9,6 @@ import streamlit.components.v1 as components
 
 from i18n import get_lang, t
 from modules.home_registry import (
-    BRAND_TAGLINE,
     LEARNING_SPOTLIGHT_CTA_EN,
     LEARNING_SPOTLIGHT_CTA_KO,
     LEARNING_SPOTLIGHT_LEAD_EN,
@@ -145,13 +144,18 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     transform: none !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
-    font-size: clamp(1.75rem, 5vw, 2.65rem) !important;
-    line-height: 1.05 !important;
+    font-size: clamp(2.65rem, 8vw, 4.75rem) !important;
+    line-height: 1.06 !important;
+    letter-spacing: 0.05em !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
-    margin-top: 0.12rem !important;
-    font-size: clamp(1.05rem, 3vw, 1.55rem) !important;
-    line-height: 1.22 !important;
+    margin-top: clamp(0.45rem, 1.5vw, 0.75rem) !important;
+    font-size: clamp(1.35rem, 4.5vw, 2.35rem) !important;
+    line-height: 1.28 !important;
+    font-weight: 600 !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-plaque {{
+    padding: clamp(1.15rem, 4vw, 2rem) clamp(1rem, 4.5vw, 2.35rem) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-about-panel {{
     margin: 0.15rem auto 0.55rem !important;
@@ -176,10 +180,19 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
         padding-right: 0.3rem !important;
     }}
     div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
-        font-size: clamp(1.45rem, 7.5vw, 1.85rem) !important;
+        font-size: clamp(2.15rem, 8.5vw, 4.75rem) !important;
     }}
     div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
-        font-size: clamp(0.95rem, 4.2vw, 1.25rem) !important;
+        font-size: clamp(1.2rem, 4.8vw, 2.1rem) !important;
+    }}
+    .dlinso-brand-hero--gate .dlinso-brand-domain {{
+        font-size: clamp(2.25rem, 9vw, 3.65rem) !important;
+    }}
+    .dlinso-brand-hero--gate .dlinso-brand-gate-lead {{
+        font-size: clamp(1.2rem, 4.8vw, 1.85rem) !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-plaque {{
+        padding: clamp(1rem, 3.5vw, 1.65rem) clamp(0.85rem, 4vw, 1.75rem) !important;
     }}
     div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
         padding: 0 0.35rem 0 !important;
@@ -333,20 +346,88 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
     color: {TEXT_DARK};
-    font-size: clamp(2.35rem, 6vw, 3.45rem);
+    font-size: clamp(2.85rem, 8.5vw, 4.85rem);
     font-weight: 500;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
+}}
+.dlinso-brand-plaque {{
+    position: relative;
+    display: block;
+    width: min(100%, 38rem);
+    margin: 0 auto;
+    padding: clamp(1.4rem, 4.5vw, 2.35rem) clamp(1.35rem, 5vw, 2.85rem);
+    text-align: center;
+    background: linear-gradient(
+        158deg,
+        rgba(255, 253, 249, 0.96) 0%,
+        rgba(248, 242, 233, 0.92) 48%,
+        rgba(241, 234, 223, 0.9) 100%
+    );
+    border: 1px solid rgba(72, 62, 50, 0.28);
+    border-radius: 3px;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.72) inset,
+        0 2px 0 rgba(255, 255, 255, 0.35) inset,
+        0 18px 48px rgba(48, 40, 32, 0.1),
+        0 4px 14px rgba(48, 40, 32, 0.05);
+}}
+.dlinso-brand-plaque::before {{
+    content: "";
+    position: absolute;
+    inset: clamp(5px, 1.2vw, 9px);
+    border: 1px solid rgba(120, 102, 82, 0.22);
+    border-radius: 1px;
+    pointer-events: none;
+}}
+.dlinso-brand-plaque::after {{
+    content: "";
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(180, 155, 120, 0.45) 20%,
+        rgba(180, 155, 120, 0.45) 80%,
+        transparent
+    );
+    pointer-events: none;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-plaque {{
+    margin-bottom: 0.15rem;
+}}
+.dlinso-brand-plaque .dlinso-brand-domain {{
+    color: {TEXT_DARK};
+}}
+.dlinso-brand-plaque .dlinso-brand-gate-lead {{
+    margin-top: clamp(0.45rem, 1.5vw, 0.75rem);
+    color: {TEXT_DARK};
+    opacity: 0.9;
+}}
+.dlinso-brand-hero--gate .dlinso-brand-plaque {{
+    width: min(100%, 40rem);
+}}
+.dlinso-brand-hero--gate .dlinso-brand-domain {{
+    font-size: clamp(2.85rem, 9vw, 4.65rem);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+}}
+.dlinso-brand-hero--gate .dlinso-brand-gate-lead {{
+    font-size: clamp(1.4rem, 4.8vw, 2.25rem);
+    max-width: none;
 }}
 .dlinso-brand-gate-lead {{
     display: block;
-    margin: 1rem auto 0;
-    max-width: 22rem;
+    margin: clamp(0.65rem, 2vw, 1rem) auto 0;
+    max-width: 26rem;
     font-family: {FONT_SERIF};
-    font-size: clamp(1rem, 3vw, 1.2rem);
-    font-weight: 500;
-    line-height: 1.45;
+    font-size: clamp(1.15rem, 3.6vw, 1.65rem);
+    font-weight: 600;
+    line-height: 1.42;
     color: {INTRO_TEXT};
-    letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
 }}
 .dlinso-brand-soon {{
     display: block;
@@ -370,13 +451,14 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
 }}
 .dlinso-brand-tagline {{
     display: none;
-    margin-top: 1rem;
-    font-size: clamp(1.55rem, 4.2vw, 2.35rem);
-    letter-spacing: -0.02em;
+    margin: clamp(0.55rem, 1.8vw, 0.85rem) auto 0;
+    max-width: 26rem;
+    font-size: clamp(1.45rem, 4.8vw, 2.55rem);
+    letter-spacing: 0.02em;
     color: {TEXT_DARK};
     font-family: {FONT_SERIF};
-    font-weight: 700;
-    line-height: 1.38;
+    font-weight: 600;
+    line-height: 1.32;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
     display: block;
@@ -846,25 +928,27 @@ def _premium_bg_html() -> str:
 
 def _brand_hero_html(*, lifted: bool) -> str:
     hero_cls = "dlinso-brand-hero--lifted" if lifted else "dlinso-brand-hero--gate"
-    soon = (
-        ""
-        if lifted
-        else f'<p class="dlinso-brand-gate-lead">{html.escape(BRAND_TAGLINE)}</p>'
-        '<span class="dlinso-brand-soon">scroll · click · 시작</span>'
-    )
-    tagline = (
-        f'<p class="dlinso-brand-tagline">{html.escape(BRAND_TAGLINE)}</p>'
-        if lifted
-        else ""
-    )
+    tagline_text = html.escape(t("brand_tagline"))
+    gate_hint = html.escape(t("brand_gate_hint"))
+    if lifted:
+        plaque_inner = (
+            f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
+            f'<p class="dlinso-brand-tagline">{tagline_text}</p>'
+        )
+    else:
+        plaque_inner = (
+            f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
+            f'<p class="dlinso-brand-gate-lead">{tagline_text}</p>'
+            f'<span class="dlinso-brand-soon">{gate_hint}</span>'
+        )
     intro_bg = (
         '<div class="dlinso-intro-atmosphere" aria-hidden="true"></div>'
         '<div class="dlinso-brand-noise" aria-hidden="true"></div>'
     )
     hero_inner = (
         f'<header class="dlinso-brand-hero {hero_cls}">'
-        f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
-        f"{soon}{tagline}</header>"
+        f'<div class="dlinso-brand-plaque">{plaque_inner}</div>'
+        f"</header>"
     )
     if lifted:
         return hero_inner
@@ -1009,6 +1093,6 @@ def render_main_home() -> bool:
 
 def render_home_footer_minimal() -> None:
     st.markdown(
-        f'<p class="lab-footer-brand">dlinso.com · {html.escape(BRAND_TAGLINE)}</p>',
+        f'<p class="lab-footer-brand">dlinso.com · {html.escape(t("brand_tagline"))}</p>',
         unsafe_allow_html=True,
     )
