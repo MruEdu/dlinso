@@ -17,8 +17,8 @@ def about_intro_panel_copy() -> dict[str, str]:
             "title": "About dlinso",
             "lead": (
                 "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
-                "디지털 서사 상담 공간입니다. 검사나 채점이 아니라, 당신의 말과 기억을 "
-                "존중하며 함께 걷는 동행입니다."
+                "디지털 서사 기록실(Dlinso Narrative Archive)입니다. "
+                "검사나 채점이 아니라, 당신의 말과 기억을 인출·기록합니다."
             ),
             "philosophy": (
                 "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
@@ -28,8 +28,8 @@ def about_intro_panel_copy() -> dict[str, str]:
     return {
         "title": "About dlinso",
         "lead": (
-            "dlinso is a digital narrative salon built on the belief that every life becomes art. "
-            "We do not test or grade—we walk beside your words and memories."
+            "dlinso is a digital Narrative Archive built on the belief that every life becomes art. "
+            "We withdraw and record your words—not test or grade."
         ),
         "philosophy": (
             "What remains at turning points is story, not scores. "
@@ -57,8 +57,8 @@ def _about_copy() -> dict[str, str]:
             "title": "About dlinso",
             "lead": (
                 "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
-                "디지털 서사 상담 공간입니다. 검사나 채점이 아니라, 당신의 말과 기억을 "
-                "존중하며 함께 걷는 동행입니다."
+                "디지털 서사 기록실(Dlinso Narrative Archive)입니다. "
+                "검사나 채점이 아니라, 당신의 말과 기억을 인출·기록합니다."
             ),
             "philosophy_h": "철학",
             "philosophy": (
@@ -66,21 +66,21 @@ def _about_copy() -> dict[str, str]:
                 "dlinso는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
                 "따뜻하지만 가볍지 않고, 신비롭되지만 멀리 두지 않습니다."
             ),
-            "modules_h": "서사 상담실",
+            "modules_h": "서사 기록실",
             "close": "닫기",
         }
     return {
         "title": "About dlinso",
         "lead": (
-            "dlinso is a digital narrative salon built on the belief that "
-            "every life becomes art. We do not test or grade—we walk beside your words."
+            "dlinso is a digital Narrative Archive built on the belief that "
+            "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy_h": "Philosophy",
         "philosophy": (
             "What remains at turning points is story, not scores. "
             "dlinso helps you arrange that story like art—warm yet grounded."
         ),
-        "modules_h": "Narrative salons",
+        "modules_h": "Narrative Archive",
         "close": "Close",
     }
 

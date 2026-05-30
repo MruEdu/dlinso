@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -962,6 +963,25 @@ def log_isolation_turn_dual(
 
 DLINSO_USERS_TABLE = "dlinso_users"
 DLINSO_TURNS_TABLE = "dlinso_conversation_turns"
+USER_SESSIONS_TABLE = "user_sessions"
+NARRATIVE_ASSETS_TABLE = "narrative_assets"
+
+_EMOTION_HINTS_KO: tuple[str, ...] = (
+    "기쁨",
+    "슬픔",
+    "분노",
+    "불안",
+    "두려움",
+    "그리움",
+    "희망",
+    "외로움",
+    "설렘",
+    "후회",
+    "감사",
+    "자부심",
+    "무기력",
+    "안도",
+)
 
 
 def _cloud_sync_modules() -> frozenset[str]:
@@ -1171,6 +1191,133 @@ def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
     if is_streamlit_cloud():
         notify_supabase_sync(sb_ok, sb_err)
 
+    sync_narrative_archive_session(**kwargs)
+    if not bool(kwargs.get("is_system")):
+        um = str(kwargs.get("user_message") or "")
+        if um and not um.startswith("["):
+            sync_narrative_asset_from_turn(
+                nickname=nick,
+                module_type=module_type,
+                user_message=um,
+                metadata=metadata,
+            )
+
+
+def _heuristic_emotion_keywords(text: str) -> list[str]:
+    found = [kw for kw in _EMOTION_HINTS_KO if kw in (text or "")]
+    return found[:8]
+
+
+def _heuristic_core_competencies(metadata: dict[str, Any]) -> list[str]:
+    themes = str(metadata.get("narrative_themes") or "")
+    parts = [p.strip() for p in re.split(r"[,·/|]", themes) if p.strip()]
+    profile = metadata.get("profile") or {}
+    if isinstance(profile, dict):
+        for key, label in (
+            ("agency", "자아 주도성"),
+            ("reflection_depth", "성찰 깊이"),
+            ("emotional_richness", "정서적 풍요"),
+            ("relational_connection", "관계성"),
+        ):
+            if float(profile.get(key) or 0) >= 60:
+                parts.append(label)
+    return parts[:6]
+
+
+def sync_narrative_archive_session(**kwargs: Any) -> None:
+    """user_sessions — 문맥·진척도 Cloud Memory."""
+    if not is_supabase_configured():
+        return
+    client = get_supabase_client()
+    nick = (kwargs.get("nickname") or "").strip()
+    if client is None or not nick:
+        return
+    module_type = (kwargs.get("module_type") or "lifespan").strip() or "lifespan"
+    turns = int(kwargs.get("total_turn_count") or 0)
+    progress = min(100.0, round(turns / 10.0 * 100.0, 1))
+    session_context = {
+        "last_user_snippet": str(kwargs.get("last_user_snippet") or "")[:280],
+        "last_assistant_snippet": str(kwargs.get("last_assistant_snippet") or "")[:280],
+        "narrative_stage": str(kwargs.get("narrative_stage") or ""),
+        "life_context": str(kwargs.get("life_context") or ""),
+        "narrative_themes": str(kwargs.get("narrative_themes") or ""),
+        "metaphors": str(kwargs.get("metaphors") or ""),
+        "turn_count": turns,
+    }
+    metadata = {
+        "module_type": module_type,
+        "learning_audience": str(kwargs.get("learning_audience") or ""),
+        "profile": kwargs.get("profile") or {},
+    }
+    row = {
+        "nickname": nick,
+        "module_type": module_type,
+        "session_context": session_context,
+        "metadata_json": metadata,
+        "turn_count": turns,
+        "asset_progress": progress,
+        "updated_at": korea_now_str(),
+    }
+    try:
+        client.table(USER_SESSIONS_TABLE).upsert(row, on_conflict="nickname").execute()
+    except Exception:  # noqa: BLE001
+        return
+
+
+def sync_narrative_asset_from_turn(
+    *,
+    nickname: str,
+    module_type: str,
+    user_message: str,
+    metadata: dict[str, Any],
+) -> None:
+    """narrative_assets — 턴별 핵심 서사(비식별화 초안)."""
+    if not is_supabase_configured():
+        return
+    client = get_supabase_client()
+    nick = (nickname or "").strip()
+    if client is None or not nick:
+        return
+    try:
+        from narrative_export import deidentify_text
+
+        raw = deidentify_text(user_message, nickname=nick)
+    except Exception:  # noqa: BLE001
+        raw = user_message[:2000]
+    row = {
+        "nickname": nick,
+        "module_type": (module_type or "lifespan").strip() or "lifespan",
+        "raw_narrative": raw[:4000],
+        "core_competencies": _heuristic_core_competencies(metadata),
+        "emotion_keywords": _heuristic_emotion_keywords(user_message),
+        "scene_fragments": [raw[:400]] if raw else [],
+        "deidentified": True,
+        "source_snippet": raw[:120],
+    }
+    try:
+        client.table(NARRATIVE_ASSETS_TABLE).insert(row).execute()
+    except Exception:  # noqa: BLE001
+        return
+
+
+def fetch_user_session_from_supabase(nickname: str) -> dict[str, Any] | None:
+    client = get_supabase_client()
+    nick = (nickname or "").strip()
+    if client is None or not nick:
+        return None
+    try:
+        resp = (
+            client.table(USER_SESSIONS_TABLE)
+            .select("*")
+            .eq("nickname", nick)
+            .limit(1)
+            .execute()
+        )
+        rows = getattr(resp, "data", None) or []
+        return rows[0] if rows else None
+    except Exception:  # noqa: BLE001
+        return None
+
 
 def supabase_nickname_exists(nickname: str) -> bool:
     client = get_supabase_client()
@@ -1300,10 +1447,18 @@ def find_returning_user_from_supabase(
         if turns:
             return _turns_to_restore_payload(turns, user_row, pw_hash)
 
+        session_row = fetch_user_session_from_supabase(nick)
         iso_turns = _fetch_isolation_turns_from_supabase(client, nick)
         if iso_turns:
-            return _isolation_turns_to_restore_payload(iso_turns, user_row, pw_hash)
-        return _turns_to_restore_payload([], user_row, pw_hash)
+            payload = _isolation_turns_to_restore_payload(iso_turns, user_row, pw_hash)
+        else:
+            payload = _turns_to_restore_payload([], user_row, pw_hash)
+        if session_row:
+            ctx = session_row.get("session_context") or {}
+            if ctx.get("narrative_stage") and not payload.get("restored_messages"):
+                payload["last_topic"] = str(ctx.get("last_user_snippet") or "")[:100]
+            payload["asset_progress"] = float(session_row.get("asset_progress") or 0)
+        return payload
     except Exception:  # noqa: BLE001
         return None
 

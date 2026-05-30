@@ -59,6 +59,7 @@ key = "sb_publishable_..."
 
 1. `scripts/supabase_isolation_narratives.sql` — 숲 모듈
 2. `scripts/supabase_dlinso_cloud.sql` — **여정 · 학습** (재로그인·대화 복원)
+3. `scripts/supabase_narrative_archive.sql` — **user_sessions · narrative_assets** (기록실 Memory)
 
 동일한 `[supabase] url` / `key` Secrets 를 사용합니다.
 

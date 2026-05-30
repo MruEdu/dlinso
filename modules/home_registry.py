@@ -11,9 +11,9 @@ MODULE_LEARNING = "learning"
 MODULE_FOREST = "forest"
 MODULE_EMOTION = "emotion"
 
-SALON_SECTION_TITLE = "서사 상담실"
-SALON_GUIDE_LINE = "dlinso는 당신의 서사를 찾는 세 가지 상담실입니다"
-SALON_GUIDE_SUB = "검사나 채점이 아닌, 당신의 말과 기억을 존중하는 동행입니다. 아래에서 지금 열린 방을 선택하세요."
+SALON_SECTION_TITLE = "서사 기록실"
+SALON_GUIDE_LINE = "dlinso — Dlinso Narrative Archive · 당신의 삶을 데이터 자산으로"
+SALON_GUIDE_SUB = "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. 아래에서 기록실을 선택하세요."
 BRAND_TAGLINE = "모든 삶은 예술이 된다"
 JOURNEY_CTA_KO = "여정 시작하기"
 JOURNEY_CTA_EN = "Begin the Narrative"
@@ -35,7 +35,7 @@ LEARNING_SPOTLIGHT_LEAD_KO = (
     "습관·동기·환경을 함께 탐색하고, 10번의 대화 뒤 배움 지도 리포트를 받을 수 있습니다."
 )
 LEARNING_SPOTLIGHT_STEPS_KO = (
-    "① 당신은 누구인가요(상담 주체) → ② 배움 이야기 나누기 → ③ 배움 지도 리포트"
+    "① 기록 주체 확인 → ② 배움 이야기 인출 → ③ 배움 지도 아카이브"
 )
 LEARNING_SPOTLIGHT_CTA_KO = "배움 여정 시작하기"
 LEARNING_SPOTLIGHT_TITLE_EN = "Journey · Contour of Learning"

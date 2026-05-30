@@ -1,4 +1,4 @@
-"""dlinso.com 브랜드 랜딩 — 신비주의 · 서사 상담실."""
+"""dlinso.com 브랜드 랜딩 — 신비주의 · 서사 기록실."""
 
 from __future__ import annotations
 
@@ -1017,7 +1017,7 @@ def _render_intro_gate() -> None:
     st.markdown(_brand_hero_html(lifted=False), unsafe_allow_html=True)
     st.markdown('<div class="dlinso-gate-enter-wrap">', unsafe_allow_html=True)
     if st.button(
-        "서사 상담실 들어가기",
+        t("btn_enter_archive"),
         key="home_reveal_visible",
         type="primary",
         use_container_width=True,

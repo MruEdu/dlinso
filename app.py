@@ -38,6 +38,7 @@ from narrative_engine import (
     pick_summoned_narrative,
     summarize_messages,
 )
+from narrative_export import build_export_payload, export_json_bytes, export_pdf_bytes
 from personas import (
     AGE_GROUPS,
     GENDER_OPTIONS,
@@ -323,7 +324,12 @@ CUSTOM_CSS = """
         background: transparent !important;
     }
     div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) .stApp {
-        background: linear-gradient(165deg, #faf6f0 0%, #e8eef5 45%, #d4c4b0 100%);
+        background: linear-gradient(165deg, #0a1628 0%, #122238 40%, #1a2d4a 100%);
+    }
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) section.main > div.block-container {
+        background: linear-gradient(180deg, #faf7f0 0%, #f3ede3 100%);
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 8px 32px rgba(10, 22, 40, 0.35);
     }
     section.main > div.block-container {
         padding-top: 0;
@@ -357,6 +363,18 @@ CUSTOM_CSS = """
         font-size: clamp(0.96rem, 2.6vw, 1.08rem) !important;
         line-height: 1.68 !important;
     }
+    .archive-progress-label {
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        color: #5a5248;
+        margin: 0.35rem 0 0.15rem;
+        font-weight: 600;
+    }
+    .archive-room-title {
+        font-family: "Cormorant Garamond", "Noto Serif KR", serif;
+        color: #0a1628;
+        letter-spacing: 0.04em;
+    }
     .opening-guide, .midpoint-encourage-msg {
         font-size: clamp(0.95rem, 2.8vw, 1.08rem) !important;
         color: #3d3630 !important;
@@ -381,18 +399,18 @@ CUSTOM_CSS = """
         position: sticky !important;
         top: 0 !important;
         z-index: 1001 !important;
-        background: rgba(255, 252, 248, 0.98) !important;
+        background: rgba(10, 22, 40, 0.97) !important;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         padding: clamp(0.35rem, 1.5vw, 0.65rem) clamp(0.5rem, 2vw, 1.25rem) !important;
         margin: 0 0 0.65rem 0 !important;
-        border-bottom: 1px solid rgba(108, 92, 231, 0.18);
-        box-shadow: 0 2px 18px rgba(50, 40, 70, 0.09);
+        border-bottom: 1px solid rgba(201, 169, 98, 0.35);
+        box-shadow: 0 2px 18px rgba(10, 22, 40, 0.25);
     }
     .hybrid-brand {
         font-size: clamp(0.95rem, 2.8vw, 1.15rem);
         font-weight: 700;
-        color: #6c5ce7;
+        color: #c9a962;
         letter-spacing: 0.04em;
         line-height: 2.75rem;
         white-space: nowrap;
@@ -414,7 +432,7 @@ CUSTOM_CSS = """
     }
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="primary"],
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
-        background: linear-gradient(180deg, #7c6cf0 0%, #6c5ce7 100%) !important;
+        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
         color: #fff !important;
         border: 1px solid #5b4cdb !important;
         box-shadow: 0 2px 10px rgba(108, 92, 231, 0.3) !important;
@@ -446,7 +464,7 @@ CUSTOM_CSS = """
     section.main button[data-testid="baseButton-primary"],
     section.main [data-testid="baseButton-primary"] {
         background-color: #6c5ce7 !important;
-        background: linear-gradient(180deg, #7c6cf0 0%, #6c5ce7 100%) !important;
+        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
         color: #ffffff !important;
         border: 1px solid #5b4cdb !important;
         box-shadow: 0 2px 12px rgba(108, 92, 231, 0.32) !important;
@@ -2281,14 +2299,24 @@ def _reset_chat_state() -> None:
     st.session_state.pop("_chat_input_focused", None)
 
 
+def _asset_progress_pct() -> float:
+    """10턴 기준 자산화 진척도 (0~100)."""
+    return min(100.0, effective_user_turn_count() / 10.0 * 100.0)
+
+
 def render_chat_toolbar(
     gemini_ok: bool,
     gemini_error: str | None,
     db: DatabaseManager,
 ) -> None:
-    """상담 화면 상단 — 언어(우측)·상태·도구."""
+    """기록 화면 상단 — 언어(우측)·진척도·내보내기."""
     with st.container():
         _html_layout_marker("chat-toolbar-marker")
+        st.markdown(
+            f'<p class="archive-room-title">{html.escape(t("archive_title"))} · '
+            f'<span style="font-size:0.85em;opacity:0.75">{html.escape(t("archive_subtitle"))}</span></p>',
+            unsafe_allow_html=True,
+        )
         left, right = st.columns([2.2, 1], gap="small")
         with left:
             if _is_learning_mode():
@@ -2314,6 +2342,11 @@ def render_chat_toolbar(
             f'<div class="gentle-record">{t("gentle_record")}</div>',
             unsafe_allow_html=True,
         )
+        st.markdown(
+            f'<p class="archive-progress-label">{html.escape(t("asset_progress_label"))}</p>',
+            unsafe_allow_html=True,
+        )
+        st.progress(_asset_progress_pct() / 100.0)
         if st.session_state.phase == PHASE_GIANT and st.session_state.active_giant:
             gk = st.session_state.active_giant
             st.caption(f"지금은 {GIANTS[gk]['label']}의 관점으로 이어갑니다.")
@@ -2346,6 +2379,42 @@ def render_chat_toolbar(
             st.caption(
                 f"{gem_icon} {t('status_dialogue')} · {db_icon} {t('status_record')}"
             )
+
+        with st.expander(t("btn_view_life_archive"), expanded=False):
+            mod = (
+                "learning"
+                if _is_learning_mode()
+                else ("isolation" if _is_isolation_mode() else "lifespan")
+            )
+            payload = build_export_payload(
+                nickname=st.session_state.participant_id,
+                messages=st.session_state.messages,
+                profile=st.session_state.profile,
+                narrative_stage=st.session_state.narrative_stage or "",
+                life_context=st.session_state.life_context or "",
+                narrative_themes=st.session_state.get("narrative_themes", ""),
+                metaphors=st.session_state.get("metaphors", ""),
+                module_type=mod,
+            )
+            col_j, col_t = st.columns(2, gap="small")
+            with col_j:
+                st.download_button(
+                    t("export_json_btn"),
+                    data=export_json_bytes(payload),
+                    file_name="dlinso_narrative_archive.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="export_narrative_json",
+                )
+            with col_t:
+                st.download_button(
+                    t("export_archive_btn"),
+                    data=export_pdf_bytes(payload),
+                    file_name="dlinso_narrative_archive.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="export_narrative_text",
+                )
 
         with st.expander(t("sidebar_inquiry"), expanded=False):
             if st.button(t("nav_inquiry"), key="chat_open_inquiry", use_container_width=True):

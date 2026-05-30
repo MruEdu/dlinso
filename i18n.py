@@ -37,6 +37,14 @@ TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
         "beta_badge": "1.1",
+        "archive_title": "서사 기록실",
+        "archive_subtitle": "Dlinso Narrative Archive",
+        "btn_start_withdrawal": "서사 인출 시작",
+        "btn_view_life_archive": "생애 아카이브 열람",
+        "asset_progress_label": "자산화 진척도",
+        "export_json_btn": "JSON 내보내기",
+        "export_archive_btn": "아카이브 텍스트 내보내기",
+        "btn_enter_archive": "서사 기록실 들어가기",
         "brand_tagline": "모든 삶은 예술이 된다",
         "brand_gate_hint": "scroll · click · 시작",
         "hub_eyebrow": "",
@@ -134,7 +142,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "go_learning_journey": "📚 나의 배움 여정 · 가입/로그인",
         "learning_role_title": "당신은 누구인가요?",
         "learning_role_intro": (
-            "지금 이 자리에서 **누가 이야기하는지**(상담 주체)에 맞춰 질문과 말투가 달라집니다. "
+            "지금 이 자리에서 **누가 이야기하는지**(기록 주체)에 맞춰 질문과 말투가 달라집니다. "
             "학생 본인이신지, 아이에 대해 말씀하시는 엄마·아빠·조부모·교사이신지 선택해 주세요."
         ),
         "learning_role_student": "학생 본인",
@@ -154,7 +162,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "learning_signup_section": "① 당신은 누구인가요? (필수)",
         "life_stage_signup_section": "② 현재 생활·재학 상태",
-        "err_learning_audience": "상담하시는 분(역할)을 선택해 주세요.",
+        "err_learning_audience": "기록하시는 분(역할)을 선택해 주세요.",
         "learning_opening_student": (
             "안녕, 나는 네 배움의 정원사야. 🌱\n\n"
             "공부만이 아니라, 네가 잘 되던 장면·지금 막히는 순간·"
@@ -202,8 +210,8 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "mode_assessment_label": "심리·강점",
         "mode_assessment_desc": "대화 속에서 마음 상태와 강점을 살펴봅니다.",
-        "mode_counseling_label": "나러티브 상담",
-        "mode_counseling_desc": "전문 상담 기법이 담긴 심화 대화입니다.",
+        "mode_counseling_label": "나러티브 기록",
+        "mode_counseling_desc": "전문 기록 기법이 담긴 심화 인출입니다.",
         "mode_research_label": "연구용",
         "mode_research_desc": "질적 연구를 위한 데이터 수집·구조화입니다.",
         "mode_tag_active": "지금",
@@ -241,7 +249,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "gender": "성별",
         "age": "연령대",
         "education": "현재 생활 단계",
-        "btn_start": "✅ 동의하고 나의 이야기 시작하기",
+        "btn_start": "✅ 동의하고 서사 인출 시작하기",
         "btn_continue": "✅ 이어서 이야기하기",
         "gentle_record": "마음의 기록이 차곡차곡 쌓이고 있어요 🌿",
         "input_hint": (
@@ -260,7 +268,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "지금까지의 대화 중간 정리 및 나만의 마음 지도 확인"
         ),
         "midpoint_analysis_btn_rerun": "중간 정리 · 마음 지도 다시 받기",
-        "midpoint_view_expand": "🗺️ 나만의 마음 지도 다시 보기",
+        "midpoint_view_expand": "📚 생애 아카이브 열람",
         "reflection_depth_gauge_label": "성찰의 깊이",
         "midpoint_encourage_before_unlock": (
             "당신의 서사가 훌륭하게 쌓이고 있습니다. "
@@ -518,7 +526,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "sidebar_inquiry": "연구소에 문의하기",
         "inquiry_type_label": "문의 유형",
-        "inquiry_type_general": "일반 상담",
+        "inquiry_type_general": "일반 기록",
         "inquiry_type_research": "네러티브 연구 협업",
         "inquiry_type_interview": "인터뷰 문의",
         "researcher_affiliation": "소속 (기관·학과)",
@@ -535,7 +543,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "connected": "연결됨",
         "disconnected": "연결 안 됨",
         "reset_chat": "대화 기록 초기화",
-        "finish_chat": "오늘 이야기 마무리 · 요약본 받기",
+        "finish_chat": "생애 아카이브 열람 · 요약본 받기",
         "new_story": "새 이야기 시작하기",
         "err_consent": "연구 동의에 체크해 주세요.",
         "err_nick": "닉네임을 입력해 주세요.",
@@ -559,6 +567,14 @@ TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "app_title": "dlinso",
         "beta_badge": "1.1",
+        "archive_title": "Narrative Archive",
+        "archive_subtitle": "Dlinso Narrative Archive",
+        "btn_start_withdrawal": "Begin narrative withdrawal",
+        "btn_view_life_archive": "View life archive",
+        "asset_progress_label": "Asset progress",
+        "export_json_btn": "Export JSON",
+        "export_archive_btn": "Export archive text",
+        "btn_enter_archive": "Enter the Narrative Archive",
         "brand_tagline": "Every life becomes art",
         "brand_gate_hint": "scroll · click · begin",
         "hub_eyebrow": "",
