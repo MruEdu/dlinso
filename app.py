@@ -3,28 +3,28 @@
 from __future__ import annotations
 
 import html
-import io
+import json
 import os
 import re
 from pathlib import Path
 from collections.abc import Iterator
 from typing import Any
 
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", FutureWarning)
-    import google.generativeai as genai
 import streamlit as st
 import streamlit.components.v1 as components
 from env_config import (
     APP_DIR,
     ENV_PATH,
-    credentials_source_label,
-    get_gemini_api_key,
-    get_gemini_model_name,
-    get_google_sheet_id,
+    apply_secrets_to_environ,
+    get_database_path,
+    get_isolation_database_path,
+    get_llm_provider,
 )
+
+apply_secrets_to_environ()
+from database_manager import DatabaseManager, hash_password
+from isolation_database_manager import IsolationDatabaseManager
+from llm_client import LLMNotConfiguredError, init_llm_client, is_llm_configured, iter_chat_stream
 from narrative_engine import (
     PROFILE_KEYS,
     analyze_narrative_turn,
@@ -72,19 +72,73 @@ from maieutic_engine import (
     format_image_display_for_user,
     merge_text_and_image,
 )
-from narrative_engine import generate_humanistic_midpoint_report, translate_to_korean
-from core.views import VIEW_APP, VIEW_INQUIRY, VIEW_INTRO
+from narrative_engine import (
+    generate_humanistic_midpoint_report,
+    translate_to_korean,
+)
+from core.views import VIEW_APP, VIEW_HOME, VIEW_INQUIRY, VIEW_INTRO
+from main_home import (
+    render_home_footer_minimal,
+    render_main_home,
+    sync_home_intro_revealed,
+)
+from ui.dlinso_about import open_dlinso_about, render_dlinso_about_expander_if_needed
+from modules.home_registry import (
+    apply_landing_module_selection,
+    get_landing_module,
+    module_app_mode,
+    reconcile_landing_module_session,
+    sync_landing_module_from_query,
+)
+from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN
+from modes.isolation import (
+    MIN_USER_TURNS_FOR_ASSET,
+    MIN_USER_TURNS_FOR_REPORT,
+    get_isolation_display,
+)
+from modes.learning import (
+    MIN_USER_TURNS_FOR_LEARNING_REPORT,
+    audience_opening_i18n_key,
+    get_learning_display,
+    is_valid_learning_audience,
+)
+from ui.learning_audience import (
+    render_learning_audience_selectbox,
+    render_learning_audience_selector,
+)
+from learning_analysis import (
+    format_full_learning_message,
+    format_learning_followup,
+    TITLE_FOUR_LENSES,
+    TITLE_IDENTITY,
+    TITLE_JAGGED,
+    TITLE_PRESCRIPTION,
+)
+from learning_engine import (
+    extract_learning_signals,
+    generate_learning_narrative_report_for_messages,
+    iter_learning_reply_stream,
+)
+from isolation_analysis import (
+    format_full_asset_message,
+    format_full_isolation_report_message,
+)
+from isolation_engine import (
+    extract_isolation_signals,
+    generate_isolation_report_for_messages,
+    iter_isolation_reply_stream,
+    save_isolation_turn_local,
+)
 from opening_copy import resolve_opening_message, resolve_opening_placeholder
-from prompts.registry import build_mode_system_addon
-from sheets_logger import SHEETS_RATE_LIMIT_MARKER, SheetsLogger, hash_password
+from prompts.registry import build_mode_system_addon, build_mode_system_addon_for_module
 from ui.age_entry import render_current_age_context, render_mode_roadmap
 
 os.chdir(APP_DIR)
 
-PAGE_TITLE = "dlinso"
+PAGE_TITLE = "dlinso | 모든 삶은 예술이 된다"
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 # VIEW_* → core.views
-SHEETS_LOGGER_CACHE_VERSION = 4
+DB_MANAGER_CACHE_VERSION = 4
 
 # st.html iframe에는 앱 전역 CSS가 적용되지 않음 — 헤더·프로필 칩 전용
 HERO_CARD_INLINE_STYLE = """
@@ -192,9 +246,16 @@ def _render_html_fragment(fragment: str) -> None:
     st.markdown(fragment, unsafe_allow_html=True)
 
 
-def _gemini_user_error(exc: BaseException) -> str:
+def _llm_user_error(exc: BaseException) -> str:
     msg = str(exc)
     low = msg.lower()
+    if isinstance(exc, LLMNotConfiguredError):
+        if get_llm_provider() == "upstage":
+            return (
+                "UPSTAGE_API_KEY가 설정되지 않았습니다. "
+                f"프로젝트 루트 `{ENV_PATH.name}` 파일을 확인하세요."
+            )
+        return t("err_dialogue_unavailable")
     if "leaked" in low or ("403" in msg and "api key" in low):
         return t("err_gemini_leaked")
     return f"{t('err_gemini_reply')}: {msg}"
@@ -226,7 +287,12 @@ CUSTOM_CSS = """
 <style>
     /* header 전체 숨김 시 사이드바 열기(≡) 버튼도 사라짐 — MainMenu·footer만 숨김 */
     #MainMenu, footer { visibility: hidden; height: 0; }
-    .stApp {
+  /* 홈 랜딩(intro/salon)은 main_home.py BRAND_LANDING_CSS가 배경·색을 담당 */
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .stApp,
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .main {
+        background: transparent !important;
+    }
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) .stApp {
         background: linear-gradient(165deg, #faf6f0 0%, #e8eef5 45%, #d4c4b0 100%);
     }
     section.main > div.block-container {
@@ -242,11 +308,29 @@ CUSTOM_CSS = """
         width: 100%;
         box-sizing: border-box;
     }
-    .stApp, .stMarkdown, p, label, span {
-        font-size: clamp(0.88rem, 2.2vw, 1rem);
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) .stMarkdown,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) p,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) label,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) span {
+        font-size: clamp(0.94rem, 2.4vw, 1.06rem);
+        color: #3a342e;
+        line-height: 1.62;
     }
-    h1, h2, h3, .hero-title {
-        font-size: clamp(1.25rem, 4vw, 1.65rem) !important;
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) h1,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) h2,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) h3,
+    div[data-testid="stAppViewContainer"]:not(:has(.dlinso-landing-root-marker)) .hero-title {
+        font-size: clamp(1.3rem, 4.2vw, 1.75rem) !important;
+        color: #2e2824 !important;
+    }
+    div[data-testid="stChatMessage"] .stMarkdown p {
+        font-size: clamp(0.96rem, 2.6vw, 1.08rem) !important;
+        line-height: 1.68 !important;
+    }
+    .opening-guide, .midpoint-encourage-msg {
+        font-size: clamp(0.95rem, 2.8vw, 1.08rem) !important;
+        color: #3d3630 !important;
+        line-height: 1.65 !important;
     }
     /* 모바일 우선 — 사이드바 완전 제거, 메인 전체 너비 */
     [data-testid="stSidebar"],
@@ -288,7 +372,15 @@ CUSTOM_CSS = """
         font-weight: 600 !important;
         border-radius: clamp(10px, 2vw, 14px) !important;
         min-height: clamp(2.6rem, 8vw, 3rem) !important;
-        padding: clamp(0.5rem, 2vw, 0.75rem) clamp(0.35rem, 2vw, 1rem) !important;
+        padding: clamp(0.5rem, 2vw, 0.75rem) clamp(0.2rem, 1vw, 0.45rem) !important;
+        white-space: nowrap !important;
+    }
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="column"] {
+        padding-left: 0.12rem !important;
+        padding-right: 0.12rem !important;
+    }
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {
+        gap: clamp(0.12rem, 0.45vw, 0.28rem) !important;
     }
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="primary"],
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
@@ -301,7 +393,7 @@ CUSTOM_CSS = """
     @media (min-width: 601px) {
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="stHorizontalBlock"] {
             justify-content: flex-end !important;
-            gap: clamp(0.35rem, 1vw, 0.65rem) !important;
+            gap: clamp(0.12rem, 0.45vw, 0.28rem) !important;
         }
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="column"]:first-child {
             flex: 0 0 auto !important;
@@ -310,6 +402,10 @@ CUSTOM_CSS = """
         section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="column"]:nth-child(2) {
             flex: 1 1 auto !important;
             max-width: none !important;
+        }
+        section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type [data-testid="column"]:nth-child(4) {
+            flex: 1.25 0 auto !important;
+            min-width: 6.5rem !important;
         }
     }
     /* Streamlit 기본 빨간 primary → dlinso 보라색 (전역) */
@@ -610,6 +706,13 @@ CUSTOM_CSS = """
         margin: 0 0 0.5rem 0;
         line-height: 1.35;
     }
+    .hero-salon-module {
+        font-size: 1.02rem;
+        font-weight: 600;
+        color: #5c5348;
+        margin: 0 0 0.45rem 0;
+        letter-spacing: -0.01em;
+    }
     .hero-desc { color: #6b5f55; font-size: 0.96rem; line-height: 1.65; margin: 0; }
     .hub-slogan-info {
         background: linear-gradient(135deg, rgba(108, 92, 231, 0.09) 0%, rgba(255, 252, 248, 0.95) 100%);
@@ -695,6 +798,13 @@ CUSTOM_CSS = """
         margin-bottom: 1rem;
     }
     .consent-box { border-left: 4px solid #b8a088; }
+    .dlinso-onboarding-module-hint {
+        text-align: center;
+        color: #5c5048;
+        font-size: 0.95rem;
+        margin: 0 0 0.75rem 0;
+        letter-spacing: 0.02em;
+    }
     .opening-guide {
         background: #fff9f4;
         border: 1px dashed rgba(160, 140, 110, 0.4);
@@ -875,10 +985,39 @@ CUSTOM_CSS = """
         border-radius: 10px;
         text-align: center;
     }
+    .isolation-recovery-panel {
+        padding: 0.55rem 0.75rem;
+        margin: 0.25rem 0 0.45rem;
+        background: linear-gradient(135deg, #f4faf5 0%, #e8f2ea 100%);
+        border: 1px solid rgba(76, 120, 90, 0.22);
+        border-radius: 10px;
+    }
+    .isolation-recovery-title {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #2d4a35;
+        margin: 0 0 0.25rem;
+    }
+    .isolation-recovery-meta {
+        font-size: 0.78rem;
+        color: #5a6b5e;
+        margin: 0;
+    }
+    .isolation-signal-quote {
+        font-size: 0.82rem;
+        color: #3d5244;
+        font-style: italic;
+        margin: 0.35rem 0 0;
+    }
     div[data-testid="stVerticalBlock"]:has(.midpoint-section-marker) {
         margin-bottom: 0.5rem !important;
         padding-bottom: 0.35rem !important;
         border-bottom: 1px solid rgba(157, 142, 207, 0.12);
+    }
+    div[data-testid="stVerticalBlock"]:has(.midpoint-actions-below-chat-marker) {
+        margin-top: 0.65rem !important;
+        padding-top: 0.5rem !important;
+        border-top: 1px solid rgba(157, 142, 207, 0.14);
     }
     div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) {
         margin-top: 0.35rem !important;
@@ -901,6 +1040,44 @@ CUSTOM_CSS = """
             0 0 0 1px rgba(212, 175, 55, 0.35),
             0 6px 22px rgba(212, 175, 55, 0.28),
             0 4px 14px rgba(15, 23, 42, 0.32) !important;
+    }
+    .midpoint-essay-block {
+        margin: 0.85rem 0 1.15rem;
+        padding: 1rem 1.15rem 1.05rem;
+        border-radius: 12px;
+        background: linear-gradient(
+            165deg,
+            rgba(255, 252, 248, 0.98) 0%,
+            rgba(246, 243, 255, 0.92) 100%
+        );
+        border: 1px solid rgba(157, 142, 207, 0.22);
+        box-shadow: 0 2px 14px rgba(90, 70, 50, 0.06);
+    }
+    .midpoint-essay-section-title {
+        margin: 0 0 0.7rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #4a3f6b;
+    }
+    .midpoint-essay-body {
+        margin: 0;
+    }
+    .midpoint-essay-p {
+        margin: 0 0 0.85rem;
+        font-size: 0.94rem;
+        line-height: 1.78;
+        color: #4a4038;
+        letter-spacing: -0.01em;
+    }
+    .midpoint-essay-p:last-child {
+        margin-bottom: 0;
+    }
+    .midpoint-essay-preface {
+        margin: 0 0 1rem;
+        font-size: 0.96rem;
+        line-height: 1.75;
+        color: #5c5048;
     }
     div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) button:hover,
     div[data-testid="stVerticalBlock"]:has(.midpoint-btn-reveal-marker) button:hover {
@@ -925,9 +1102,9 @@ CUSTOM_CSS = """
     }
     .dlinso-intro-panel {
         text-align: center;
-        padding: clamp(1.5rem, 5vh, 2.5rem) 1.25rem;
+        padding: clamp(1.5rem, 5vh, 2.5rem) clamp(1.25rem, 4vw, 2rem);
         margin: 0 auto 0.75rem;
-        max-width: min(36rem, 94vw);
+        max-width: min(42rem, 96vw);
         background: radial-gradient(
             ellipse 90% 70% at 50% 28%,
             #2a2438 0%,
@@ -939,24 +1116,51 @@ CUSTOM_CSS = """
     }
     .dlinso-intro-headline {
         color: #ece6f8;
-        font-size: clamp(1.05rem, 3.8vw, 1.35rem);
+        font-size: clamp(1.2rem, 4.2vw, 1.55rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.4;
+        margin: 0 0 1.1rem;
+        text-wrap: balance;
+    }
+    .dlinso-intro-headline-line {
+        display: block;
+        white-space: nowrap;
+    }
+    @media (max-width: 380px) {
+        .dlinso-intro-headline-line {
+            white-space: normal;
+        }
+    }
+    .dlinso-intro-headline-brand {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: clamp(0.95rem, 3vw, 1.1rem);
         font-weight: 500;
-        letter-spacing: 0.03em;
-        line-height: 1.65;
-        margin: 0 0 1rem;
+        letter-spacing: 0.12em;
+        color: #9d8ecf;
     }
     .dlinso-intro-sub {
         color: #b8b0cc;
         font-size: clamp(0.88rem, 2.8vw, 0.98rem);
         font-weight: 300;
-        line-height: 1.75;
+        line-height: 1.7;
         margin: 0 0 1.1rem;
-        text-align: left;
+        text-align: center;
+        text-wrap: pretty;
+        max-width: 34rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .dlinso-intro-sub-line {
+        display: block;
+        margin-top: 0.35rem;
     }
     .dlinso-intro-guide {
         text-align: left;
         padding: 0.85rem 1rem;
-        margin: 0 0 1rem;
+        margin: 0 auto 1rem;
+        max-width: 34rem;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(157, 142, 207, 0.22);
@@ -981,6 +1185,21 @@ CUSTOM_CSS = """
         margin: 0;
         padding-top: 0.75rem;
         border-top: 1px solid rgba(157, 142, 207, 0.2);
+    }
+    .hub-slogan-hero {
+        text-align: center;
+        max-width: min(42rem, 96vw);
+        margin: 0 auto 1rem;
+        padding: 0.25rem 0.5rem 0.75rem;
+    }
+    .hub-slogan-hero .dlinso-intro-headline {
+        color: #3d3548;
+    }
+    .hub-slogan-hero .dlinso-intro-headline-brand {
+        color: #6c5ce7;
+    }
+    .hub-slogan-hero .dlinso-intro-sub {
+        color: #5c5048;
     }
     .intro-footer-bridge {
         margin-top: 0.25rem;
@@ -1078,17 +1297,64 @@ def render_lab_footer(*, intro_bridge: bool = False) -> None:
     )
 
 
+def _simple_bold_html(text: str) -> str:
+    """i18n **bold** → safe <strong> (intro 안내 박스용)."""
+    out: list[str] = []
+    rest = text or ""
+    while "**" in rest:
+        before, _, rest = rest.partition("**")
+        if before:
+            out.append(html.escape(before))
+        if "**" not in rest:
+            out.append(html.escape("**" + rest))
+            break
+        bold, _, rest = rest.partition("**")
+        out.append(f"<strong>{html.escape(bold)}</strong>")
+    if rest:
+        out.append(html.escape(rest))
+    return "".join(out)
+
+
+def _intro_headline_html() -> str:
+    line1 = t("intro_headline_line1").strip()
+    line2 = t("intro_headline_line2").strip()
+    if line1 and line2 and line1 != "intro_headline_line1":
+        return (
+            '<h2 class="dlinso-intro-headline">'
+            f'<span class="dlinso-intro-headline-line">{html.escape(line1)}</span>'
+            f'<span class="dlinso-intro-headline-line">{html.escape(line2)}</span>'
+            f'<span class="dlinso-intro-headline-brand">{html.escape(t("app_title"))}</span>'
+            "</h2>"
+        )
+    return (
+        f'<h2 class="dlinso-intro-headline">{html.escape(t("intro_headline"))}</h2>'
+    )
+
+
+def _intro_sub_html() -> str:
+    sub1 = t("intro_sub").strip()
+    sub2 = t("intro_sub_line2").strip()
+    if sub2 and sub2 != "intro_sub_line2":
+        return (
+            '<p class="dlinso-intro-sub">'
+            f"{html.escape(sub1)}"
+            f'<span class="dlinso-intro-sub-line">{html.escape(sub2)}</span>'
+            "</p>"
+        )
+    return f'<p class="dlinso-intro-sub">{html.escape(sub1)}</p>'
+
+
 def render_intro() -> None:
     """홈(소개) — 소개 문구, 브랜치 로드맵."""
     _html_layout_marker("dlinso-intro-marker")
+    guide_inner = _simple_bold_html(t("intro_guide_body"))
     panel = (
         '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
-        f'<h2 class="dlinso-intro-headline">{html.escape(t("intro_headline"))}'
-        f"{_beta_badge_html()}</h2>"
-        f'<p class="dlinso-intro-sub">{html.escape(t("intro_sub"))}</p>'
+        f"{_intro_headline_html()}"
+        f"{_intro_sub_html()}"
         '<div class="dlinso-intro-guide">'
         f'<p class="dlinso-intro-guide-label">{html.escape(t("intro_guide_label"))}</p>'
-        f'<p class="dlinso-intro-guide-body">{html.escape(t("intro_guide_body"))}</p>'
+        f'<p class="dlinso-intro-guide-body">{guide_inner}</p>'
         "</div>"
         f'<p class="dlinso-intro-whisper">{html.escape(t("intro_whisper"))}</p>'
         "</div>"
@@ -1110,15 +1376,18 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
     """하이브리드 네비 — 안내 | 나의 이야기 | 문의하기 (+ 언어·초기화)."""
     current = st.session_state.get("current_view", VIEW_APP)
     show_reset = is_ready_for_chat() or st.session_state.get("onboarding_complete")
+    on_brand_home = current in (VIEW_HOME, VIEW_INTRO) and st.session_state.get(
+        "home_intro_revealed", False
+    )
 
-    if show_reset and include_lang:
-        ratios = [1.0, 1.35, 1.0, 1.0, 1.05, 0.4, 0.72]
-    elif show_reset:
-        ratios = [1.0, 1.65, 1.05, 1.05, 1.05, 0.42]
-    elif include_lang:
-        ratios = [1.0, 1.55, 1.05, 1.05, 1.05, 0.72]
-    else:
-        ratios = [1.0, 1.85, 1.1, 1.1, 1.1]
+    ratios: list[float] = [1.0, 0.5]
+    if on_brand_home:
+        ratios.append(0.78)
+    ratios.extend([0.95, 1.1, 0.82])
+    if show_reset:
+        ratios.append(0.38)
+    if include_lang:
+        ratios.append(0.62)
 
     cols = st.columns(ratios, gap="small")
     idx = 0
@@ -1134,14 +1403,25 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
         st.empty()
     idx += 1
 
+    if on_brand_home and idx < len(cols):
+        with cols[idx]:
+            if st.button(
+                t("nav_about"),
+                use_container_width=True,
+                type="secondary",
+                key="hybrid_nav_about",
+            ):
+                open_dlinso_about()
+        idx += 1
+
     with cols[idx]:
         if st.button(
             t("nav_home"),
             use_container_width=True,
-            type="primary" if current == VIEW_INTRO else "secondary",
+            type="primary" if current in (VIEW_HOME, VIEW_INTRO) else "secondary",
             key="hybrid_nav_home",
         ):
-            _apply_view_nav(VIEW_INTRO)
+            _apply_view_nav(VIEW_HOME)
     idx += 1
 
     with cols[idx]:
@@ -1180,6 +1460,8 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
         with cols[idx]:
             render_language_selector(key="nav_lang", compact=True)
 
+    render_dlinso_about_expander_if_needed()
+
 
 def render_inquiry_fab(*, above_chat_input: bool = True) -> None:
     """하단 문의 바 — 모든 화면에서 원클릭 접근."""
@@ -1202,44 +1484,32 @@ def render_inquiry_fab(*, above_chat_input: bool = True) -> None:
         st.rerun()
 
 
-def _sheet_save_warning(err: str) -> str:
-    if err == SHEETS_RATE_LIMIT_MARKER:
-        return t("err_sheets_busy")
-    return f"시트 저장 실패: {err}"
+def _db_save_warning(err: str) -> str:
+    return f"저장 실패: {err}"
 
 
-def _sheets_error_message(sheets: SheetsLogger) -> str:
-    """연결 실패 시 사용자용 안내 (상세 오류 + 설정 방법)."""
-    lines = [t("err_sheets")]
-    if sheets.error_message:
-        lines.append(f"`{sheets.error_message}`")
-    src = credentials_source_label()
-    if src != "none":
-        lines.append(f"인증 소스: `{src}`")
-    else:
-        lines.append("인증 소스: **없음** (Secrets 또는 service_account.json 필요)")
-    sid = get_google_sheet_id()
-    if sid:
-        lines.append(f"시트 ID: `{sid[:8]}…`")
-    lines.append(t("err_sheets_setup"))
+def _db_error_message(db: DatabaseManager) -> str:
+    lines = ["로컬 데이터베이스에 연결할 수 없습니다."]
+    if db.error_message:
+        lines.append(f"`{db.error_message}`")
+    lines.append(f"DB 경로: `{db.database_label()}`")
+    lines.append("프로젝트 폴더에 쓰기 권한이 있는지 확인하세요.")
     return "\n\n".join(lines)
 
 
-def render_sheets_status(sheets: SheetsLogger) -> None:
-    """Sheets 연결 상태 — 실패 시 설정 안내."""
-    if sheets.is_connected:
-        email = sheets.service_account_email or "—"
-        st.caption(f"🟢 Google Sheets 연결됨 · {email}")
+def render_db_status(db: DatabaseManager) -> None:
+    if db.is_connected:
+        st.caption(f"🟢 로컬 DB 연결됨 · `{db.database_label()}`")
         return
-    with st.expander("⚠️ Google Sheets 연결 안 됨 — 설정 방법", expanded=True):
-        st.markdown(_sheets_error_message(sheets))
+    with st.expander("⚠️ 데이터베이스 연결 안 됨", expanded=True):
+        st.markdown(_db_error_message(db))
 
 
-def render_inquiry_page(sheets: SheetsLogger) -> None:
-    """문의하기 전용 — Google Sheets 기록 폼."""
+def render_inquiry_page(db: DatabaseManager) -> None:
+    """문의하기 전용 — SQLite 기록 폼."""
     st.markdown(f"## {t('inquiry_page_title')}")
     st.caption(t("inquiry_page_intro"))
-    render_researcher_inquiry(sheets)
+    render_researcher_inquiry(db)
 
     if st.button(t("inquiry_back"), use_container_width=True, key="inquiry_back_btn"):
         prev = st.session_state.get("inquiry_return_view", VIEW_APP)
@@ -1251,10 +1521,9 @@ render_sticky_top_nav = render_hybrid_nav
 
 
 def _is_preview_mode() -> bool:
-    try:
-        return st.query_params.get("preview", "").lower() in ("1", "true", "yes")
-    except Exception:  # noqa: BLE001
-        return False
+    from modules.home_registry import query_param_str
+
+    return query_param_str("preview").lower() in ("1", "true", "yes")
 
 
 def _apply_preview_session() -> None:
@@ -1263,7 +1532,7 @@ def _apply_preview_session() -> None:
     st.session_state.participant_id = "미리보기"
     st.session_state.gender = "기타"
     st.session_state.age_group = "30대"
-    st.session_state.life_stage = "성인(일반)"
+    st.session_state.life_stage = "일·활동 중"
     st.session_state.password_hash = hash_password("preview")
     st.session_state.is_returning_user = False
     st.session_state.last_visit_topic = ""
@@ -1304,7 +1573,9 @@ def _init_session_state() -> None:
         "metaphors": "",
         "turning_points": "",
         "app_mode": "lifespan",
-        "current_view": VIEW_APP,
+        "selected_module_id": "",
+        "home_intro_revealed": False,
+        "current_view": VIEW_HOME,
         "pending_user_prompt": "",
         "pending_turn": None,
         "story_thread": "",
@@ -1316,6 +1587,18 @@ def _init_session_state() -> None:
         "narrative_precision": 50.0,
         "jaggedness_index": 0.0,
         "pending_midpoint_analysis": False,
+        "learning_audience": "",
+        "last_learning_report": None,
+        "learning_report_count": 0,
+        "pending_learning_report": False,
+        "learning_signals": None,
+        "isolation_signals": None,
+        "last_isolation_asset": None,
+        "isolation_asset_count": 0,
+        "last_isolation_report": None,
+        "isolation_report_count": 0,
+        "pending_isolation_asset": False,
+        "pending_isolation_report": False,
         "conversation_restored": False,
     }
     for key, value in defaults.items():
@@ -1460,10 +1743,10 @@ def show_admin_reply_banner() -> None:
         st.info(f"**{t('admin_reply_title')}**\n\n{reply}")
 
 
-def render_researcher_inquiry(sheets: SheetsLogger) -> None:
-    """연구자·일반 문의 — Google Sheets Inquiries 탭에 기록."""
-    if not sheets.is_connected:
-        st.warning(_sheets_error_message(sheets))
+def render_researcher_inquiry(db: DatabaseManager) -> None:
+    """연구자·일반 문의 — SQLite inquiries 테이블."""
+    if not db.is_connected:
+        st.warning(_db_error_message(db))
         return
 
     participant = (st.session_state.get("participant_id") or "").strip()
@@ -1514,7 +1797,7 @@ def render_researcher_inquiry(sheets: SheetsLogger) -> None:
             )
         except Exception:  # noqa: BLE001
             msg_ko = inquiry.strip()
-        ok, err = sheets.log_inquiry(
+        ok, err = db.log_inquiry(
             participant_id,
             inquiry.strip(),
             lang=lang,
@@ -1537,84 +1820,168 @@ def _status_class(ok: bool) -> str:
     return "status-ok" if ok else "status-fail"
 
 
-def _credentials_cache_key() -> str:
-    """secrets / 파일 변경 시 SheetsLogger 캐시 무효화."""
-    label = credentials_source_label()
-    path = APP_DIR / "service_account.json"
-    mtime = path.stat().st_mtime if path.is_file() else 0.0
-    return f"{label}:{mtime}"
-
-
-def _sheets_logger_mtime() -> float:
-    path = APP_DIR / "sheets_logger.py"
+def _db_manager_mtime() -> float:
+    path = APP_DIR / "database_manager.py"
     return path.stat().st_mtime if path.is_file() else 0.0
 
 
 @st.cache_resource
-def get_sheets_logger(
-    _credentials_key: str,
-    _logger_mtime: float,
+def get_db_manager(
+    _db_path: str,
+    _manager_mtime: float,
     _cache_version: int,
-) -> SheetsLogger:
-    """sheets_logger.py 수정·인증 소스 변경 시 캐시 갱신."""
-    return SheetsLogger()
+) -> DatabaseManager:
+    """database_manager.py 수정·DB 경로 변경 시 캐시 갱신."""
+    return DatabaseManager()
 
 
-def nickname_exists(sheets: SheetsLogger, nickname: str) -> bool:
-    """가입 시 닉네임 중복 확인 (캐시된 구버전 SheetsLogger 대비)."""
-    nick = nickname.strip()
-    checker = getattr(sheets, "nickname_exists", None)
-    if callable(checker):
-        return bool(checker(nick))
-    for row in getattr(sheets, "_read_main_rows", lambda: [])():
-        cell = getattr(sheets, "_cell", None)
-        if callable(cell) and cell(row, "식별코드") == nick:
-            return True
-    return False
+@st.cache_resource
+def get_isolation_db_manager(
+    _db_path: str,
+    _manager_mtime: float,
+    _cache_version: int,
+) -> IsolationDatabaseManager:
+    """숲 모듈 — data/isolation.db (로컬·Cloud 공통, Cloud는 Supabase로 영속화 권장)."""
+    return IsolationDatabaseManager()
+
+
+def resolve_active_db() -> DatabaseManager | IsolationDatabaseManager:
+    if _is_isolation_mode():
+        return get_isolation_db_manager(
+            str(get_isolation_database_path()),
+            _isolation_db_manager_mtime(),
+            DB_MANAGER_CACHE_VERSION,
+        )
+    return get_db_manager(
+        str(get_database_path()),
+        _db_manager_mtime(),
+        DB_MANAGER_CACHE_VERSION,
+    )
+
+
+def _isolation_db_manager_mtime() -> float:
+    path = APP_DIR / "isolation_database_manager.py"
+    return path.stat().st_mtime if path.is_file() else 0.0
+
+
+def nickname_exists(db: DatabaseManager, nickname: str) -> bool:
+    return db.nickname_exists(nickname.strip())
 
 
 def init_gemini() -> tuple[bool, str | None]:
-    # 키 출처: env_config.get_gemini_api_key() → st.secrets(Cloud) 또는 .env(로컬)
-    # Cloud 배포 시 Streamlit Settings → Secrets 에 GEMINI_API_KEY 필수 (Reboot)
-    api_key = get_gemini_api_key()
-    if not api_key:
-        return False, t("err_dialogue_unavailable")
-    cache_key = f"gemini_init_{hash(api_key)}"
+    """
+    대화 LLM 준비 — Upstage Solar(기본) 또는 Gemini.
+    키: .env / Streamlit Secrets (UPSTAGE_API_KEY 또는 GEMINI_API_KEY).
+    """
+    if not is_llm_configured():
+        return False, _llm_user_error(LLMNotConfiguredError("not configured"))
+    provider = get_llm_provider()
+    cache_key = f"llm_init_{provider}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
     try:
-        genai.configure(api_key=api_key)
-        # list_models()는 Cloud 첫 로딩에서 수십 초 걸리거나 멈춘 것처럼 보일 수 있어 생략.
-        # 실제 키 검증은 첫 generate 시점에 이루어집니다.
+        init_llm_client()
         result: tuple[bool, str | None] = (True, None)
     except Exception as exc:  # noqa: BLE001
-        result = (False, _gemini_user_error(exc))
+        result = (False, _llm_user_error(exc))
     st.session_state[cache_key] = result
     return result
 
 
+def _is_learning_mode() -> bool:
+    return st.session_state.get("app_mode", MODE_LIFESPAN) == MODE_LEARNING
+
+
+def _is_isolation_mode() -> bool:
+    return st.session_state.get("app_mode", MODE_LIFESPAN) == MODE_ISOLATION
+
+
+def _refresh_isolation_signals(*, force_llm: bool = False) -> dict[str, Any] | None:
+    """대화 중 회복 신호 — 기본 휴리스틱(즉시), LLM은 4턴마다 또는 강제 시만."""
+    if not _is_isolation_mode():
+        return None
+    turns = effective_user_turn_count()
+    use_llm = force_llm or (turns >= 2 and turns % 4 == 0)
+    try:
+        signals = extract_isolation_signals(
+            st.session_state.messages,
+            lang=get_lang(),
+            use_llm=use_llm,
+        )
+    except Exception:  # noqa: BLE001
+        return st.session_state.get("isolation_signals")
+    st.session_state.isolation_signals = signals
+    return signals
+
+
+def _refresh_learning_signals(*, force_llm: bool = False) -> dict[str, Any] | None:
+    """대화 중 4대 이론 신호 — 턴마다 휴리스틱, 3턴마다 LLM 보강."""
+    if not _is_learning_mode():
+        return None
+    turns = effective_user_turn_count()
+    use_llm = force_llm or (turns >= 2 and turns % 3 == 0)
+    try:
+        signals = extract_learning_signals(
+            st.session_state.messages,
+            lang=get_lang(),
+            use_llm=use_llm,
+        )
+    except Exception:  # noqa: BLE001
+        return st.session_state.get("learning_signals")
+    st.session_state.learning_signals = signals
+    return signals
+
+
+def resolve_companion_display() -> dict[str, str]:
+    if _is_learning_mode():
+        return get_learning_display(st.session_state.get("learning_audience", ""))
+    if _is_isolation_mode():
+        return get_isolation_display()
+    return get_active_display(
+        st.session_state.phase, st.session_state.active_giant
+    )
+
+
 def build_system_instruction() -> str:
     age = st.session_state.age_group or "30대"
-    life_stage = st.session_state.life_stage or "성인(일반)"
+    life_stage = st.session_state.life_stage or "일·활동 중"
     phase = st.session_state.phase
     summary = st.session_state.get("context_summary", "").strip()
 
     lang = get_lang()
     base = build_global_maieutic_system_instruction(lang)
 
-    base += "\n\n" + build_mode_system_addon(
-        st.session_state.get("app_mode", "lifespan"),
-        phase,
-        giant_key=st.session_state.active_giant,
-        age_group=age,
-        life_stage=life_stage,
-        positive_resources=st.session_state.positive_resources,
-        current_concern=st.session_state.current_concern,
-        lang=lang,
-        is_returning=st.session_state.get("is_returning_user", False),
-        last_topic=st.session_state.get("last_visit_topic", ""),
-        nickname=st.session_state.get("participant_id", ""),
-    )
+    module_id = (st.session_state.get("selected_module_id") or "").strip()
+    if module_id and get_landing_module(module_id):
+        base += "\n\n" + build_mode_system_addon_for_module(
+            module_id,
+            phase,
+            giant_key=st.session_state.active_giant,
+            age_group=age,
+            life_stage=life_stage,
+            positive_resources=st.session_state.positive_resources,
+            current_concern=st.session_state.current_concern,
+            lang=lang,
+            is_returning=st.session_state.get("is_returning_user", False),
+            last_topic=st.session_state.get("last_visit_topic", ""),
+            nickname=st.session_state.get("participant_id", ""),
+            learning_audience=st.session_state.get("learning_audience", ""),
+        )
+    else:
+        base += "\n\n" + build_mode_system_addon(
+            st.session_state.get("app_mode", MODE_LIFESPAN),
+            phase,
+            giant_key=st.session_state.active_giant,
+            age_group=age,
+            life_stage=life_stage,
+            positive_resources=st.session_state.positive_resources,
+            current_concern=st.session_state.current_concern,
+            lang=lang,
+            is_returning=st.session_state.get("is_returning_user", False),
+            last_topic=st.session_state.get("last_visit_topic", ""),
+            nickname=st.session_state.get("participant_id", ""),
+            learning_audience=st.session_state.get("learning_audience", ""),
+        )
 
     if summary:
         base += f"\n\n[지금까지의 이야기 요약]\n{summary}"
@@ -1623,11 +1990,19 @@ def build_system_instruction() -> str:
         base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
 
     user_turns = effective_user_turn_count()
-    midpoint_done = bool(st.session_state.get("midpoint_analysis_count", 0))
+    if _is_learning_mode():
+        min_turns = MIN_USER_TURNS_FOR_LEARNING_REPORT
+        report_done = bool(st.session_state.get("learning_report_count", 0))
+    elif _is_isolation_mode():
+        min_turns = MIN_USER_TURNS_FOR_REPORT
+        report_done = bool(st.session_state.get("isolation_report_count", 0))
+    else:
+        min_turns = MIN_USER_TURNS_FOR_MIDPOINT
+        report_done = bool(st.session_state.get("midpoint_analysis_count", 0))
     base += build_conversation_phase_addon(
         user_turns,
-        midpoint_completed=midpoint_done,
-        min_turns=MIN_USER_TURNS_FOR_MIDPOINT,
+        midpoint_completed=report_done,
+        min_turns=min_turns,
     )
 
     precision = float(st.session_state.get("narrative_precision", 50.0))
@@ -1636,26 +2011,44 @@ def build_system_instruction() -> str:
             st.session_state.messages, st.session_state.profile
         )
         st.session_state.narrative_precision = precision
-    if user_turns >= MIN_USER_TURNS_FOR_MIDPOINT or midpoint_done:
+    if user_turns >= min_turns or report_done:
         base += build_adaptive_scaffolding_addon(precision)
 
-    report = st.session_state.get("last_midpoint_report")
-    if isinstance(report, dict) and report.get("section_treasure"):
-        base += (
-            "\n\n[중간 마음 지도 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
-            f"- [{report.get('title_treasure', '삶의 보물지도')}] "
-            f"{str(report.get('section_treasure', ''))[:280]}\n"
-            '- 마무리 질문: "이 지도가 당신의 마음과 닮았나요? '
-            '조금 더 들려주고 싶은 장면이 있다면 말씀해 주세요."\n'
-            "- 대화를 **종료하지 말고** 이어갈 것."
-        )
+    if _is_isolation_mode():
+        ireport = st.session_state.get("last_isolation_report")
+        if isinstance(ireport, dict) and ireport.get("section_inner_strength"):
+            base += (
+                "\n\n[내면 항해 일지 — 공유됨 · 점수 금지]\n"
+                f"{str(ireport.get('section_inner_strength', ''))[:280]}\n"
+            )
+    elif _is_learning_mode():
+        lreport = st.session_state.get("last_learning_report")
+        if isinstance(lreport, dict) and lreport.get("section_prescription"):
+            base += (
+                "\n\n[배움 지도 리포트 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
+                f"- [{lreport.get('title_prescription', TITLE_PRESCRIPTION)}] "
+                f"{str(lreport.get('section_prescription', ''))[:280]}\n"
+                f"- {format_learning_followup()}\n"
+                "- 대화를 종료하지 말고 이어갈 것."
+            )
+    else:
+        report = st.session_state.get("last_midpoint_report")
+        if isinstance(report, dict) and report.get("section_treasure"):
+            base += (
+                "\n\n[중간 마음 지도 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
+                f"- [{report.get('title_treasure', '삶의 보물지도')}] "
+                f"{str(report.get('section_treasure', ''))[:280]}\n"
+                '- 마무리 질문: "이 지도가 당신의 마음과 닮았나요? '
+                '조금 더 들려주고 싶은 장면이 있다면 말씀해 주세요."\n'
+                "- 대화를 종료하지 말고 이어갈 것."
+            )
 
     base += _conversation_style_addon()
     return base
 
 
 def _conversation_style_addon() -> str:
-    """턴당 맥락 보강 (글로벌 정원사 System Instruction은 최상단에 고정)."""
+    """턴당 맥락 보강 (서사 동행자 System Instruction은 최상단에 고정)."""
     user_turns = effective_user_turn_count()
     last_user = _last_user_display_text()
     return build_maieutic_addon(last_user=last_user, user_turns=user_turns)
@@ -1701,7 +2094,7 @@ def effective_user_turn_count() -> int:
 
 
 def messages_for_gemini_api() -> list[dict]:
-    """Gemini API 전송용 — 최근 N턴만. UI messages 는 그대로 둠."""
+    """LLM API 전송용 — 최근 N턴만. UI messages 는 그대로 둠."""
     msgs = list(st.session_state.messages)
     if len(msgs) <= TOKEN_DIET_MESSAGE_THRESHOLD:
         return msgs
@@ -1719,24 +2112,11 @@ def _update_story_thread(user_text: str, assistant_text: str) -> None:
     u = (user_text or "").strip()[:80]
     a = (assistant_text or "").strip()[:120]
     if u and a:
-        st.session_state.story_thread = f"최근: 씨앗 「{u}」 → 정원사 「{a}」"
+        st.session_state.story_thread = f"최근: 씨앗 「{u}」 → 서사 동행자 「{a}」"
 
 
-def get_chat_model() -> genai.GenerativeModel:
-    max_out = (
-        4096
-        if st.session_state.get("extended_input_unlocked")
-        else 2048
-    )
-    return genai.GenerativeModel(
-        get_gemini_model_name(),
-        system_instruction=build_system_instruction(),
-        generation_config=genai.GenerationConfig(
-            temperature=0.82,
-            top_p=0.92,
-            max_output_tokens=max_out,
-        ),
-    )
+def _chat_max_output_tokens() -> int:
+    return 4096 if st.session_state.get("extended_input_unlocked") else 2048
 
 
 def build_gemini_history(messages: list[dict]) -> list[dict]:
@@ -1805,6 +2185,18 @@ def _reset_chat_state() -> None:
         "midpoint_analysis_count",
         "last_midpoint_report",
         "pending_midpoint_analysis",
+        "last_learning_report",
+        "learning_report_count",
+        "pending_learning_report",
+        "learning_audience",
+        "learning_signals",
+        "isolation_signals",
+        "last_isolation_asset",
+        "isolation_asset_count",
+        "last_isolation_report",
+        "isolation_report_count",
+        "pending_isolation_asset",
+        "pending_isolation_report",
         "narrative_precision",
         "jaggedness_index",
     ):
@@ -1840,6 +2232,20 @@ def _reset_chat_state() -> None:
             st.session_state[key] = 50.0
         elif key == "jaggedness_index":
             st.session_state[key] = 0.0
+        elif key in ("last_midpoint_report", "last_learning_report"):
+            st.session_state[key] = None
+        elif key in ("midpoint_analysis_count", "learning_report_count"):
+            st.session_state[key] = 0
+        elif key == "learning_audience":
+            st.session_state[key] = ""
+        elif key in ("learning_signals", "isolation_signals"):
+            st.session_state[key] = None
+        elif key in ("last_isolation_asset", "last_isolation_report"):
+            st.session_state[key] = None
+        elif key in ("isolation_asset_count", "isolation_report_count"):
+            st.session_state[key] = 0
+        elif key in ("pending_isolation_asset", "pending_isolation_report"):
+            st.session_state[key] = False
         else:
             st.session_state[key] = 0 if key == "diet_applied_count" else ""
     st.session_state.pop("_chat_input_focused", None)
@@ -1848,17 +2254,21 @@ def _reset_chat_state() -> None:
 def render_chat_toolbar(
     gemini_ok: bool,
     gemini_error: str | None,
-    sheets: SheetsLogger,
+    db: DatabaseManager,
 ) -> None:
     """상담 화면 상단 — 언어(우측)·상태·도구."""
     with st.container():
         _html_layout_marker("chat-toolbar-marker")
         left, right = st.columns([2.2, 1], gap="small")
         with left:
-            companion = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
+            if _is_learning_mode():
+                companion = resolve_companion_display()["short"]
+            else:
+                companion = phase_label_ko(
+                    st.session_state.phase, st.session_state.active_giant
+                )
             st.markdown(
-                f'<span class="phase-badge">{companion}와 함께</span>'
-                f"{_beta_badge_html()}",
+                f'<span class="phase-badge">{html.escape(companion)}와 함께</span>',
                 unsafe_allow_html=True,
             )
             if st.session_state.preview_mode:
@@ -1900,11 +2310,11 @@ def render_chat_toolbar(
                     st.session_state._request_summary = True
                     st.rerun()
         with act3:
-            sheets_ok = sheets.is_connected
+            db_ok = db.is_connected
             gem_icon = "🟢" if gemini_ok else "🔴"
-            sheet_icon = "🟢" if sheets_ok else "🔴"
+            db_icon = "🟢" if db_ok else "🔴"
             st.caption(
-                f"{gem_icon} {t('status_dialogue')} · {sheet_icon} {t('status_record')}"
+                f"{gem_icon} {t('status_dialogue')} · {db_icon} {t('status_record')}"
             )
 
         with st.expander(t("sidebar_inquiry"), expanded=False):
@@ -1912,11 +2322,40 @@ def render_chat_toolbar(
                 st.session_state.inquiry_return_view = VIEW_APP
                 st.session_state.current_view = VIEW_INQUIRY
                 st.rerun()
-            render_researcher_inquiry(sheets)
+            render_researcher_inquiry(db)
         if not gemini_ok and gemini_error:
             st.caption(gemini_error)
-        if not sheets.is_connected and sheets.error_message:
-            st.warning(sheets.error_message)
+        if not db.is_connected and db.error_message:
+            st.warning(db.error_message)
+
+def _login_restore_payload(found: dict[str, Any]) -> tuple[list[dict[str, Any]] | None, list[dict[str, str]]]:
+    """
+    랜딩에서 고른 모듈과 DB 마지막 모듈이 다르면 복원하지 않음.
+    (여정 카드 → 동행 대화가 붙는 현상 방지)
+    """
+    restore_msgs = found.get("restored_messages")
+    restore_turns = list(found.get("recent_turns") or [])
+    landing_id = (st.session_state.get("selected_module_id") or "").strip()
+
+    if landing_id:
+        want_mode = module_app_mode(landing_id) or MODE_LIFESPAN
+        db_mod = (found.get("last_module_type") or "lifespan").strip()
+        if want_mode != db_mod:
+            return None, []
+        return restore_msgs, restore_turns
+
+    db_mod = (found.get("last_module_type") or "lifespan").strip()
+    if db_mod == "isolation":
+        apply_landing_module_selection("forest")
+    elif db_mod == "learning":
+        apply_landing_module_selection("learning")
+        aud = (found.get("last_learning_audience") or "").strip()
+        if aud:
+            st.session_state.learning_audience = aud
+    else:
+        apply_landing_module_selection("narrative")
+    return restore_msgs, restore_turns
+
 
 def reset_user_session() -> None:
     """가입·로그인 화면을 다시 보이게 세션 초기화."""
@@ -1930,6 +2369,9 @@ def reset_user_session() -> None:
         "age_group": "",
         "life_stage": "",
         "app_mode": "lifespan",
+        "selected_module_id": "",
+        "home_intro_revealed": False,
+        "learning_audience": "",
         "password_hash": "",
         "is_returning_user": False,
         "preview_mode": False,
@@ -1937,29 +2379,105 @@ def reset_user_session() -> None:
         "life_summary": "",
         "phase": PHASE_COLLECT,
         "active_giant": None,
-        "current_view": VIEW_APP,
+        "current_view": VIEW_HOME,
     }.items():
         st.session_state[key] = val
 
 
-def render_onboarding(sheets: SheetsLogger) -> None:
+def render_onboarding(db: DatabaseManager) -> None:
+    reconcile_landing_module_session()
     st.markdown(f"## {t('consent_title')}")
-    render_sheets_status(sheets)
-    st.info(t("onboarding_banner"))
+    render_db_status(db)
+    mod = get_landing_module(st.session_state.get("selected_module_id", ""))
+    if mod:
+        st.markdown(
+            f'<p class="dlinso-onboarding-module-hint">「{html.escape(mod.title)}」 여정을 시작합니다.</p>',
+            unsafe_allow_html=True,
+        )
+        if _is_learning_mode():
+            from modules.home_registry import (
+                LEARNING_SPOTLIGHT_LEAD_EN,
+                LEARNING_SPOTLIGHT_LEAD_KO,
+                LEARNING_SPOTLIGHT_STEPS_EN,
+                LEARNING_SPOTLIGHT_STEPS_KO,
+            )
+
+            if get_lang() == "ko":
+                lead = LEARNING_SPOTLIGHT_LEAD_KO
+                steps = LEARNING_SPOTLIGHT_STEPS_KO
+            else:
+                lead = LEARNING_SPOTLIGHT_LEAD_EN
+                steps = LEARNING_SPOTLIGHT_STEPS_EN
+            st.markdown(
+                f'<p class="dlinso-onboarding-learning-detail">'
+                f"{html.escape(lead)}<br>"
+                f"<span style='font-size:0.9em;color:#666;'>{html.escape(steps)}</span>"
+                f"</p>",
+                unsafe_allow_html=True,
+            )
+        elif _is_isolation_mode():
+            st.markdown(
+                f'<p class="dlinso-onboarding-learning-detail">'
+                f"{html.escape(t('mode_isolation_desc'))}"
+                f"</p>",
+                unsafe_allow_html=True,
+            )
+    st.info(
+        t("onboarding_banner").format(
+            tab_new=t("tab_new"),
+            tab_return=t("tab_return"),
+        )
+    )
     tab_new, tab_return = st.tabs([t("tab_new"), t("tab_return")])
 
     with tab_new:
         st.markdown(t("key_hint"))
         render_current_age_context(placement="onboarding")
         consent = st.checkbox(t("consent_check"), key="consent_new")
-        with st.form("signup_form"):
-            nickname = st.text_input(t("nickname"), placeholder="…")
-            password = st.text_input(t("password"), type="password")
-            password2 = st.text_input(t("password_confirm"), type="password")
-            gender = st.selectbox(t("gender"), GENDER_OPTIONS)
-            age_group = st.selectbox(t("age_current"), AGE_GROUPS)
+        with st.form("signup_form", clear_on_submit=False):
+            nickname = st.text_input(
+                t("nickname"),
+                placeholder="…",
+                key="signup_nickname",
+            )
+            password = st.text_input(
+                t("password"),
+                type="password",
+                key="signup_password",
+            )
+            password2 = st.text_input(
+                t("password_confirm"),
+                type="password",
+                key="signup_password_confirm",
+            )
+            gender = st.selectbox(
+                t("gender"),
+                GENDER_OPTIONS,
+                key="signup_gender",
+            )
+            age_group = st.selectbox(
+                t("age_current"),
+                AGE_GROUPS,
+                key="signup_age_group",
+            )
             st.caption(t("age_field_help"))
-            life_stage = st.selectbox(t("education"), LIFE_STAGE_OPTIONS)
+
+            signup_learning_audience = ""
+            if _is_learning_mode():
+                st.markdown(f"**{t('learning_signup_section')}**")
+                st.caption(t("learning_role_intro"))
+                signup_learning_audience = render_learning_audience_selectbox(
+                    key="signup_learning_audience",
+                    label=t("learning_role_title"),
+                )
+
+            st.markdown(f"**{t('life_stage_signup_section') if _is_learning_mode() else t('education')}**")
+            life_stage = st.selectbox(
+                t("education"),
+                LIFE_STAGE_OPTIONS,
+                key="signup_life_stage",
+                label_visibility="collapsed",
+            )
             st.caption(t("education_field_help"))
             signup = st.form_submit_button(
                 t("btn_start"),
@@ -1978,13 +2496,19 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                 st.error(t("err_pw"))
             elif password != password2:
                 st.error(t("err_pw_match"))
-            elif sheets.is_connected and nickname_exists(sheets, nick):
+            elif nickname_exists(db, nick):
                 st.error(t("err_nick_taken"))
+            elif _is_learning_mode() and not is_valid_learning_audience(
+                signup_learning_audience
+            ):
+                st.error(t("err_learning_audience"))
             else:
                 pw_hash = hash_password(password)
-                if sheets.is_connected:
-                    sheets.ensure_header_row()
-                    sheets.log_registration(
+                if not db.is_connected:
+                    st.error(_db_error_message(db))
+                else:
+                    db.ensure_schema()
+                    db.log_registration(
                         participant_id=nick,
                         password_hash=pw_hash,
                         lang=lang,
@@ -1992,16 +2516,18 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                         age_group=age_group,
                         education=life_stage,
                     )
-                _activate_session(
-                    participant_id=nick,
-                    password_hash_value=pw_hash,
-                    gender=gender,
-                    age_group=age_group,
-                    life_stage=life_stage,
-                    lang=lang,
-                    is_returning=False,
-                )
-                st.rerun()
+                    _activate_session(
+                        participant_id=nick,
+                        password_hash_value=pw_hash,
+                        gender=gender,
+                        age_group=age_group,
+                        life_stage=life_stage,
+                        lang=lang,
+                        is_returning=False,
+                    )
+                    if _is_learning_mode():
+                        st.session_state.learning_audience = signup_learning_audience
+                    st.rerun()
 
     with tab_return:
         st.markdown(t("return_hint"))
@@ -2018,16 +2544,16 @@ def render_onboarding(sheets: SheetsLogger) -> None:
             nick = nickname.strip()
             if not nick or not password:
                 st.error(t("err_login_both"))
-            elif not sheets.is_connected:
-                st.error(_sheets_error_message(sheets))
+            elif not db.is_connected:
+                st.error(_db_error_message(db))
             else:
-                sheets.ensure_header_row()
-                found = sheets.find_returning_user(nick, password)
+                db.ensure_schema()
+                found = db.find_returning_user(nick, password)
                 if not found:
                     st.error(t("err_login"))
                 else:
                     profile = found["profile"]
-                    sheets.record_visit(
+                    db.record_visit(
                         participant_id=profile["participant_id"],
                         password_hash=profile["password_hash"],
                         lang=profile.get("lang", get_lang()) or "ko",
@@ -2035,6 +2561,8 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                         age_group=profile.get("age_group", ""),
                         life_stage=profile.get("life_stage", ""),
                     )
+                    restored_msgs, recent_turns = _login_restore_payload(found)
+                    reconcile_landing_module_session()
                     _activate_session(
                         participant_id=profile["participant_id"],
                         password_hash_value=profile["password_hash"],
@@ -2043,8 +2571,8 @@ def render_onboarding(sheets: SheetsLogger) -> None:
                         life_stage=profile.get("life_stage", ""),
                         lang=profile.get("lang", get_lang()) or "ko",
                         is_returning=True,
-                        recent_turns=found.get("recent_turns", []),
-                        restored_messages=found.get("restored_messages"),
+                        recent_turns=recent_turns,
+                        restored_messages=restored_msgs,
                         total_turn_count=int(found.get("total_turn_count") or 0),
                         has_midpoint=bool(found.get("has_midpoint")),
                         last_topic=found.get("last_topic", ""),
@@ -2055,17 +2583,15 @@ def render_onboarding(sheets: SheetsLogger) -> None:
 
 
 def render_hub_slogan_banner() -> None:
-    """서비스 슬로건 — 짧은 한 줄 + 베타 표시."""
-    slogan_md = t("hub_slogan").strip()
-    if slogan_md:
-        st.markdown(slogan_md)
-    st.markdown(
-        f'<p class="hub-beta-row">{_beta_badge_html()}</p>',
-        unsafe_allow_html=True,
+    """서비스 슬로건 — 베타 뱃지는 상단 네비에만 표시."""
+    _html_layout_marker("hub-slogan-hero-marker")
+    fragment = (
+        '<div class="hub-slogan-hero">'
+        f"{_intro_headline_html()}"
+        f"{_intro_sub_html()}"
+        "</div>"
     )
-    beta_note = t("hub_slogan_beta_note").strip()
-    if beta_note:
-        st.caption(beta_note)
+    _render_html_fragment(fragment)
 
 
 def _profile_pill_html(icon: str, label: str, value: str, *, accent: bool = False) -> str:
@@ -2085,11 +2611,18 @@ def _profile_pill_html(icon: str, label: str, value: str, *, accent: bool = Fals
 
 
 def render_main_header(display: dict) -> None:
+    reconcile_landing_module_session()
     phase_txt = (
         t("phase_collect")
         if st.session_state.phase == PHASE_COLLECT
         else f"{display.get('short', display['label'])}"
     )
+    mod = get_landing_module(st.session_state.get("selected_module_id", ""))
+    salon_html = ""
+    if mod:
+        salon_html = (
+            f'<p class="hero-salon-module">「{html.escape(mod.title)}」</p>'
+        )
     pills = [
         _profile_pill_html("🪪", t("profile_nick"), st.session_state.participant_id),
         _profile_pill_html("📅", t("profile_age"), st.session_state.age_group),
@@ -2109,6 +2642,7 @@ def render_main_header(display: dict) -> None:
         + f'<section class="hero-header">'
         f'<div class="hero-eyebrow">{html.escape(t("hub_eyebrow"))}</div>'
         f'<h2 class="hero-title">{html.escape(t("app_title"))}</h2>'
+        f"{salon_html}"
         f'<p class="hero-desc">{display["emoji"]} <strong>'
         f"{html.escape(display['label'])}</strong> — "
         f"{html.escape(phase_txt)}.</p>"
@@ -2131,12 +2665,22 @@ def render_chat_area(display: dict) -> None:
 
     if not st.session_state.messages:
         render_current_age_context(placement="chat")
-        opening = resolve_opening_message(
-            t=t,
-            age_group=st.session_state.get("age_group", ""),
-            gender=st.session_state.get("gender", ""),
-            life_stage=st.session_state.get("life_stage", ""),
-        ).replace("\n\n", "<br><br>")
+        if _is_isolation_mode():
+            opening = t("isolation_opening")
+        elif _is_learning_mode():
+            aud = str(st.session_state.get("learning_audience") or "").strip()
+            if is_valid_learning_audience(aud):
+                opening = t(audience_opening_i18n_key(aud))
+            else:
+                opening = t("learning_role_intro")
+        else:
+            opening = resolve_opening_message(
+                t=t,
+                age_group=st.session_state.get("age_group", ""),
+                gender=st.session_state.get("gender", ""),
+                life_stage=st.session_state.get("life_stage", ""),
+            )
+        opening = opening.replace("\n\n", "<br><br>").replace("\n", "<br>")
         st.markdown(
             f'<div class="opening-guide">{opening}</div>',
             unsafe_allow_html=True,
@@ -2155,104 +2699,55 @@ def render_chat_area(display: dict) -> None:
                     st.markdown(body)
 
 
-def _gemini_response_text(response: Any) -> str:
-    """Gemini 응답 본문 — stream 청크 누락 방지용."""
-    try:
-        text = response.text
-        if text and str(text).strip():
-            return str(text).strip()
-    except Exception:  # noqa: BLE001
-        pass
-    parts: list[str] = []
-    for cand in getattr(response, "candidates", None) or []:
-        content = getattr(cand, "content", None)
-        for part in getattr(content, "parts", None) or []:
-            piece = getattr(part, "text", None)
-            if piece:
-                parts.append(str(piece))
-    return "".join(parts).strip()
-
-
-def _gemini_chunk_text(chunk: Any) -> str:
-    """스트리밍 청크에서 텍스트 조각 추출."""
-    try:
-        text = chunk.text
-        if text:
-            return str(text)
-    except Exception:  # noqa: BLE001
-        pass
-    parts: list[str] = []
-    for cand in getattr(chunk, "candidates", None) or []:
-        content = getattr(cand, "content", None)
-        for part in getattr(content, "parts", None) or []:
-            piece = getattr(part, "text", None)
-            if piece:
-                parts.append(str(piece))
-    return "".join(parts)
-
-
-def _gemini_message_parts(
-    user_prompt: str,
-    *,
-    image_bytes: bytes | None = None,
-) -> list[Any]:
-    parts: list[Any] = []
-    if image_bytes:
-        try:
-            from PIL import Image
-
-            parts.append(Image.open(io.BytesIO(image_bytes)))
-        except Exception:  # noqa: BLE001
-            pass
-    parts.append(user_prompt or "(사진을 보냈습니다)")
-    return parts
-
-
-def iter_gemini_reply_stream(
-    model,
+def iter_reply_stream(
     messages: list[dict],
     user_prompt: str,
     *,
     image_bytes: bytes | None = None,
     image_mime: str | None = None,
 ) -> Iterator[str]:
-    """Gemini 스트리밍 — UI에 토큰 단위로 넘긴다. 끝나면 전체 본문과 대조해 누락을 보완."""
-    del image_mime  # API는 PIL/bytes로 처리
-    parts = _gemini_message_parts(user_prompt, image_bytes=image_bytes)
-    chat = model.start_chat(history=build_gemini_history(messages))
-    response = chat.send_message(parts, stream=True)
-    accumulated: list[str] = []
-    for chunk in response:
-        piece = _gemini_chunk_text(chunk)
-        if piece:
-            accumulated.append(piece)
-            yield piece
-    streamed = "".join(accumulated)
-    final = _gemini_response_text(response)
-    if final and len(final) > len(streamed):
-        remainder = final[len(streamed) :]
-        if remainder:
-            yield remainder
-
-
-def generate_gemini_reply(
-    model,
-    messages: list[dict],
-    user_prompt: str,
-    *,
-    image_bytes: bytes | None = None,
-    image_mime: str | None = None,
-) -> str:
-    """비-UI 호출용 — 스트림을 모아 한 문자열로 반환."""
-    return "".join(
-        iter_gemini_reply_stream(
-            model,
+    """Solar/Gemini 스트리밍 — 배움 모드는 learning_engine 전용."""
+    if _is_isolation_mode():
+        yield from iter_isolation_reply_stream(
             messages,
             user_prompt,
-            image_bytes=image_bytes,
-            image_mime=image_mime,
+            lang=get_lang(),
+            age_group=st.session_state.age_group or "",
+            life_stage=st.session_state.life_stage or "",
+            nickname=str(st.session_state.get("participant_id") or ""),
+            report_completed=bool(st.session_state.get("isolation_report_count", 0)),
+            context_summary=str(st.session_state.get("context_summary") or ""),
+            live_signals=st.session_state.get("isolation_signals"),
         )
-    ).strip()
+        return
+
+    if _is_learning_mode():
+        yield from iter_learning_reply_stream(
+            messages,
+            user_prompt,
+            lang=get_lang(),
+            learning_audience=str(st.session_state.get("learning_audience") or ""),
+            age_group=st.session_state.age_group or "",
+            life_stage=st.session_state.life_stage or "",
+            nickname=str(st.session_state.get("participant_id") or ""),
+            report_completed=bool(st.session_state.get("learning_report_count", 0)),
+            context_summary=str(st.session_state.get("context_summary") or ""),
+            live_signals=st.session_state.get("learning_signals"),
+        )
+        return
+
+    api_messages = messages
+    yield from iter_chat_stream(
+        api_messages,
+        user_prompt,
+        system=build_system_instruction(),
+        temperature=0.82,
+        top_p=0.92,
+        max_tokens=_chat_max_output_tokens(),
+        gemini_history=build_gemini_history(api_messages),
+        image_bytes=image_bytes,
+        image_mime=image_mime,
+    )
 
 
 def deliver_life_summary(gemini_ok: bool) -> None:
@@ -2276,7 +2771,7 @@ def handle_chat_turn(
     user_text: str,
     display: dict,
     gemini_ok: bool,
-    sheets: SheetsLogger,
+    db: DatabaseManager,
     *,
     image_bytes: bytes | None = None,
     image_mime: str | None = None,
@@ -2320,7 +2815,8 @@ def handle_chat_turn(
         except Exception:  # noqa: BLE001
             pass
 
-    maybe_switch_to_giant(model_prompt)
+    if not _is_learning_mode() and not _is_isolation_mode():
+        maybe_switch_to_giant(model_prompt)
 
     user_extra: dict[str, Any] = {}
     if image_bytes:
@@ -2341,26 +2837,23 @@ def handle_chat_turn(
         elif display_text:
             st.markdown(display_text)
 
-    model = get_chat_model()
-
     def _reply_token_stream() -> Iterator[str]:
         try:
-            yield from iter_gemini_reply_stream(
-                model,
+            yield from iter_reply_stream(
                 messages_for_gemini_api(),
                 model_prompt,
                 image_bytes=image_bytes,
                 image_mime=image_mime,
             )
         except Exception as exc:  # noqa: BLE001
-            yield _gemini_user_error(exc)
+            yield _llm_user_error(exc)
 
     try:
         with st.chat_message("assistant", avatar=display["emoji"]):
             streamed = st.write_stream(_reply_token_stream())
             full_reply = (streamed or "").strip() if isinstance(streamed, str) else ""
     except Exception as exc:  # noqa: BLE001
-        full_reply = _gemini_user_error(exc)
+        full_reply = _llm_user_error(exc)
         with st.chat_message("assistant", avatar=display["emoji"]):
             st.markdown(full_reply)
 
@@ -2391,27 +2884,38 @@ def handle_chat_turn(
         )
         st.session_state.summoned_narrative = summoned
 
-    with st.spinner(""):
-        try:
-            metrics = analyze_narrative_turn(
-                model_prompt, full_reply, st.session_state.context_summary
-            )
-            st.session_state.profile = {k: float(metrics[k]) for k in PROFILE_KEYS}
-            st.session_state.narrative_stage = str(metrics["narrative_stage"])
-            st.session_state.life_context = str(metrics["life_context"])
-            st.session_state.narrative_themes = str(
-                metrics.get("narrative_themes", "")
-            )
-            st.session_state.metaphors = str(metrics.get("metaphors", ""))
-            st.session_state.turning_points = str(metrics.get("turning_points", ""))
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            st.session_state.interests = extract_interests(
-                st.session_state.messages, st.session_state.interests
-            )
-        except Exception:  # noqa: BLE001
-            pass
+    learning_signals_json = ""
+    isolation_signals_json = ""
+    if _is_isolation_mode():
+        signals = _refresh_isolation_signals()
+        if isinstance(signals, dict):
+            isolation_signals_json = json.dumps(signals, ensure_ascii=False)[:8000]
+    elif _is_learning_mode():
+        signals = _refresh_learning_signals()
+        if isinstance(signals, dict):
+            learning_signals_json = json.dumps(signals, ensure_ascii=False)[:8000]
+    else:
+        with st.spinner(""):
+            try:
+                metrics = analyze_narrative_turn(
+                    model_prompt, full_reply, st.session_state.context_summary
+                )
+                st.session_state.profile = {k: float(metrics[k]) for k in PROFILE_KEYS}
+                st.session_state.narrative_stage = str(metrics["narrative_stage"])
+                st.session_state.life_context = str(metrics["life_context"])
+                st.session_state.narrative_themes = str(
+                    metrics.get("narrative_themes", "")
+                )
+                st.session_state.metaphors = str(metrics.get("metaphors", ""))
+                st.session_state.turning_points = str(metrics.get("turning_points", ""))
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                st.session_state.interests = extract_interests(
+                    st.session_state.messages, st.session_state.interests
+                )
+            except Exception:  # noqa: BLE001
+                pass
 
     apply_token_diet()
 
@@ -2427,31 +2931,63 @@ def handle_chat_turn(
     except Exception:  # noqa: BLE001
         user_ko = model_prompt
         reply_ko = full_reply
-    if sheets.is_connected:
-        sheets.ensure_header_row()
-        ok, err = sheets.log_conversation(
-            user_message=model_prompt,
-            assistant_message=full_reply,
-            participant_id=st.session_state.participant_id,
-            password_hash=st.session_state.password_hash,
-            lang=lang,
-            gender=st.session_state.gender,
-            age_group=st.session_state.age_group,
-            education=st.session_state.life_stage,
-            user_message_ko=user_ko,
-            assistant_message_ko=reply_ko,
-            giant_name=giant_name,
-            current_concern=st.session_state.current_concern or "",
-            summoned_narrative=summoned or "",
-            profile=st.session_state.profile,
-            life_context=st.session_state.life_context or "",
-            narrative_stage=st.session_state.narrative_stage or "",
-            narrative_themes=st.session_state.get("narrative_themes", ""),
-            metaphors=st.session_state.get("metaphors", ""),
-            turning_points=st.session_state.get("turning_points", ""),
-        )
+    if db.is_connected:
+        if _is_isolation_mode():
+            ok, err = save_isolation_turn_local(
+                db,
+                nickname=st.session_state.participant_id,
+                user_message=model_prompt,
+                assistant_message=full_reply,
+                participant_id=st.session_state.participant_id,
+                password_hash=st.session_state.password_hash,
+                lang=lang,
+                gender=st.session_state.gender,
+                age_group=st.session_state.age_group,
+                education=st.session_state.life_stage,
+                user_message_ko=user_ko,
+                assistant_message_ko=reply_ko,
+                giant_name=display.get("label", "연결의 동행자"),
+                current_concern=st.session_state.current_concern or "",
+                summoned_narrative=summoned or "",
+                profile=st.session_state.profile,
+                life_context=st.session_state.life_context or "",
+                narrative_stage=st.session_state.narrative_stage or "",
+                narrative_themes=st.session_state.get("narrative_themes", ""),
+                metaphors=st.session_state.get("metaphors", ""),
+                turning_points=st.session_state.get("turning_points", ""),
+                module_type="isolation",
+                isolation_signals_json=isolation_signals_json,
+            )
+        else:
+            db.ensure_schema()
+            ok, err = db.log_conversation(
+                user_message=model_prompt,
+                assistant_message=full_reply,
+                participant_id=st.session_state.participant_id,
+                password_hash=st.session_state.password_hash,
+                lang=lang,
+                gender=st.session_state.gender,
+                age_group=st.session_state.age_group,
+                education=st.session_state.life_stage,
+                user_message_ko=user_ko,
+                assistant_message_ko=reply_ko,
+                giant_name=giant_name,
+                current_concern=st.session_state.current_concern or "",
+                summoned_narrative=summoned or "",
+                profile=st.session_state.profile,
+                life_context=st.session_state.life_context or "",
+                narrative_stage=st.session_state.narrative_stage or "",
+                narrative_themes=st.session_state.get("narrative_themes", ""),
+                metaphors=st.session_state.get("metaphors", ""),
+                turning_points=st.session_state.get("turning_points", ""),
+                module_type=(
+                    "learning" if _is_learning_mode() else "lifespan"
+                ),
+                learning_audience=st.session_state.get("learning_audience", ""),
+                learning_signals_json=learning_signals_json,
+            )
         if not ok:
-            st.warning(_sheet_save_warning(err))
+            st.warning(_db_save_warning(err))
 
     if st.session_state.get("is_returning_user"):
         st.session_state.is_returning_user = False
@@ -2513,7 +3049,7 @@ def _input_char_limit() -> int:
 
 def _deliver_midpoint_scaffolding(
     display: dict,
-    sheets: SheetsLogger,
+    db: DatabaseManager,
     message: str,
 ) -> None:
     """발화 품질 부족 시 적응형 비계 — 리포트·5000자 해제 없음."""
@@ -2521,9 +3057,9 @@ def _deliver_midpoint_scaffolding(
         st.info(message)
     _append_message("assistant", message, display=message)
 
-    if sheets.is_connected:
-        sheets.ensure_header_row()
-        sheets.log_conversation(
+    if db.is_connected:
+        db.ensure_schema()
+        db.log_conversation(
             user_message="[중간정리·데이터부족]",
             assistant_message=message,
             participant_id=st.session_state.participant_id,
@@ -2545,7 +3081,7 @@ def _deliver_midpoint_scaffolding(
     st.rerun()
 
 
-def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
+def execute_midpoint_analysis(display: dict, db: DatabaseManager) -> None:
     """특허 기반 중간 분석 — 10턴 달성 시 마음 지도 리포트 생성."""
     turn_count = effective_user_turn_count()
     if turn_count < MIN_USER_TURNS_FOR_MIDPOINT:
@@ -2622,9 +3158,9 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
     giant_name = phase_label_ko(st.session_state.phase, st.session_state.active_giant)
     stats_json = str(report.get("stats_json", ""))[:2000]
     scene = (report.get("situational_context") or {}).get("scene_phrase", "")
-    if sheets.is_connected:
-        sheets.ensure_header_row()
-        ok, err = sheets.log_conversation(
+    if db.is_connected:
+        db.ensure_schema()
+        ok, err = db.log_conversation(
             user_message="[중간정리·마음지도·OR내부]",
             assistant_message=full_reply,
             participant_id=st.session_state.participant_id,
@@ -2646,36 +3182,446 @@ def execute_midpoint_analysis(display: dict, sheets: SheetsLogger) -> None:
             turning_points=stats_json,
         )
         if not ok:
-            st.warning(_sheet_save_warning(err))
+            st.warning(_db_save_warning(err))
 
     st.rerun()
 
 
+def _midpoint_section_body_html(body: str) -> str:
+    paragraphs = [p.strip() for p in (body or "").split("\n\n") if p.strip()]
+    if not paragraphs and (body or "").strip():
+        paragraphs = [(body or "").strip()]
+    return "".join(
+        f'<p class="midpoint-essay-p">{html.escape(p)}</p>' for p in paragraphs
+    )
+
+
+def _render_midpoint_essay_section(title: str, body: str) -> None:
+    st.markdown(
+        f'<section class="midpoint-essay-block">'
+        f'<h4 class="midpoint-essay-section-title">[{html.escape(title)}]</h4>'
+        f'<div class="midpoint-essay-body">{_midpoint_section_body_html(body)}</div>'
+        f"</section>",
+        unsafe_allow_html=True,
+    )
+
+
 def _render_midpoint_report_blocks(report: dict[str, Any]) -> None:
-    """마음 지도 리포트 본문 (채팅·expander 공용)."""
+    """마음 지도 리포트 본문 (채팅·expander 공용) — 에세이형 단락."""
+    from hbridge_analysis import (
+        TITLE_CONNECTION,
+        TITLE_LANDSCAPE,
+        TITLE_TREASURE,
+        polish_midpoint_report,
+    )
+
+    polished = polish_midpoint_report(report)
     st.markdown("### 지금까지의 대화, 나를 돌아보는 마음 지도")
-    st.markdown(str(report.get("midpoint_preface", "")))
-    st.info(
-        f"**[{report.get('title_landscape', '나만의 마음 풍경')}]**\n\n"
-        + str(report.get("section_landscape", ""))
+    preface = str(polished.get("midpoint_preface", "")).strip()
+    if preface:
+        st.markdown(
+            f'<p class="midpoint-essay-preface">{html.escape(preface)}</p>',
+            unsafe_allow_html=True,
+        )
+    _render_midpoint_essay_section(
+        str(polished.get("title_landscape", TITLE_LANDSCAPE)),
+        str(polished.get("section_landscape", "")),
     )
-    st.info(
-        f"**[{report.get('title_connection', '우리들의 연결고리')}]**\n\n"
-        + str(report.get("section_connection", ""))
+    _render_midpoint_essay_section(
+        str(polished.get("title_connection", TITLE_CONNECTION)),
+        str(polished.get("section_connection", "")),
     )
-    st.info(
-        f"**[{report.get('title_treasure', '삶의 보물지도')}]**\n\n"
-        + str(report.get("section_treasure", ""))
+    _render_midpoint_essay_section(
+        str(polished.get("title_treasure", TITLE_TREASURE)),
+        str(polished.get("section_treasure", "")),
     )
     st.markdown(format_midpoint_followup())
 
 
-def _render_midpoint_section() -> None:
-    """대화 패널 상단 — 성찰 게이지 + 중간 정리 (입력창 위 스크롤 없이 보이도록)."""
-    if st.session_state.conversation_closed:
+def execute_learning_report_analysis(display: dict, db: DatabaseManager) -> None:
+    """학습 서사 검사 리포트 — 10턴 이후."""
+    turn_count = effective_user_turn_count()
+    if turn_count < MIN_USER_TURNS_FOR_LEARNING_REPORT:
+        st.warning(
+            t("learning_report_need_turns").format(
+                need=MIN_USER_TURNS_FOR_LEARNING_REPORT,
+                current=turn_count,
+            )
+        )
         return
+    if not is_valid_learning_audience(
+        str(st.session_state.get("learning_audience") or "")
+    ):
+        st.warning(t("learning_role_intro"))
+        return
+
+    with st.spinner(t("learning_report_spinner")):
+        report = generate_learning_narrative_report_for_messages(
+            st.session_state.messages,
+            learning_audience=st.session_state.learning_audience,
+            age_group=st.session_state.age_group,
+            life_stage=st.session_state.life_stage,
+            participant_id=st.session_state.participant_id,
+            lang=get_lang(),
+            profile=st.session_state.profile,
+        )
+        learning_signals = report.get("learning_signals")
+        if isinstance(learning_signals, dict):
+            st.session_state.learning_signals = learning_signals
+
+    st.session_state.last_learning_report = report
+    st.session_state.extended_input_unlocked = True
+    st.session_state.learning_report_count = (
+        int(st.session_state.get("learning_report_count", 0)) + 1
+    )
+    st.session_state.jaggedness_index = float(report.get("jaggedness_index", 0))
+    st.session_state.narrative_precision = float(
+        report.get("narrative_precision", 50.0)
+    )
+
+    with st.chat_message("assistant", avatar=display["emoji"]):
+        _render_learning_report_blocks(report)
+
+    full_reply = format_full_learning_message(report)
+    _append_message("assistant", full_reply, display=full_reply, learning_report=True)
+
+    lang = get_lang()
+    if db.is_connected:
+        db.ensure_schema()
+        ok, err = db.log_conversation(
+            user_message="[학습리포트·배움지도·내부]",
+            assistant_message=full_reply,
+            participant_id=st.session_state.participant_id,
+            password_hash=st.session_state.password_hash,
+            lang=lang,
+            gender=st.session_state.gender,
+            age_group=st.session_state.age_group,
+            education=st.session_state.life_stage,
+            user_message_ko="[학습리포트·배움지도]",
+            assistant_message_ko=full_reply,
+            giant_name=display.get("label", "배움 동행자"),
+            profile=st.session_state.profile,
+            life_context=st.session_state.life_context or "",
+            narrative_stage="학습_리포트",
+            narrative_themes=st.session_state.learning_audience,
+            metaphors=str(report.get("hbridge_summary", ""))[:500],
+            turning_points=json.dumps(
+                report.get("learning_signals") or {},
+                ensure_ascii=False,
+            )[:2000],
+            turn_type="learning_report",
+            module_type="learning",
+            learning_audience=st.session_state.learning_audience,
+            learning_signals_json=json.dumps(
+                report.get("learning_signals") or {},
+                ensure_ascii=False,
+            )[:8000],
+        )
+        if not ok:
+            st.warning(_db_save_warning(err))
+    st.rerun()
+
+
+def _render_learning_report_blocks(report: dict[str, Any]) -> None:
+    from learning_analysis import render_learning_report_blocks
+
+    render_learning_report_blocks(report)
+
+
+def execute_isolation_asset_analysis(display: dict, db: DatabaseManager) -> None:
+    """숲 · 6턴 이후 자아성/사회성 자산."""
+    turn_count = effective_user_turn_count()
+    if turn_count < MIN_USER_TURNS_FOR_ASSET:
+        st.warning(
+            t("isolation_asset_need_turns").format(
+                need=MIN_USER_TURNS_FOR_ASSET,
+                current=turn_count,
+            )
+        )
+        return
+    with st.spinner(t("isolation_asset_spinner")):
+        from isolation_analysis import run_isolation_asset_pipeline
+
+        signals = extract_isolation_signals(st.session_state.messages, lang=get_lang())
+        asset = run_isolation_asset_pipeline(
+            st.session_state.messages,
+            st.session_state.profile,
+            signals=signals,
+        )
+    st.session_state.last_isolation_asset = asset
+    st.session_state.isolation_asset_count = (
+        int(st.session_state.get("isolation_asset_count", 0)) + 1
+    )
+    if isinstance(signals, dict):
+        st.session_state.isolation_signals = signals
+
+    with st.chat_message("assistant", avatar=display["emoji"]):
+        from isolation_analysis import render_isolation_asset_blocks
+
+        render_isolation_asset_blocks(asset)
+
+    full_reply = format_full_asset_message(asset)
+    _append_message("assistant", full_reply, display=full_reply, midpoint=True)
+
+    if db.is_connected:
+        ok, err = save_isolation_turn_local(
+            db,
+            nickname=st.session_state.participant_id,
+            user_message="[숲·자아성사회성자산·내부]",
+            assistant_message=full_reply,
+            participant_id=st.session_state.participant_id,
+            password_hash=st.session_state.password_hash,
+            lang=get_lang(),
+            gender=st.session_state.gender,
+            age_group=st.session_state.age_group,
+            education=st.session_state.life_stage,
+            user_message_ko="[숲·자아성사회성자산]",
+            assistant_message_ko=full_reply,
+            giant_name=display.get("label", "연결의 동행자"),
+            profile=st.session_state.profile,
+            narrative_stage="숲_자산",
+            narrative_themes=str(asset.get("section_identity_asset", ""))[:500],
+            metaphors=str(asset.get("hbridge_summary", ""))[:500],
+            turning_points=json.dumps(signals or {}, ensure_ascii=False)[:2000],
+            turn_type="isolation_asset",
+            module_type="isolation",
+            isolation_signals_json=json.dumps(signals or {}, ensure_ascii=False)[:8000],
+        )
+        if not ok:
+            st.warning(_db_save_warning(err))
+    st.rerun()
+
+
+def execute_isolation_report_analysis(display: dict, db: DatabaseManager) -> None:
+    """숲 · 10턴 이후 내면 항해 일지."""
+    turn_count = effective_user_turn_count()
+    if turn_count < MIN_USER_TURNS_FOR_REPORT:
+        st.warning(
+            t("isolation_report_need_turns").format(
+                need=MIN_USER_TURNS_FOR_REPORT,
+                current=turn_count,
+            )
+        )
+        return
+    with st.spinner(t("isolation_report_spinner")):
+        report = generate_isolation_report_for_messages(
+            st.session_state.messages,
+            age_group=st.session_state.age_group,
+            life_stage=st.session_state.life_stage,
+            participant_id=st.session_state.participant_id,
+            lang=get_lang(),
+            profile=st.session_state.profile,
+        )
+        sig = report.get("signals") or report.get("learning_signals")
+        if isinstance(sig, dict):
+            st.session_state.isolation_signals = sig
+
+    st.session_state.last_isolation_report = report
+    st.session_state.extended_input_unlocked = True
+    st.session_state.isolation_report_count = (
+        int(st.session_state.get("isolation_report_count", 0)) + 1
+    )
+    st.session_state.jaggedness_index = float(report.get("jaggedness_index", 0))
+    st.session_state.narrative_precision = float(
+        report.get("narrative_precision", 50.0)
+    )
+
+    with st.chat_message("assistant", avatar=display["emoji"]):
+        from isolation_analysis import render_isolation_report_blocks
+
+        render_isolation_report_blocks(report)
+
+    full_reply = format_full_isolation_report_message(report)
+    _append_message("assistant", full_reply, display=full_reply, learning_report=True)
+
+    if db.is_connected:
+        sig = report.get("signals") or {}
+        ok, err = save_isolation_turn_local(
+            db,
+            nickname=st.session_state.participant_id,
+            user_message="[숲·내면항해일지·내부]",
+            assistant_message=full_reply,
+            participant_id=st.session_state.participant_id,
+            password_hash=st.session_state.password_hash,
+            lang=get_lang(),
+            gender=st.session_state.gender,
+            age_group=st.session_state.age_group,
+            education=st.session_state.life_stage,
+            user_message_ko="[숲·내면항해일지]",
+            assistant_message_ko=full_reply,
+            giant_name=display.get("label", "연결의 동행자"),
+            profile=st.session_state.profile,
+            narrative_stage="숲_리포트",
+            metaphors=str(report.get("hbridge_summary", ""))[:500],
+            turning_points=json.dumps(sig, ensure_ascii=False)[:2000],
+            turn_type="isolation_report",
+            module_type="isolation",
+            isolation_signals_json=json.dumps(sig, ensure_ascii=False)[:8000],
+        )
+        if not ok:
+            st.warning(_db_save_warning(err))
+    st.rerun()
+
+
+def _render_isolation_progress_header() -> dict[str, Any] | None:
+    if st.session_state.conversation_closed:
+        return None
+    _html_layout_marker("isolation-progress-marker")
+    prog = _render_reflection_depth_gauge()
+    turns = effective_user_turn_count()
+    asset = st.session_state.get("last_isolation_asset")
+    report = st.session_state.get("last_isolation_report")
+    if turns < MIN_USER_TURNS_FOR_ASSET and not asset and not report:
+        st.markdown(
+            f'<p class="midpoint-encourage-msg">{html.escape(t("isolation_encourage_before_unlock"))}</p>',
+            unsafe_allow_html=True,
+        )
+    sig = st.session_state.get("isolation_signals")
+    if turns >= 1 and isinstance(sig, dict):
+        from isolation_analysis import render_isolation_recovery_signals
+
+        with st.expander(t("isolation_recovery_signals"), expanded=turns <= 3):
+            render_isolation_recovery_signals(sig)
+    elif isinstance(sig, dict) and sig.get("thin_axis"):
+        labels = {
+            "identity": "자아성",
+            "social": "사회성",
+            "bloom": "고립 인지·재정의",
+            "todd_rose": "안전 맥락",
+            "pattern_seeker": "내면 질서",
+            "dynamics": "마찰·Small Win",
+        }
+        thin = str(sig.get("thin_axis", ""))
+        st.caption(f"지금 대화는 「{labels.get(thin, thin)}」 축을 열어 가고 있어요.")
+    return dict(prog)
+
+
+def _render_isolation_actions(prog: dict[str, Any] | None) -> None:
+    if st.session_state.conversation_closed or prog is None:
+        return
+    _html_layout_marker("isolation-actions-marker")
+    turns = effective_user_turn_count()
+    asset = st.session_state.get("last_isolation_asset")
+    report = st.session_state.get("last_isolation_report")
+
+    if isinstance(asset, dict) and asset.get("section_identity_asset"):
+        with st.expander(t("isolation_asset_btn"), expanded=False):
+            from isolation_analysis import render_isolation_asset_blocks
+
+            render_isolation_asset_blocks(asset)
+
+    if turns >= MIN_USER_TURNS_FOR_ASSET and not isinstance(asset, dict):
+        if st.button(
+            t("isolation_asset_btn"),
+            key="isolation_asset_btn",
+            use_container_width=True,
+            type="secondary",
+        ):
+            st.session_state.pending_isolation_asset = True
+            st.rerun()
+
+    if turns < MIN_USER_TURNS_FOR_REPORT:
+        return
+
+    btn = (
+        t("isolation_report_btn_rerun")
+        if st.session_state.get("isolation_report_count", 0)
+        else t("isolation_report_btn")
+    )
+    if st.button(btn, key="isolation_report_btn", use_container_width=True, type="primary"):
+        st.session_state.pending_isolation_report = True
+        st.rerun()
+
+
+def _render_learning_progress_header() -> dict[str, Any] | None:
+    if st.session_state.conversation_closed:
+        return None
+    _html_layout_marker("learning-progress-marker")
+    prog = _render_reflection_depth_gauge()
+    turns = effective_user_turn_count()
+    need = MIN_USER_TURNS_FOR_LEARNING_REPORT
+    eligible = turns >= need or bool(prog.get("button_eligible"))
+    report = st.session_state.get("last_learning_report")
+    if not eligible and not report:
+        st.markdown(
+            f'<p class="midpoint-encourage-msg">{html.escape(t("learning_encourage_before_unlock"))}</p>',
+            unsafe_allow_html=True,
+        )
+    sig = st.session_state.get("learning_signals")
+    if isinstance(sig, dict) and sig.get("thin_axis"):
+        axis_labels = {
+            "bloom": "Bloom · 인지적 창조",
+            "todd_rose": "Jagged 강점",
+            "pattern_seeker": "패턴·체계화",
+            "dynamics": "동역학 · 추진·마찰",
+        }
+        thin = str(sig.get("thin_axis", ""))
+        label = axis_labels.get(thin, thin)
+        st.caption(f"지금 대화는 「{label}」 축을 조심스럽게 열어 가고 있어요.")
+    prog = dict(prog)
+    prog["button_eligible"] = turns >= need
+    return prog
+
+
+def _render_learning_actions(prog: dict[str, Any] | None) -> None:
+    if st.session_state.conversation_closed or prog is None:
+        return
+    if not is_valid_learning_audience(
+        str(st.session_state.get("learning_audience") or "")
+    ):
+        return
+    _html_layout_marker("learning-actions-marker")
+    turns = effective_user_turn_count()
+    need = MIN_USER_TURNS_FOR_LEARNING_REPORT
+    eligible = turns >= need or bool(prog.get("button_eligible"))
+    report = st.session_state.get("last_learning_report")
+    unlocked = bool(st.session_state.get("extended_input_unlocked"))
+
+    if isinstance(report, dict) and report:
+        with st.expander(t("learning_report_view_expand"), expanded=False):
+            _render_learning_report_blocks(report)
+
+    if not eligible:
+        return
+
+    btn_label = (
+        t("learning_report_btn_rerun")
+        if unlocked
+        else t("learning_report_btn")
+    )
+    if st.button(
+        btn_label,
+        key="learning_report_btn",
+        use_container_width=True,
+        type="primary" if not unlocked else "secondary",
+    ):
+        st.session_state.pending_learning_report = True
+        st.rerun()
+
+
+def _render_midpoint_progress_header() -> dict[str, Any] | None:
+    """대화 패널 상단 — 성찰 게이지·잠금 전 안내."""
+    if st.session_state.conversation_closed:
+        return None
     _html_layout_marker("midpoint-section-marker")
     prog = _render_reflection_depth_gauge()
+    turns = effective_user_turn_count()
+    need = MIN_USER_TURNS_FOR_MIDPOINT
+    eligible = turns >= need or bool(prog.get("button_eligible"))
+    report = st.session_state.get("last_midpoint_report")
+    if not eligible and not report:
+        st.markdown(
+            f'<p class="midpoint-encourage-msg">{t("midpoint_encourage_before_unlock")}</p>',
+            unsafe_allow_html=True,
+        )
+    return prog
+
+
+def _render_midpoint_actions(prog: dict[str, Any] | None) -> None:
+    """채팅 메시지 아래 — 마음 지도 버튼·리포트 다시 보기."""
+    if st.session_state.conversation_closed or prog is None:
+        return
+    _html_layout_marker("midpoint-actions-below-chat-marker")
     _render_midpoint_unlock_ui(prog)
 
 
@@ -2708,19 +3654,12 @@ def _render_reflection_depth_gauge() -> dict[str, Any]:
 
 
 def _render_midpoint_unlock_ui(prog: dict[str, Any]) -> None:
-    """10회 미만: 안내 / 10회 이상: 중간 정리 버튼 (완료 후에도 다시 보기·재생성)."""
+    """10회 이상: 중간 정리 버튼 (완료 후에도 다시 보기·재생성)."""
     turns = effective_user_turn_count()
     need = MIN_USER_TURNS_FOR_MIDPOINT
     eligible = turns >= need or bool(prog.get("button_eligible"))
     report = st.session_state.get("last_midpoint_report")
     unlocked = bool(st.session_state.get("extended_input_unlocked"))
-
-    if not eligible and not report:
-        st.markdown(
-            f'<p class="midpoint-encourage-msg">{t("midpoint_encourage_before_unlock")}</p>',
-            unsafe_allow_html=True,
-        )
-        return
 
     if isinstance(report, dict) and report:
         with st.expander(t("midpoint_view_expand"), expanded=False):
@@ -2953,55 +3892,54 @@ def _run_app() -> None:
     st.markdown(FULL_WIDTH_LAYOUT_CSS, unsafe_allow_html=True)
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     _init_session_state()
+    sync_landing_module_from_query()
+    reconcile_landing_module_session()
+    sync_home_intro_revealed()
+    if _is_preview_mode():
+        st.session_state.home_intro_revealed = True
 
-    sheets = get_sheets_logger(
-        _credentials_cache_key(),
-        _sheets_logger_mtime(),
-        SHEETS_LOGGER_CACHE_VERSION,
-    )
+    db = resolve_active_db()
 
-    view = st.session_state.get("current_view", VIEW_APP)
+    view = st.session_state.get("current_view", VIEW_HOME)
     chat_screen = is_ready_for_chat() and view == VIEW_APP
-    render_hybrid_nav(include_lang=not chat_screen)
+    home_gate = view in (VIEW_HOME, VIEW_INTRO) and not st.session_state.get(
+        "home_intro_revealed", False
+    )
+    if not home_gate:
+        render_hybrid_nav(include_lang=not chat_screen)
 
     if view == VIEW_INQUIRY:
         with st.container():
             _html_layout_marker("app-content-pad-marker")
-            render_inquiry_page(sheets)
+            render_inquiry_page(db)
             render_lab_footer()
         return
 
-    if view == VIEW_INTRO:
-        render_intro()
-        foot = st.container()
-        with foot:
-            _html_layout_marker("intro-foot-marker")
-            if st.button(t("go_life_story"), type="primary", use_container_width=True):
-                st.session_state.current_view = VIEW_APP
-                st.rerun()
-            render_lab_footer(intro_bridge=True)
-        render_inquiry_fab(above_chat_input=False)
+    if view in (VIEW_HOME, VIEW_INTRO):
+        show_footer = render_main_home()
+        if show_footer:
+            with st.container():
+                _html_layout_marker("home-foot-marker")
+                render_home_footer_minimal()
+            render_inquiry_fab(above_chat_input=False)
         return
 
     if not is_ready_for_chat():
         with st.container():
             _html_layout_marker("app-content-pad-marker")
             st.markdown(
-                f'<h3 class="hub-page-title">🌿 {html.escape(t("app_title"))}'
-                f"{_beta_badge_html()}</h3>",
+                f'<h3 class="hub-page-title">🌿 {html.escape(t("app_title"))}</h3>',
                 unsafe_allow_html=True,
             )
             render_hub_slogan_banner()
-            render_onboarding(sheets)
+            render_onboarding(db)
             render_lab_footer()
         render_inquiry_fab(above_chat_input=False)
         return
 
     gemini_ok, gemini_error = init_gemini()
-    display = get_active_display(
-        st.session_state.phase, st.session_state.active_giant
-    )
-    render_chat_toolbar(gemini_ok, gemini_error, sheets)
+    display = resolve_companion_display()
+    render_chat_toolbar(gemini_ok, gemini_error, db)
 
     with st.container():
         _html_layout_marker("app-content-pad-marker", "chat-content-pad-marker")
@@ -3037,13 +3975,41 @@ def _run_app() -> None:
         else:
             with st.container(border=True):
                 _html_layout_marker("unified-chat-panel-marker")
-                _render_midpoint_section()
-                render_chat_area(display)
-                composer_queued = render_chat_composer_body()
+                audience_locked = (
+                    render_learning_audience_selector() if _is_learning_mode() else False
+                )
+                if _is_isolation_mode():
+                    iso_prog = _render_isolation_progress_header()
+                    render_chat_area(display)
+                    _render_isolation_actions(iso_prog)
+                    composer_queued = render_chat_composer_body()
+                elif _is_learning_mode():
+                    learning_prog = (
+                        None
+                        if audience_locked
+                        else _render_learning_progress_header()
+                    )
+                    if not audience_locked:
+                        render_chat_area(display)
+                        _render_learning_actions(learning_prog)
+                        composer_queued = render_chat_composer_body()
+                    else:
+                        composer_queued = False
+                else:
+                    midpoint_prog = _render_midpoint_progress_header()
+                    render_chat_area(display)
+                    _render_midpoint_actions(midpoint_prog)
+                    composer_queued = render_chat_composer_body()
 
     if not st.session_state.conversation_closed and not composer_queued:
-        if st.session_state.pop("pending_midpoint_analysis", False):
-            execute_midpoint_analysis(display, sheets)
+        if st.session_state.pop("pending_isolation_report", False):
+            execute_isolation_report_analysis(display, db)
+        elif st.session_state.pop("pending_isolation_asset", False):
+            execute_isolation_asset_analysis(display, db)
+        elif st.session_state.pop("pending_learning_report", False):
+            execute_learning_report_analysis(display, db)
+        elif st.session_state.pop("pending_midpoint_analysis", False):
+            execute_midpoint_analysis(display, db)
         pending = _take_pending_turn()
         if pending:
             if gemini_ok:
@@ -3051,7 +4017,7 @@ def _run_app() -> None:
                     pending.get("text") or "",
                     display,
                     gemini_ok,
-                    sheets,
+                    db,
                     image_bytes=pending.get("image_bytes"),
                     image_mime=pending.get("image_mime"),
                 )

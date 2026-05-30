@@ -12,7 +12,7 @@ load_dotenv(APP_DIR / ".env")
 
 from sheets_logger import SheetsLogger  # noqa: E402
 
-EXPECTED_SHEET_ID = "1aamo-Sf330d6tlrmR-GkA494V66Ow2NcGU9x7E7vbrI"
+EXPECTED_SHEET_ID = "1tdZVHL2JeAmvCV2stjhMG5W6yz6NB9AENnMzTuvMEms"
 SA_PATH = APP_DIR / "service_account.json"
 
 
@@ -49,7 +49,7 @@ def main() -> int:
                 lang="en",
                 gender="기타",
                 age_group="30대",
-                education="성인(일반)",
+                education="일·활동 중",
                 user_message_ko="[연동 테스트]",
                 assistant_message_ko="dlinso 시트 로깅 점검 완료",
                 giant_name="마음의 정원사",

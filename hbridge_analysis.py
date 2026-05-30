@@ -216,7 +216,7 @@ TITLE_CONNECTION = "우리들의 연결고리"
 TITLE_TREASURE = "삶의 보물지도"
 
 MIDPOINT_MAP_PREFACE = (
-    "이것은 당신의 전체 서사 중 현재까지의 흐름을 짚어본 **'중간 지도'**입니다."
+    "이것은 당신의 전체 서사 중 현재까지의 흐름을 짚어본 「중간 지도」입니다."
 )
 
 MIDPOINT_PRESENT_STRENGTH_LINE = (
@@ -240,6 +240,22 @@ MIDPOINT_SCAFFOLDING_MESSAGE = (
     "조금 더 구체적인 상황을 들려주시면 더 선명한 지도를 그릴 수 있어요. "
     "그때 **어디**에 계셨는지, **누구**와 함께였는지, "
     "마음에 남은 **한 장면**을 조금만 더 들려주실 수 있을까요?"
+)
+
+# 상투적·지표식 표현 — 중간 지도 서술에서 지양
+MIDPOINT_CLICHE_BAN = (
+    "특별한 색깔",
+    "보물상자",
+    "반짝",
+    "소중한 보물",
+    "자아 주도성",
+    "정서적 풍요",
+    "관계성 지표",
+    "평범한 사람",
+    "숨은 보물",
+    "Jagged Profile",
+    "Jagged",
+    "jagged profile",
 )
 
 
@@ -592,18 +608,44 @@ def extract_situational_context(user_texts: list[str]) -> dict[str, str]:
 
 def resolve_report_voice(life_stage: str, age_group: str = "") -> str:
     """elementary | secondary | adult"""
-    stage = (life_stage or "").strip()
+    from personas import normalize_age_group, normalize_life_stage
+
+    stage = normalize_life_stage(life_stage or "")
     if stage == "초등학생":
         return "elementary"
-    if stage in ("중학생", "고등학생"):
+    if stage in (
+        "중·고등학생 (재학)",
+        "청소년 (비재학·홈스쿨·중·고 휴학)",
+        "중학생",
+        "고등학생",
+    ):
         return "secondary"
-    if stage == "대학생":
+    if stage in (
+        "대학·전문대 (재학)",
+        "대학·전문대 (휴학)",
+        "대학원 (재학)",
+        "대학원 (휴학)",
+        "대학생",
+    ):
         return "adult"
-    if stage in ("성인(일반)", "은퇴 후 삶"):
+    if stage in (
+        "일·활동 중",
+        "준비·돌봄·쉬는 중",
+        "은퇴 후",
+        "성인(일반)",
+        "은퇴 후 삶",
+    ):
         return "adult"
-    ag = (age_group or "").strip()
-    if ag in ("10대", "20대") or "10-20" in ag:
-        return "secondary"
+    ag = normalize_age_group(age_group or "")
+    if ag in (
+        "초등 연령(약 7–12세)",
+        "중등 연령(약 13–15세)",
+        "고등 연령(약 16–18세)",
+        "10대",
+    ):
+        return "elementary" if ag == "초등 연령(약 7–12세)" else "secondary"
+    if ag == "20대":
+        return "adult"
     return "adult"
 
 
@@ -651,6 +693,255 @@ def compute_midpoint_statistics(
     }
 
 
+def extract_anchor_phrases(user_texts: list[str], *, max_phrases: int = 5) -> list[str]:
+    """참여자 발화에서 인용할 핵심 구절 후보 (중간 지도 신뢰도·깊이용)."""
+    if not user_texts:
+        return []
+
+    seen: set[str] = set()
+    candidates: list[str] = []
+
+    def _add(phrase: str) -> None:
+        p = re.sub(r"\s+", " ", (phrase or "").strip())
+        if len(p) < 6 or len(p) > 72 or p in seen:
+            return
+        if any(b in p for b in MIDPOINT_CLICHE_BAN):
+            return
+        seen.add(p)
+        candidates.append(p)
+
+    blob = "\n".join(user_texts)
+    for match in re.finditer(r"[「『\"']([^」』\"']{4,60})[」』\"']", blob):
+        _add(match.group(1))
+
+    vivid_markers = (
+        "빚",
+        "책임",
+        "배움",
+        "나눔",
+        "세상",
+        "황혼",
+        "책",
+        "휴학",
+        "관계",
+        "부모",
+        "후회",
+        "의미",
+        "전환",
+        "조급",
+        "외로",
+        "감사",
+        "죄책",
+        "부채",
+    )
+    for text in user_texts[-10:]:
+        for part in re.split(r"[.!?。\n]+", text):
+            part = part.strip()
+            if len(part) < 8:
+                continue
+            if any(m in part for m in vivid_markers) or len(part) >= 18:
+                _add(part)
+
+    return candidates[:max_phrases]
+
+
+MIDPOINT_PROSE_KEYS = (
+    "midpoint_preface",
+    "section_landscape",
+    "section_connection",
+    "section_treasure",
+    "situational_opening",
+)
+
+# 인용구 내 흔한 깨진 표기 — 가독용 순화(LLM·후처리 공통)
+_QUOTE_TYPO_FIXES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile("맣군"), "많군"),
+    (re.compile("ㅓㄱ당한"), "적당한"),
+    (re.compile("ㅓㄱ당"), "적당"),
+    (re.compile("ㅇㅐ"), "왜"),
+    (re.compile("ㅎㅏ"), "하"),
+]
+
+
+def _polish_text_inside_quotes(text: str) -> str:
+    """「인용구」 안 명백한 오타만 순화 — 말투는 유지."""
+
+    def _fix_inner(match: re.Match[str]) -> str:
+        inner = match.group(1)
+        for pattern, replacement in _QUOTE_TYPO_FIXES:
+            inner = pattern.sub(replacement, inner)
+        return f"「{inner}」"
+
+    return re.sub(r"「([^」]+)」", _fix_inner, text)
+
+
+def sanitize_midpoint_prose(text: str) -> str:
+    """마크다운 별표 제거·공백 정리."""
+    if not text:
+        return ""
+    cleaned = (text or "").replace("**", "").replace("*", "")
+    cleaned = _polish_text_inside_quotes(cleaned)
+    cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def format_midpoint_section_body(text: str) -> str:
+    """에세이형 단락 — 문단 사이 빈 줄."""
+    body = sanitize_midpoint_prose(text)
+    if not body:
+        return ""
+    if "\n\n" in body:
+        return body
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?。])\s+", body) if s.strip()]
+    if len(sentences) <= 2:
+        return body
+    paragraphs: list[str] = []
+    chunk: list[str] = []
+    for sentence in sentences:
+        chunk.append(sentence)
+        if len(chunk) >= 2:
+            paragraphs.append(" ".join(chunk))
+            chunk = []
+    if chunk:
+        paragraphs.append(" ".join(chunk))
+    return "\n\n".join(paragraphs)
+
+
+def polish_midpoint_report(report: dict[str, Any]) -> dict[str, Any]:
+    """중간 지도 본문 — 별표 제거·인용 순화·단락 간격."""
+    polished = dict(report)
+    for key in MIDPOINT_PROSE_KEYS:
+        raw = polished.get(key)
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        if key.startswith("section_"):
+            polished[key] = format_midpoint_section_body(raw)
+        else:
+            polished[key] = sanitize_midpoint_prose(raw)
+    return polished
+
+
+def _uneven_strength_hint(stats: dict[str, Any]) -> str:
+    """비균질적 역량 지형 — 수치 없이 모델·fallback용 힌트."""
+    domain = stats.get("domain_scores") or {}
+    if not domain:
+        return (
+            "대화 속에서 특정 축(지식·관계·책임 등)만 유난히 높게 솟은 "
+            "들쭉날쭉한 강점 지형이 보입니다."
+        )
+    ranked = sorted(domain.items(), key=lambda x: -float(x[1]))
+    peaks = [k for k, _ in ranked[:2]]
+    trough = ranked[-1][0] if len(ranked) > 2 else ""
+    parts = [f"높은 봉우리: {' · '.join(peaks)}"]
+    if trough and trough not in peaks:
+        parts.append(f"상대적으로 완만한 축: {trough}")
+    parts.append(
+        "평균적인 사람이 아니라, 특정 축에서만 솟은 봉우리가 "
+        "당신만의 지형을 이룹니다."
+    )
+    return " ".join(parts)
+
+
+def build_midpoint_report_prompt(
+    *,
+    user_lines: list[str],
+    stats: dict[str, Any],
+    voice_guide: str,
+    scene: str,
+    gender: str,
+    resources: str,
+    life_context: str,
+    lang: str,
+    lang_name: str,
+) -> str:
+    """인문학적 중간 지도 생성용 LLM 프롬프트."""
+    anchors = extract_anchor_phrases(user_lines)
+    anchor_block = (
+        "\n".join(
+            f"- 반드시 인용 후보(원문): {a}\n  → 인용 시 「」로 감싸고, "
+            f"명백한 오타만 표준어로 순화"
+            for a in anchors
+        )
+        if anchors
+        else (
+            "- 참여자 발화에서 2~3개의 핵심 구절을 「」로 직접 인용 (6~40자)."
+        )
+    )
+    ban_line = " · ".join(f"「{c}」" for c in MIDPOINT_CLICHE_BAN[:8])
+
+    stats_for_model = {
+        "strength_categories": stats.get("strength_categories"),
+        "top_or": stats.get("top_or"),
+        "domain_scores": stats.get("domain_scores"),
+        "jaggedness_index": stats.get("jaggedness_index"),
+        "narrative_precision": stats.get("narrative_precision"),
+    }
+
+    return (
+        "당신은 dlinso의 **서사 동행자**이자, 한 사람의 인생 서사를 존중하는 "
+        "**인문학적 서사 해석가**입니다.\n"
+        "아래 **내부 통계**는 해석 재료일 뿐, 출력에 숫자·OR·P-value·%·지표명·"
+        f"딱딱한 심리학 라벨({ban_line} 등)을 **절대 쓰지 마세요**.\n\n"
+        "[중간 지도 정체성]\n"
+        "「이것은 당신의 전체 서사 중 현재까지의 흐름을 짚어본 '중간 지도'입니다.」\n"
+        "— 리포트 서두(midpoint_preface)에 반드시 담을 것.\n\n"
+        "[분석 가이드라인 — 각 섹션 3~5문장, 상투어 금지]\n\n"
+        f"■ {TITLE_LANDSCAPE}\n"
+        "- 장소·사건 나열 금지. **현재 심리 상태**를 은유적 풍경으로 그릴 것.\n"
+        "- 예시 톤: '황혼의 조급함을 책이라는 결과물로 승화시키려는 책임감의 풍경'\n"
+        "- 참여자가 쓴 감각어·비유를 풍경 메타포에 녹일 것.\n\n"
+        f"■ {TITLE_CONNECTION}\n"
+        "- 관계 **대상 이름 나열**만 하지 말 것.\n"
+        "- 그 관계를 대하는 **태도**, **부채감**, **기대**, **거리두기** 등 "
+        "감정의 실타래를 따라갈 것.\n"
+        "- '누구와 좋다/나쁘다' 수준이 아니라, 말투·침묵·책임의 방향을 짚을 것.\n\n"
+        f"■ {TITLE_TREASURE}\n"
+        "- '자아 주도성' 같은 용어 대신, 평생 쌓아온 **지식·경험**과 "
+        "그것을 **나눔·전환**으로 옮기려는 **서사적 전환점**을 구체적으로 명명.\n"
+        "- 비균질적 역량: 평균형이 아니라 특정 축의 **봉우리**가 "
+        "어떻게 당신만의 지형을 만드는지 서술. 수치·%·영문 용어 없이 비유로.\n"
+        f"- 내부 힌트: {_uneven_strength_hint(stats)}\n\n"
+        "[인용 규칙 — 신뢰도]\n"
+        f"{anchor_block}\n"
+        "- 세 섹션 합쳐 최소 2회 참여자 말을 「」로 직접 인용.\n"
+        "- 인용구 안의 명백한 오타·깨진 표기(예: 맣군→많군, ㅓㄱ당한→적당한)는 "
+        "문맥에 맞게 표준어로 순화해 읽기 쉽게. 말투·감정·뉘앙스는 유지.\n"
+        "- 인용 없이 일반론만 쓰면 실패.\n\n"
+        "[출력 형식 — 필수]\n"
+        "- JSON 본문 값에 마크다운 별표(*, **)를 절대 넣지 말 것.\n"
+        "- 강조는 「인용구」, [상황], 섹션 제목 구조로만. 별표로 강조 금지.\n"
+        "- section_landscape / section_connection / section_treasure 각각 "
+        "2~3개 단락, 단락 사이는 반드시 빈 줄(\\n\\n) — 인쇄된 에세이처럼.\n"
+        "- 문장은 완결형으로, 딱딱한 심리학 라벨·영문 용어·수치 금지.\n\n"
+        "[말투]\n"
+        f"{voice_guide}\n"
+        "격조 있고 따뜻하며, 한 사람의 인생 전체를 존중하는 인문학적 어조. "
+        "진단·조언·훈계 금지.\n"
+        f"성별 참고: {gender or '미입력'} (고정관념·조롱 금지)\n\n"
+        f"[상황 맥락 — {TITLE_LANDSCAPE} 첫 문장에 [상황] 괄호로 짧게]\n"
+        f"예: [{scene}] …\n\n"
+        f"[내부 통계 — 출력 금지]\n{json.dumps(stats_for_model, ensure_ascii=False)}\n\n"
+        f"[긍정 서사 자원]\n{resources}\n"
+        f"[생활 맥락] {life_context or '—'}\n\n"
+        "[참여자 발화 — 여기서만 근거를 가져올 것]\n"
+        + "\n".join(f"- {line}" for line in user_lines[-16:])
+        + "\n\n"
+        "JSON만 출력:\n"
+        "{\n"
+        '  "midpoint_preface": "중간 지도 서두 1~2문장",\n'
+        f'  "title_landscape": "{TITLE_LANDSCAPE}",\n'
+        f'  "title_connection": "{TITLE_CONNECTION}",\n'
+        f'  "title_treasure": "{TITLE_TREASURE}",\n'
+        f'  "section_landscape": "{TITLE_LANDSCAPE} 본문(단락\\n\\n구분, 별표 없음)",\n'
+        f'  "section_connection": "{TITLE_CONNECTION} 본문(단락\\n\\n구분, 별표 없음)",\n'
+        f'  "section_treasure": "{TITLE_TREASURE} 본문(단락\\n\\n구분, 별표 없음)",\n'
+        '  "situational_opening": "[상황]만 짧게"\n'
+        "}\n"
+        f"언어: {lang_name} (코드 {lang})"
+    )
+
+
 def _nickname_short(participant_id: str) -> str:
     nick = (participant_id or "").strip()
     if not nick or nick in ("미리보기", "(익명)"):
@@ -667,76 +958,85 @@ def compose_humanistic_sections_fallback(
     gender: str,
     positive_resources: list[str] | None,
     life_context: str,
+    user_texts: list[str] | None = None,
 ) -> dict[str, str]:
-    """Gemini 실패 시 연령 맞춤 규칙 서술."""
+    """Gemini 실패 시 — 대화 인용·은유·비균질 강점 지형 기반 규칙 서술."""
     scene = situational.get("scene_phrase", "지금까지의 이야기 속")
     bracket_scene = f"[{scene}]"
     top_cat = stats.get("strength_categories") or ["meaning"]
     strength_ko = TOPIC_LABELS_KO.get(top_cat[0], "의미·성찰")
-    jagged_high = float(stats.get("jaggedness_index", 0)) >= 45.0
+    strength_hint = _uneven_strength_hint(stats)
     resources = positive_resources or []
-
-    or_sentence = (
-        f"{MIDPOINT_PRESENT_STRENGTH_LINE} "
-        "남과의 비교가 아닌, 당신의 특정 순간이 다른 때보다 더 빛나는 순간을 "
-        "발견했습니다."
-    )
-    jagged_sentence = (
-        "모든 면에서 평균인 사람보다, 특정 부분에서 봉우리처럼 솟은 "
-        "당신의 개성이 훨씬 귀한 자산입니다."
-        if jagged_high
-        else "당신 안에는 아직 이름 붙이지 않은 보물이 조용히 자라고 있습니다."
-    )
+    anchors = extract_anchor_phrases(user_texts or [])
+    q1 = f"「{anchors[0]}」" if len(anchors) > 0 else "당신이 건넨 말"
+    q2 = f"「{anchors[1]}」" if len(anchors) > 1 else q1
+    people = situational.get("people") or "가까운 사람"
 
     if voice == "elementary":
         name = nickname or "친구"
         landscape = (
-            f"{name}아, 네 마음속 보물상자를 열어보니 {bracket_scene} "
-            f"특별한 빛이 반짝이고 있어. {or_sentence}"
+            f"{bracket_scene} 네 마음에는 조용한 바람과 따뜻한 빛이 함께 있어. "
+            f"{q1}라고 말해 준 순간이, 지금 네 마음 풍경의 중심이야."
         )
         connection = (
-            f"너의 이야기 속엔 너만의 특별한 색깔이 담겨 있어. "
-            f"{life_context or '가족과 친구'} 이야기가 마음을 따뜻하게 이어 주고 있네."
+            f"{people}와의 이야기에서, 네가 상대를 어떻게 대하는지가 보여. "
+            f"서운함도, 고마움도 실타래처럼 이어져 있어."
         )
         treasure = (
-            f"{jagged_sentence} "
-            f"특히 **{strength_ko}** 쪽에서 네가 빛나는 모습이 보여. "
-            + (f"「{resources[0][:50]}」 같은 기억도 소중한 보물이야." if resources else "")
+            f"{strength_hint} "
+            f"특히 {strength_ko} 쪽에서 눈에 띄게 높아. "
+            + (f"{q2} 같은 말은 앞으로의 나눔으로 이어질 씨앗이야." if anchors else "")
         )
     elif voice == "secondary":
         landscape = (
-            f"너의 이야기 속엔 너만의 특별한 색깔이 담겨 있어. "
-            f"{bracket_scene} 느꼈던 마음은 분명 의미 있어. {or_sentence}"
+            f"{bracket_scene} 지금 네 안의 풍경은, 말로 옮기기 어려운 무게와 "
+            f"동시에 {q1}에서 드러난 빛이 공존하는 모습이야."
         )
         connection = (
-            "관계와 감정의 실타래가 서로 묶이며, 네가 소중히 여기는 사람들과의 "
-            "연결이 이야기의 중심에 있어."
-        )
-        treasure = f"{jagged_sentence} 두드러지는 방향은 **{strength_ko}** 쪽이야."
-    else:
-        landscape = (
-            f"당신의 삶의 맥락에서 발견된 고유한 자산은 {bracket_scene} "
-            f"피어났던 감정과 연결되어 있습니다. {or_sentence}"
-        )
-        connection = (
-            f"{'생활 영역: ' + life_context + '. ' if life_context and life_context != '—' else ''}"
-            "대화 속 관계·정서의 실타래가 맥락적 성격을 드러냅니다."
+            f"관계는 이름이 아니라 태도로 드러나. {people}를 향한 네 마음에는 "
+            f"기대와 부채감이 함께 엮여 있는 것 같아."
         )
         treasure = (
-            f"{jagged_sentence} "
-            f"특히 **{strength_ko}** 영역에서 삶의 보물이 응집되어 있습니다."
+            f"{strength_hint} "
+            f"{strength_ko} 축에서 봉우리가 높아. "
+            f"{q2}는 배움을 나눔으로 바꾸려는 서사의 전환점에 가깝다."
+        )
+    else:
+        landscape = (
+            f"{bracket_scene} 당신의 마음 풍경에는, 조급함과 책임이 한 줄기로 "
+            f"겹쳐 있습니다. {q1}라고 하신 말은, 그 감정을 결과물이나 관계로 "
+            f"승화하려는 시도를 비춥니다."
+        )
+        connection = (
+            f"{'생활 맥락(' + life_context + ') 속에서, ' if life_context and life_context != '—' else ''}"
+            f"{people}와의 연결은 사건이 아니라 태도로 남아 있습니다. "
+            f"거리, 기대, 미안함이 실타래처럼 엮여 있으며, "
+            f"{q2}에서 그 방향이 드러납니다."
+        )
+        res_note = (
+            f" 대화 속 자원으로 {resources[0][:40]}…도 포착됩니다."
+            if resources
+            else ""
+        )
+        treasure = (
+            f"{strength_hint} "
+            f"평생 쌓아 온 지식과 경험이 {strength_ko} 축에서 높은 봉우리를 이루고, "
+            f"그것을 나눔으로 전환하려는 서사적 전환점이 {q1}에 담겨 있습니다."
+            f"{res_note}"
         )
 
-    return {
-        "midpoint_preface": MIDPOINT_MAP_PREFACE,
-        "title_landscape": TITLE_LANDSCAPE,
-        "title_connection": TITLE_CONNECTION,
-        "title_treasure": TITLE_TREASURE,
-        "section_landscape": landscape.strip(),
-        "section_connection": connection.strip(),
-        "section_treasure": treasure.strip(),
-        "situational_opening": bracket_scene,
-    }
+    return polish_midpoint_report(
+        {
+            "midpoint_preface": MIDPOINT_MAP_PREFACE,
+            "title_landscape": TITLE_LANDSCAPE,
+            "title_connection": TITLE_CONNECTION,
+            "title_treasure": TITLE_TREASURE,
+            "section_landscape": landscape.strip(),
+            "section_connection": connection.strip(),
+            "section_treasure": treasure.strip(),
+            "situational_opening": bracket_scene,
+        }
+    )
 
 
 def run_intra_individual_or_pipeline(
@@ -773,6 +1073,7 @@ def run_intra_individual_or_pipeline(
         gender=gender,
         positive_resources=positive_resources,
         life_context=life_context,
+        user_texts=user_texts,
     )
 
     stats_payload = {
@@ -784,23 +1085,25 @@ def run_intra_individual_or_pipeline(
         "life_stage": life_stage,
     }
 
-    return {
-        "midpoint_preface": narrative.get("midpoint_preface", MIDPOINT_MAP_PREFACE),
-        "title_landscape": narrative.get("title_landscape", TITLE_LANDSCAPE),
-        "title_connection": narrative.get("title_connection", TITLE_CONNECTION),
-        "title_treasure": narrative.get("title_treasure", TITLE_TREASURE),
-        "section_landscape": narrative.get("section_landscape", ""),
-        "section_connection": narrative.get("section_connection", ""),
-        "section_treasure": narrative.get("section_treasure", ""),
-        "situational_opening": narrative.get(
-            "situational_opening", situational.get("scene_phrase", "")
-        ),
-        "jaggedness_index": stats["jaggedness_index"],
-        "narrative_precision": stats["narrative_precision"],
-        "stats": stats_payload,
-        "stats_json": json.dumps(stats_payload, ensure_ascii=False),
-        "situational_context": situational,
-    }
+    return polish_midpoint_report(
+        {
+            "midpoint_preface": narrative.get("midpoint_preface", MIDPOINT_MAP_PREFACE),
+            "title_landscape": narrative.get("title_landscape", TITLE_LANDSCAPE),
+            "title_connection": narrative.get("title_connection", TITLE_CONNECTION),
+            "title_treasure": narrative.get("title_treasure", TITLE_TREASURE),
+            "section_landscape": narrative.get("section_landscape", ""),
+            "section_connection": narrative.get("section_connection", ""),
+            "section_treasure": narrative.get("section_treasure", ""),
+            "situational_opening": narrative.get(
+                "situational_opening", situational.get("scene_phrase", "")
+            ),
+            "jaggedness_index": stats["jaggedness_index"],
+            "narrative_precision": stats["narrative_precision"],
+            "stats": stats_payload,
+            "stats_json": json.dumps(stats_payload, ensure_ascii=False),
+            "situational_context": situational,
+        }
+    )
 
 
 def parse_stored_midpoint_message(text: str) -> dict[str, Any] | None:
@@ -827,15 +1130,17 @@ def parse_stored_midpoint_message(text: str) -> dict[str, Any] | None:
     if not any((landscape, connection, treasure)):
         return None
 
-    return {
-        "midpoint_preface": preface,
-        "title_landscape": TITLE_LANDSCAPE,
-        "section_landscape": landscape,
-        "title_connection": TITLE_CONNECTION,
-        "section_connection": connection,
-        "title_treasure": TITLE_TREASURE,
-        "section_treasure": treasure,
-    }
+    return polish_midpoint_report(
+        {
+            "midpoint_preface": preface,
+            "title_landscape": TITLE_LANDSCAPE,
+            "section_landscape": landscape,
+            "title_connection": TITLE_CONNECTION,
+            "section_connection": connection,
+            "title_treasure": TITLE_TREASURE,
+            "section_treasure": treasure,
+        }
+    )
 
 
 def format_midpoint_followup() -> str:

@@ -2,10 +2,13 @@
 앱 설정 — 로컬 .env + 배포(Streamlit) st.secrets 통합.
 
 보안 (API 키):
-  - 코드에 GEMINI_API_KEY 를 문자열로 넣지 마세요.
+  - 코드에 API 키를 문자열로 넣지 마세요.
   - 로컬: `.env` (Git 제외) — `.env.example` 만 커밋
+  - v2 LLM: UPSTAGE_API_KEY (Solar, OpenAI 호환)
   - Streamlit Cloud: 앱 → Settings → Secrets → TOML 예:
-        GEMINI_API_KEY = "새로_발급한_키"
+        UPSTAGE_API_KEY = "..."
+        LLM_PROVIDER = "upstage"
+  - Gemini 폴백: GEMINI_API_KEY = "..."
     저장 후 Reboot app 필수.
   - 유출된 키는 Google AI Studio 에서 폐기·재발급하세요.
 """
@@ -41,17 +44,86 @@ _SERVICE_ACCOUNT_JSON_KEYS = (
 
 # 환경 변수: secrets 우선 → os.environ (.env)
 _CONFIG_KEYS = (
+    "UPSTAGE_API_KEY",
+    "UPSTAGE_MODEL",
+    "LLM_PROVIDER",
+    "DATABASE_PATH",
+    "ISOLATION_DATABASE_PATH",
     "GEMINI_API_KEY",
     "GEMINI_MODEL",
     "GOOGLE_SHEET_ID",
     "INQUIRY_EMAIL",
+    "SUPABASE_URL",
+    "SUPABASE_KEY",
 )
+
+UPSTAGE_API_BASE = "https://api.upstage.ai/v1"
+DEFAULT_UPSTAGE_MODEL = "solar-pro3"
+DEFAULT_LLM_PROVIDER = "upstage"
 
 # API 키별 사용 가능 모델이 다름. 1.5-flash 는 v1beta 에서 404 인 경우 많음.
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 # 연구 협업·문의 기본 수신 (env에 추가 주소가 있으면 함께 사용)
 DEFAULT_INQUIRY_EMAIL = "hyc6999@gmail.com"
+DEFAULT_DATABASE_PATH = APP_DIR / "data" / "dlinso.db"
+DEFAULT_ISOLATION_DATABASE_PATH = APP_DIR / "data" / "isolation.db"
+DATA_DIR = APP_DIR / "data"
+
+
+def is_streamlit_cloud() -> bool:
+    """Streamlit Community Cloud 등 호스팅 환경 감지."""
+    if os.getenv("STREAMLIT_SHARING_MODE"):
+        return True
+    host = (os.getenv("HOSTNAME") or "").lower()
+    return host.endswith(".streamlit.app") or "streamlit" in host
+
+
+def _path_unusable_on_this_host(path: Path) -> bool:
+    """
+    Windows 절대 경로(E:\\...)가 Linux(Cloud)에서 쓰이거나,
+    로컬에서도 부모 폴더가 없으면 프로젝트 data/ 로 대체.
+    """
+    if path.drive and os.name != "nt":
+        return True
+    try:
+        parent = path.parent
+        if parent != path and not parent.exists():
+            return True
+    except OSError:
+        return True
+    return False
+
+
+def resolve_storage_path(raw: str, default: Path) -> Path:
+    """
+    DB 등 저장 경로 — 상대 경로는 APP_DIR 기준.
+    .env 에 남은 E:\\work\\... 절대 경로는 Cloud/이전 PC 에서 자동 폴백.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return default
+    path = Path(text)
+    if not path.is_absolute():
+        return APP_DIR / path
+    if _path_unusable_on_this_host(path):
+        if path.suffix.lower() == ".db":
+            fallback = DATA_DIR / path.name
+            fallback.parent.mkdir(parents=True, exist_ok=True)
+            return fallback
+        return default
+    return path
+
+
+def get_database_path() -> Path:
+    raw = get_config("DATABASE_PATH")
+    return resolve_storage_path(raw, DEFAULT_DATABASE_PATH)
+
+
+def get_isolation_database_path() -> Path:
+    """숲 모듈 DB — 기본 APP_DIR/data/isolation.db."""
+    raw = get_config("ISOLATION_DATABASE_PATH")
+    return resolve_storage_path(raw, DEFAULT_ISOLATION_DATABASE_PATH)
 
 
 def _streamlit_secrets() -> Any | None:
@@ -81,6 +153,31 @@ def get_config(key: str, default: str = "") -> str:
     if raw is not None and str(raw).strip():
         return str(raw).strip()
     return os.getenv(key, default).strip()
+
+
+def get_llm_provider() -> str:
+    """upstage | gemini — .env / Secrets 의 LLM_PROVIDER."""
+    raw = get_config("LLM_PROVIDER").lower()
+    if raw in ("upstage", "gemini"):
+        return raw
+    return DEFAULT_LLM_PROVIDER
+
+
+def get_upstage_api_key() -> str:
+    key = get_config("UPSTAGE_API_KEY")
+    if not key or key in (
+        "your_upstage_api_key_here",
+        "your_upstage_api_key",
+    ):
+        return ""
+    return key
+
+
+def get_upstage_model_name() -> str:
+    name = get_config("UPSTAGE_MODEL")
+    if name and not name.startswith("your_"):
+        return name
+    return DEFAULT_UPSTAGE_MODEL
 
 
 def get_gemini_model_name() -> str:
@@ -246,12 +343,75 @@ def credentials_source_label() -> str:
     return "none"
 
 
+def _supabase_secrets_block() -> dict[str, Any]:
+    """st.secrets [supabase] TOML 섹션."""
+    secrets = _streamlit_secrets()
+    if secrets is None:
+        return {}
+    try:
+        raw = secrets.get("supabase")
+    except Exception:  # noqa: BLE001
+        return {}
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    if hasattr(raw, "keys"):
+        try:
+            return {k: raw[k] for k in raw.keys()}
+        except Exception:  # noqa: BLE001
+            return {}
+    return {}
+
+
+def get_supabase_url() -> str:
+    block = _supabase_secrets_block()
+    url = str(block.get("url") or block.get("SUPABASE_URL") or "").strip()
+    if url:
+        return url
+    return get_config("SUPABASE_URL")
+
+
+def get_supabase_key() -> str:
+    """Supabase secret / service_role / publishable(anon) 키 — INSERT 권한 필요."""
+    block = _supabase_secrets_block()
+    for name in (
+        "key",
+        "secret_key",
+        "service_role_key",
+        "publishable_key",
+        "anon_key",
+        "SUPABASE_KEY",
+    ):
+        val = str(block.get(name) or "").strip()
+        if val and not val.startswith("your_"):
+            return val
+    key = get_config("SUPABASE_KEY")
+    if key and not key.startswith("your_"):
+        return key
+    return ""
+
+
 def apply_secrets_to_environ() -> None:
     """비-Streamlit 모듈이 os.getenv만 쓸 때 secrets 값을 환경에 반영."""
     for key in _CONFIG_KEYS:
         val = get_config(key)
         if val:
             os.environ.setdefault(key, val)
+    block = _supabase_secrets_block()
+    url = str(block.get("url") or "").strip()
+    key = str(
+        block.get("key")
+        or block.get("secret_key")
+        or block.get("service_role_key")
+        or block.get("publishable_key")
+        or block.get("anon_key")
+        or ""
+    ).strip()
+    if url:
+        os.environ.setdefault("SUPABASE_URL", url)
+    if key:
+        os.environ.setdefault("SUPABASE_KEY", key)
 
 
 KOREA_TZ = ZoneInfo("Asia/Seoul")

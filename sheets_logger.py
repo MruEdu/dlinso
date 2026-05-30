@@ -133,6 +133,15 @@ INQUIRY_TYPES = frozenset(
     {"general", "research_collab", "interview"}
 )
 
+# ---------------------------------------------------------------------------
+# [비활성] Google Sheets — 숲 모듈 실시간 로그
+# dlinso v2 숲 모듈은 100% 로컬 SQLite (isolation.db) 만 사용합니다.
+# ---------------------------------------------------------------------------
+# ISOLATION_SHEET = "숲_연결의서사"
+# ISOLATION_HEADER = [
+#     "일시", "닉네임", "사용자 발화", "AI 응답", "회복 신호(JSON)",
+# ]
+
 # 재로그인 시 복원할 대화 쌍(사용자+정원사) 상한 — 예전 5쌍은 5/10·중간정리 소실 원인
 MAX_RESTORE_TURNS = 30
 
@@ -947,3 +956,5 @@ class SheetsLogger:
             assistant_message_ko="dlinso 서사 연구 세션 시작",
             giant_name="마음의 정원사",
         )
+
+# --- [비활성] append_row / append_isolation_* / append_to_google_sheet (로컬 SQLite 전용) ---

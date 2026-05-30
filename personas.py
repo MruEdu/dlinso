@@ -5,20 +5,54 @@ from __future__ import annotations
 import re
 
 SERVICE_TITLE = "dlinso"
-GUIDE_NAME = "마음의 정원사"
+GUIDE_NAME = "서사 동행자"
 GUIDE_EMOJI = "🌿"
 
-AGE_GROUPS = ["10대", "20대", "30대", "40대", "50대", "60대 이상"]
+AGE_GROUPS = [
+    "초등 연령(약 7–12세)",
+    "중등 연령(약 13–15세)",
+    "고등 연령(약 16–18세)",
+    "20대",
+    "30대",
+    "40대",
+    "50대",
+    "60대",
+    "70대 이상",
+]
+
+AGE_LEGACY: dict[str, str] = {
+    "10대": "고등 연령(약 16–18세)",
+    "10-20대": "고등 연령(약 16–18세)",
+    "60대 이상": "60대",
+}
+
+DEFAULT_AGE_GROUP = "30대"
 GENDER_OPTIONS = ["남", "여", "기타"]
 
 LIFE_STAGE_OPTIONS = [
     "초등학생",
-    "중학생",
-    "고등학생",
-    "대학생",
-    "성인(일반)",
-    "은퇴 후 삶",
+    "중·고등학생 (재학)",
+    "청소년 (비재학·홈스쿨·중·고 휴학)",
+    "대학·전문대 (재학)",
+    "대학·전문대 (휴학)",
+    "대학원 (재학)",
+    "대학원 (휴학)",
+    "일·활동 중",
+    "준비·돌봄·쉬는 중",
+    "은퇴 후",
 ]
+
+# 이전 가입·DB 값 → 현재 옵션 (말투·분석 호환)
+LIFE_STAGE_LEGACY: dict[str, str] = {
+    "중학생": "중·고등학생 (재학)",
+    "고등학생": "중·고등학생 (재학)",
+    "대학생": "대학·전문대 (재학)",
+    "성인(일반)": "일·활동 중",
+    "은퇴 후 삶": "은퇴 후",
+    "대학·전문대 (휴학·휴지)": "대학·전문대 (휴학)",
+}
+
+DEFAULT_LIFE_STAGE = "일·활동 중"
 
 PHASE_COLLECT = "collect"
 PHASE_GIANT = "giant"
@@ -84,12 +118,50 @@ GIANT_SELECT_RULES: dict[str, list[str]] = {
     "frankl": ["의미", "상실", "고통", "절망", "가치", "선택"],
 }
 
-# 학력·생애주기 맞춤 말투 (Phase 1·2 공통)
+# 현재 생활 단계 맞춤 말투 (Phase 1·2 공통)
 LIFE_STAGE_TONE: dict[str, str] = {
     "초등학생": (
         "짧고 다정한 말투. 어려운 단어 대신 쉬운 말. 칭찬과 호기심을 담아 "
         "한 번에 한 질문만. 어른처럼 무겁게 말하지 않기."
     ),
+    "중·고등학생 (재학)": (
+        "친근한 존댓말. 학교·친구·꿈·진로를 부드럽게. "
+        "비난 없이 성장의 이야기를 함께 쓰게 이끌기."
+    ),
+    "청소년 (비재학·홈스쿨·중·고 휴학)": (
+        "따뜻한 존댓말. 학교·성적·반 친구를 전제하지 않기. "
+        "홈스쿨·비재학·휴학 이유를 캐묻지 않고, 관계·자기주도·미래·가족을 존중. "
+        "한 번에 한 질문."
+    ),
+    "대학·전문대 (재학)": (
+        "정중한 존댓말. 자아·관계·미래 가능성을 존중. "
+        "조언보다 성찰 질문 중심."
+    ),
+    "대학·전문대 (휴학)": (
+        "정중하고 부드러운 존댓말. 휴학·쉼을 낙인으로 다루지 않기. "
+        "선택·관계·불안·다음 계획을 존중하며 한 번에 한 질문."
+    ),
+    "대학원 (재학)": (
+        "정중한 존댓말. 연구·지도교수·진로 압박을 전제하되 평가하지 않기. "
+        "고립·번아웃·의미를 함께 짚으며 한 번에 한 질문."
+    ),
+    "대학원 (휴학)": (
+        "정중하고 부드러운 존댓말. 휴학·전환을 낙인으로 다루지 않기. "
+        "선택·관계·다음 계획을 존중하며 한 번에 한 질문."
+    ),
+    "일·활동 중": (
+        "차분하고 정중한 존댓말. 책임·성취·관계를 깊이 있게, "
+        "평가나 진단 없이 동행."
+    ),
+    "준비·돌봄·쉬는 중": (
+        "따뜻한 존댓말. 구직·돌봄·휴식·전환기를 '게으름'으로 단정하지 않기. "
+        "지금의 속도와 선택을 존중하며 한 번에 한 질문."
+    ),
+    "은퇴 후": (
+        "느린 호흡, 품위 있는 존댓말. 기억·유산·지혜를 경건하게. "
+        "말의 속도를 기다리며 한 번에 한 질문."
+    ),
+    # 이전 DB·시트 값 (normalize 전 직접 조회 호환)
     "중학생": (
         "친근한 존댓말. 학교·친구·꿈 이야기를 부드럽게. "
         "비난 없이 성장의 이야기를 함께 쓰게 이끌기."
@@ -112,12 +184,49 @@ LIFE_STAGE_TONE: dict[str, str] = {
     ),
 }
 
+
+def normalize_life_stage(life_stage: str) -> str:
+    s = (life_stage or "").strip()
+    if not s:
+        return DEFAULT_LIFE_STAGE
+    if s in LIFE_STAGE_LEGACY:
+        return LIFE_STAGE_LEGACY[s]
+    if s in LIFE_STAGE_OPTIONS:
+        return s
+    if s in LIFE_STAGE_TONE:
+        return LIFE_STAGE_LEGACY.get(s, s)
+    return DEFAULT_LIFE_STAGE
+
+
+def normalize_age_group(age_group: str) -> str:
+    s = (age_group or "").strip()
+    if not s:
+        return DEFAULT_AGE_GROUP
+    if s in AGE_LEGACY:
+        return AGE_LEGACY[s]
+    if s in AGE_GROUPS:
+        return s
+    if s in AGE_SUPPLEMENT:
+        return AGE_LEGACY.get(s, s)
+    return DEFAULT_AGE_GROUP
+
+
 AGE_SUPPLEMENT: dict[str, str] = {
+    "초등 연령(약 7–12세)": (
+        "초등 연령 맥락: 짧고 쉬운 말, 호기심·칭찬, 한 번에 한 질문."
+    ),
+    "중등 연령(약 13–15세)": (
+        "중등 연령 맥락: 친근한 존댓말, 친구·성장·꿈을 가볍게."
+    ),
+    "고등 연령(약 16–18세)": (
+        "고등 연령 맥락: 진로·관계·압박을 부드럽게, 스스로 생각할 여지."
+    ),
     "10대": "10대 맥락: 성장·친구·꿈을 가볍고 따뜻하게.",
     "20대": "20대 맥락: 정체성·선택·관계를 함께 탐색.",
     "30대": "30대 맥락: 일·관계·균형 속 의미를 함께 짚기.",
     "40대": "40대 맥락: 책임·전환·다음 챕터를 존중하며.",
     "50대": "50대 맥락: 재시작·경험·남은 시간의 의미.",
+    "60대": "60대 맥락: 전환·재시작·남은 시간의 의미를 경건하게.",
     "60대 이상": "60대 이상 맥락: 통합·기억·유산을 경건하게.",
     # 이전 가입자 시트 값 호환
     "10-20대": "청년기 맥락: 정체성·미래를 가볍게 열어 두기.",
@@ -148,8 +257,12 @@ def select_giant(text: str, concern: str = "") -> str:
 
 
 def _tone_block(age_group: str, life_stage: str) -> str:
-    stage_tone = LIFE_STAGE_TONE.get(life_stage, LIFE_STAGE_TONE["성인(일반)"])
-    age_note = AGE_SUPPLEMENT.get(age_group, "")
+    stage_key = normalize_life_stage(life_stage)
+    stage_tone = LIFE_STAGE_TONE.get(
+        stage_key, LIFE_STAGE_TONE[DEFAULT_LIFE_STAGE]
+    )
+    age_key = normalize_age_group(age_group)
+    age_note = AGE_SUPPLEMENT.get(age_key) or AGE_SUPPLEMENT.get(age_group, "")
     return f"{stage_tone}\n{age_note}" if age_note else stage_tone
 
 
@@ -158,7 +271,7 @@ def build_returning_greeting(
     nickname: str = "",
     lang: str = "ko",
 ) -> str:
-    """재방문 시 대화창에 표시할 마음의 정원사 인사."""
+    """재방문 시 대화창에 표시할 서사 동행자 인사."""
     topic = (last_topic or "").strip()
     if len(topic) > 60:
         topic = topic[:57] + "…"
@@ -200,12 +313,12 @@ def build_phase1_system_prompt(
     reply_lang = LANG_REPLY.get(lang, "Korean")
     base = (
         f"[Phase 1 · {GUIDE_NAME}] {SERVICE_TITLE}\n\n"
-        f"참여자 맥락: 연령대 {age_group}, 학력·생애주기 「{life_stage}」.\n\n"
+        f"참여자 맥락: 연령대 {age_group}, 현재 생활 단계 「{life_stage}」.\n\n"
         "첫 대화는 **자유롭게**—오늘의 일상·현재 마음·과거 기억 모두 환영. "
-        "연령·생애주기는 **말투와 맥락**만 맞추고, '어느 시기 이야기'를 정하지 마세요. "
+        "연령·현재 생활 단계는 **말투와 맥락**만 맞추고, '어느 시기 이야기'를 정하지 마세요. "
         "내면의 질문으로 대화를 이끌되(산파술·엘렌코스), 그 방법론 이름은 드러내지 마세요. "
         "희망적 서사 자원(씨앗)을 천천히 모으되, 회상·과거는 대화가 이어지며 자연스럽게.\n\n"
-        f"[연령·학력 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
+        f"[연령·생활 단계 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
     )
     if is_returning:
         base += build_returning_system_addon(last_topic, nickname)
@@ -229,9 +342,9 @@ def build_giant_system_prompt(
         f"참여자: {age_group}, 「{life_stage}」. 현재 고민: {current_concern or '난관'}\n\n"
         "[Phase 1 긍정적 서사 자원 — 반드시 1개 이상 구체 인용]\n"
         f"{resource_block}\n\n"
-        "글로벌 정원사 가이드(Elenchus·Aporia)를 따르되, **{giant['short']}** 의 관점 1줄 + "
+        "글로벌 서사 동행(Elenchus·Aporia)를 따르되, **{giant['short']}** 의 관점 1줄 + "
         "자원 인용 1회 + Maieutic question 1개. Aporia 시 그 언어의 은유로 길을 열 것.\n\n"
-        f"[연령·학력 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
+        f"[연령·생활 단계 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
     )
 
 

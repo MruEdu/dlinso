@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import re
+from typing import Any
 
 import google.generativeai as genai
 
 from env_config import ENV_PATH, get_gemini_api_key, get_gemini_model_name
+from personas import LANG_REPLY  # noqa: F401 — re-export (isolation/learning 호환)
+
 _gemini_configured = False
 
 PROFILE_KEYS = (
@@ -91,12 +94,16 @@ def _clamp_score(value: object, default: float = 50.0) -> float:
         return default
 
 
-def _analysis_model(max_tokens: int = 700) -> genai.GenerativeModel:
+def _analysis_model(
+    max_tokens: int = 700,
+    *,
+    temperature: float = 0.2,
+) -> genai.GenerativeModel:
     ensure_gemini_configured()
     return genai.GenerativeModel(
         get_gemini_model_name(),
         generation_config=genai.GenerationConfig(
-            temperature=0.2,
+            temperature=temperature,
             max_output_tokens=max_tokens,
         ),
     )
@@ -293,10 +300,13 @@ def generate_humanistic_midpoint_report(
     화면에는 수치·OR·Jaggedness를 절대 넣지 않음.
     """
     from hbridge_analysis import (
+        MIDPOINT_MAP_PREFACE,
         TITLE_CONNECTION,
         TITLE_LANDSCAPE,
         TITLE_TREASURE,
+        build_midpoint_report_prompt,
         compose_humanistic_sections_fallback,
+        polish_midpoint_report,
         resolve_report_voice,
     )
 
@@ -318,88 +328,65 @@ def generate_humanistic_midpoint_report(
 
     voice_guide = {
         "elementary": (
-            f'초등 맞춤: "{nick}아, 네 마음속 보물상자를 열어보니..." 다정한 입말체. '
-            "어려운 통계 용어 금지."
+            f'초등 맞춤: 서사 동행자 dlinso. "{nick}아/야" 다정한 입말체. '
+            "참여자 말을 「」로 1~2회 인용. 은유는 쉬운 말로."
         ),
         "secondary": (
-            '중·고 맞춤: "너의 이야기 속엔 너만의 특별한 색깔이 담겨 있어." '
-            "자존감을 고취하는 반말·친근 존댓말."
+            "중·고 맞춤: 서사 동행자. 친근한 존댓말·반말. "
+            "관계의 태도·부채감을 짚되 훈계 금지. 핵심 구절 인용 필수."
         ),
         "adult": (
-            '대학·일반: "당신의 삶의 맥락에서 발견된 고유한 자산은..." '
-            "인문학적·차분한 존댓말."
+            "대학·성인: 서사 동행자로서 격조 있고 따뜻한 인문학적 존댓말. "
+            "한 사람의 인생 전체를 존중. 심리검사·지표식 라벨·별표 강조 금지."
         ),
     }[voice]
 
-    stats_for_model = {
-        "strength_categories": stats.get("strength_categories"),
-        "top_or": stats.get("top_or"),
-        "domain_scores": stats.get("domain_scores"),
-        "jaggedness_index": stats.get("jaggedness_index"),
-        "narrative_precision": stats.get("narrative_precision"),
-    }
-
-    prompt = (
-        "당신은 dlinso의 **인문학적 서사 해석가**입니다.\n"
-        "아래 **내부 통계**는 해석의 재료일 뿐, 출력에 숫자·OR·P-value·%·지표명을 "
-        "**절대 쓰지 마세요**.\n\n"
-        "[중간 지도 — 리포트 첫 문장에 반드시 포함]\n"
-        "「이것은 당신의 전체 서사 중 현재까지의 흐름을 짚어본 '중간 지도'입니다.」\n\n"
-        "[특허 개념 — 감성적으로, **현재 대화 맥락** 강조]\n"
-        "- 반드시 포함: 「지금까지의 대화 맥락에서는 이런 강점이 두드러집니다.」\n"
-        "- 자기 내적 오즈비(숫자·OR 금지): 남과 비교하지 않고, 지금까지 나눈 이야기 "
-        "안에서 빛나는 순간을 짚을 것.\n"
-        "- 들쭉날쭉: 평균보다 특정 부분에서 봉우리처럼 솟은 개성이 귀한 자산임을 "
-        "강조.\n\n"
-        f"[말투] {voice_guide}\n"
-        f"성별 참고: {gender or '미입력'} (고정관념 조롱 금지)\n"
-        f"[상황 맥락 — 첫 문단에 대괄호로 반드시 포함]\n"
-        f"예: 당신이 [{scene}] 느꼈던 그 따뜻한 감정은…\n\n"
-        f"[내부 통계 — 출력 금지]\n{json.dumps(stats_for_model, ensure_ascii=False)}\n\n"
-        f"[긍정 서사 자원]\n{resources}\n"
-        f"[생활 맥락] {life_context or '—'}\n\n"
-        "[참여자 발화]\n" + "\n".join(f"- {line}" for line in user_lines[-12:]) + "\n\n"
-        "JSON만 출력:\n"
-        "{\n"
-        '  "midpoint_preface": "중간 지도 서두 1문장",\n'
-        f'  "title_landscape": "{TITLE_LANDSCAPE}",\n'
-        f'  "title_connection": "{TITLE_CONNECTION}",\n'
-        f'  "title_treasure": "{TITLE_TREASURE}",\n'
-        '  "section_landscape": "2~4문장, [상황]으로 시작",\n'
-        '  "section_connection": "2~4문장",\n'
-        '  "section_treasure": "2~4문장, 들쭉날쭉 강조",\n'
-        '  "situational_opening": "[상황]만 짧게"\n'
-        "}\n"
-        f"언어: {LANG_NAMES.get(lang, 'Korean')}"
+    lang_name = LANG_NAMES.get(lang, "Korean")
+    prompt = build_midpoint_report_prompt(
+        user_lines=user_lines,
+        stats=stats,
+        voice_guide=voice_guide,
+        scene=scene,
+        gender=gender,
+        resources=resources,
+        life_context=life_context or "—",
+        lang=lang,
+        lang_name=lang_name,
     )
 
     try:
-        model = _analysis_model(max_tokens=1400)
+        model = _analysis_model(max_tokens=2000, temperature=0.42)
         response = model.generate_content(prompt)
         data = _extract_json(response.text or "")
         if data and data.get("section_landscape"):
-            from hbridge_analysis import MIDPOINT_MAP_PREFACE
-
-            return {
-                "midpoint_preface": str(
-                    data.get("midpoint_preface", MIDPOINT_MAP_PREFACE)
-                ).strip(),
-                "title_landscape": str(
-                    data.get("title_landscape", TITLE_LANDSCAPE)
-                ),
-                "title_connection": str(
-                    data.get("title_connection", TITLE_CONNECTION)
-                ),
-                "title_treasure": str(data.get("title_treasure", TITLE_TREASURE)),
-                "section_landscape": str(data.get("section_landscape", "")).strip(),
-                "section_connection": str(
-                    data.get("section_connection", "")
-                ).strip(),
-                "section_treasure": str(data.get("section_treasure", "")).strip(),
-                "situational_opening": str(
-                    data.get("situational_opening", f"[{scene}]")
-                ).strip(),
-            }
+            return polish_midpoint_report(
+                {
+                    "midpoint_preface": str(
+                        data.get("midpoint_preface", MIDPOINT_MAP_PREFACE)
+                    ).strip(),
+                    "title_landscape": str(
+                        data.get("title_landscape", TITLE_LANDSCAPE)
+                    ),
+                    "title_connection": str(
+                        data.get("title_connection", TITLE_CONNECTION)
+                    ),
+                    "title_treasure": str(
+                        data.get("title_treasure", TITLE_TREASURE)
+                    ),
+                    "section_landscape": str(
+                        data.get("section_landscape", "")
+                    ).strip(),
+                    "section_connection": str(
+                        data.get("section_connection", "")
+                    ).strip(),
+                    "section_treasure": str(
+                        data.get("section_treasure", "")
+                    ).strip(),
+                    "situational_opening": str(
+                        data.get("situational_opening", f"[{scene}]")
+                    ).strip(),
+                }
+            )
     except Exception:  # noqa: BLE001
         pass
 
@@ -411,6 +398,7 @@ def generate_humanistic_midpoint_report(
         gender=gender,
         positive_resources=positive_resources,
         life_context=life_context,
+        user_texts=user_lines,
     )
 
 
@@ -440,3 +428,116 @@ def generate_life_summary(
     model = _analysis_model(900)
     response = model.generate_content(prompt)
     return (response.text or "").strip() or "오늘 나눈 이야기가 당신 안에 차곡차곡 남았습니다. 🌿"
+
+
+def generate_learning_narrative_report(
+    messages: list[dict],
+    stats: dict[str, Any],
+    *,
+    learning_audience: str = "",
+    age_group: str = "",
+    life_stage: str = "",
+    participant_id: str = "",
+    situational_context: dict[str, str] | None = None,
+    lang: str = "ko",
+    learning_signals: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    """학습 서사 검사 리포트 — 4대 이론 기반 서술 (수치·별표 미노출)."""
+    from learning_analysis import (
+        LEARNING_MAP_PREFACE,
+        TITLE_FOUR_LENSES,
+        TITLE_IDENTITY,
+        TITLE_JAGGED,
+        TITLE_PRESCRIPTION,
+        build_learning_report_prompt,
+        compose_learning_report_fallback,
+        polish_learning_report,
+        build_learning_voice_guide,
+        resolve_learning_voice,
+    )
+
+    user_lines = []
+    for msg in messages:
+        if msg.get("role") != "user":
+            continue
+        text = str(msg.get("content") or msg.get("display") or "").strip()
+        if text:
+            user_lines.append(text[:600])
+    if not user_lines:
+        user_lines = ["(아직 이야기가 짧습니다)"]
+
+    situational = situational_context or {}
+    scene = situational.get("scene_phrase", "지금까지의 배움 이야기")
+    voice = resolve_learning_voice(learning_audience, life_stage, age_group)
+    nick = (participant_id or "").strip()[:12] or "참여자"
+
+    voice_guide = build_learning_voice_guide(
+        learning_audience,
+        voice=voice,
+        nick=nick,
+    )
+
+    lang_name = LANG_NAMES.get(lang, "Korean")
+    prompt = build_learning_report_prompt(
+        user_lines=user_lines,
+        stats=stats,
+        voice_guide=voice_guide,
+        scene=scene,
+        learning_audience=learning_audience,
+        age_group=age_group,
+        life_stage=life_stage,
+        lang_name=lang_name,
+        learning_signals=learning_signals,
+    )
+
+    try:
+        model = _analysis_model(max_tokens=2000, temperature=0.42)
+        response = model.generate_content(prompt)
+        data = _extract_json(response.text or "")
+        if data and data.get("section_identity"):
+            return polish_learning_report(
+                {
+                    "learning_preface": str(
+                        data.get("learning_preface", LEARNING_MAP_PREFACE)
+                    ).strip(),
+                    "title_identity": str(
+                        data.get("title_identity", TITLE_IDENTITY)
+                    ),
+                    "title_four_lenses": str(
+                        data.get("title_four_lenses", TITLE_FOUR_LENSES)
+                    ),
+                    "title_jagged": str(data.get("title_jagged", TITLE_JAGGED)),
+                    "title_prescription": str(
+                        data.get("title_prescription", TITLE_PRESCRIPTION)
+                    ),
+                    "section_identity": str(
+                        data.get("section_identity", "")
+                    ).strip(),
+                    "section_four_lenses": str(
+                        data.get("section_four_lenses", "")
+                    ).strip(),
+                    "section_jagged": str(
+                        data.get("section_jagged", "")
+                    ).strip(),
+                    "section_prescription": str(
+                        data.get("section_prescription", "")
+                    ).strip(),
+                    "jagged_profile_sentence": str(
+                        data.get("jagged_profile_sentence", "")
+                    ).strip(),
+                    "learning_tactic": str(data.get("learning_tactic", "")).strip(),
+                    "situational_opening": str(
+                        data.get("situational_opening", f"[{scene}]")
+                    ).strip(),
+                }
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
+    return compose_learning_report_fallback(
+        stats=stats,
+        situational=situational,
+        voice=voice,
+        learning_audience=learning_audience,
+        user_texts=user_lines,
+    )

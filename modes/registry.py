@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 MODE_LIFESPAN = "lifespan"
+MODE_LEARNING = "learning"
+MODE_ISOLATION = "isolation"
 MODE_ASSESSMENT = "assessment"
 MODE_COUNSELING = "counseling"
 MODE_RESEARCH = "research"
@@ -28,6 +30,20 @@ APP_MODES: tuple[AppModeSpec, ...] = (
         "mode_lifespan_desc",
         True,
         "mode_tag_active",
+    ),
+    AppModeSpec(
+        MODE_LEARNING,
+        "mode_learning_label",
+        "mode_learning_desc",
+        True,
+        "mode_tag_open",
+    ),
+    AppModeSpec(
+        MODE_ISOLATION,
+        "mode_isolation_label",
+        "mode_isolation_desc",
+        True,
+        "mode_tag_open",
     ),
     AppModeSpec(
         MODE_ASSESSMENT,

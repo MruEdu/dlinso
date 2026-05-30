@@ -6,82 +6,162 @@ from __future__ import annotations
 OPENING_I18N: dict[str, dict[str, str]] = {
     "en": {
         "opening": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "Today, right now, or a memory from long ago—whatever surfaces is welcome. "
             "No fixed topic; start at your own pace.\n\n"
             "Share whatever comes to mind first, and we'll take it from there."
         ),
         "opening_stage_초등학생": (
-            "Hi! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll look for treasures in your heart through our chat. "
             "School, friends, home—or whatever felt exciting or hard lately—all count.\n\n"
             "What's the first story that comes to mind today?"
         ),
         "opening_stage_중학생": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll explore the stories in your life together. "
             "Friends, school, dreams, and little everyday moments are all precious pieces.\n\n"
             "Share whatever is staying with you right now."
         ),
         "opening_stage_고등학생": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll continue the stories you care about. "
             "Future paths, relationships, worries, or small joys—all are welcome.\n\n"
             "What story feels largest in your heart today?"
         ),
         "opening_stage_대학생": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll weave the pieces of your life together through dialogue. "
             "Studies, relationships, choices ahead—write without pressure.\n\n"
             "What's on your mind right now?"
         ),
+        "opening_stage_중·고등학생_재학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll explore the stories in your life together. "
+            "School, friends, dreams, and paths ahead—all count.\n\n"
+            "Share whatever is staying with you right now."
+        ),
+        "opening_stage_청소년_비재학·홈스쿨·중·고_휴학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Whether you're out of school, homeschooling, or on leave—that's okay. "
+            "Relationships, daily life, dreams, family—tell your story as you live it.\n\n"
+            "What's the first thing that comes to mind?"
+        ),
+        "opening_stage_대학·전문대_재학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll weave the pieces of your life together through dialogue. "
+            "Studies, relationships, choices ahead—write without pressure.\n\n"
+            "What's on your mind right now?"
+        ),
+        "opening_stage_대학·전문대_휴학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Time on leave or pause is part of your story too. "
+            "Feelings, relationships, what's next—all welcome.\n\n"
+            "Share at your own pace."
+        ),
+        "opening_stage_대학원_재학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Research, study, relationships, what's ahead—share without pressure. "
+            "What's on your mind right now?"
+        ),
+        "opening_stage_대학원_휴학": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Time on leave counts too. We'll reflect on how you feel and what comes next.\n\n"
+            "Share at your own pace."
+        ),
+        "opening_stage_일·활동_중": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Through our dialogue, we'll look for the treasures hidden in your life.\n\n"
+            "What story is taking up the most space in your heart today?"
+        ),
+        "opening_stage_준비·돌봄·쉬는_중": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Preparing, caring, or resting—this chapter counts too. "
+            "We'll respect your pace.\n\n"
+            "What's the first story you'd like to share?"
+        ),
+        "opening_stage_은퇴_후": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll gently revisit the stories you've lived and the heart you carry now.\n\n"
+            "Share at your own pace."
+        ),
         "opening_stage_성인일반": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "Through our dialogue, we'll look for the treasures hidden in your life.\n\n"
             "What story is taking up the most space in your heart today? "
             "Even a small piece of daily life is welcome.\n\n"
             "We're listening."
         ),
         "opening_stage_은퇴_후_삶": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll gently revisit the stories you've lived and the heart you carry now. "
             "Memories, relationships, feelings—anything is welcome.\n\n"
             "Share at your own pace."
         ),
+        "opening_age_초등_연령약_7–12세": (
+            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll look for treasures in your heart through our chat. "
+            "Home, friends, or whatever felt exciting or hard lately—all count.\n\n"
+            "What's the first story that comes to mind today?"
+        ),
+        "opening_age_중등_연령약_13–15세": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll explore your days and inner stories together. "
+            "Friends, school, small joys or hurts—all count.\n\n"
+            "What comes to mind first right now?"
+        ),
+        "opening_age_고등_연령약_16–18세": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll continue the stories you care about. "
+            "Paths ahead, relationships, worries, or small joys—all welcome.\n\n"
+            "What story feels largest in your heart today?"
+        ),
         "opening_age_10대": (
-            "Hi! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll explore your days and inner stories together. "
             "Friends, school, small joys or hurts—all count.\n\n"
             "What comes to mind first right now?"
         ),
         "opening_age_20대": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll walk the path you've taken and the heart you hold now. "
             "Choices, relationships, and small daily moments all matter.\n\n"
             "What story feels largest today?"
         ),
         "opening_age_30대": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll look for hidden treasures in work and relationships. "
             "A small scene from a busy day is enough.\n\n"
             "What's on your mind?"
         ),
         "opening_age_40대": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll sit with the weight of life and its bright moments together. "
             "Responsibility, transition, small joys—anything goes.\n\n"
             "We're listening."
         ),
         "opening_age_50대": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll reflect on the stories you've built and how you feel now.\n\n"
             "What would you like to share today?"
         ),
-        "opening_age_60대_이상": (
-            "Hello! I'm **dlinso**, your Mind Gardener.\n\n"
+        "opening_age_60대": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
             "We'll move slowly through life's memories and today's heart. "
             "Even a small daily moment is precious.\n\n"
             "Share comfortably, in your own time."
+        ),
+        "opening_age_60대_이상": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll move slowly through life's memories and today's heart. "
+            "Even a small daily moment is precious.\n\n"
+            "Share comfortably, in your own time."
+        ),
+        "opening_age_70대_이상": (
+            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "We'll take our time—memories, family, how you feel today. "
+            "Even a small story matters.\n\n"
+            "Share at your own pace."
         ),
         "opening_gender_note_여": (
             "Write in whatever tone feels natural—there's no rush."
@@ -105,13 +185,55 @@ OPENING_I18N: dict[str, dict[str, str]] = {
         "chat_opening_placeholder_stage_대학생": (
             "What's on your mind right now?"
         ),
+        "chat_opening_placeholder_stage_중·고등학생_재학": (
+            "What's staying with you right now?"
+        ),
+        "chat_opening_placeholder_stage_청소년_비재학·홈스쿨·중·고_휴학": (
+            "Write about how you're living now…"
+        ),
+        "chat_opening_placeholder_stage_대학·전문대_재학": (
+            "What's on your mind right now?"
+        ),
+        "chat_opening_placeholder_stage_대학·전문대_휴학": (
+            "What's on your mind right now?"
+        ),
+        "chat_opening_placeholder_stage_대학원_재학": (
+            "What's on your mind right now?"
+        ),
+        "chat_opening_placeholder_stage_대학원_휴학": (
+            "What's on your mind right now?"
+        ),
+        "chat_opening_placeholder_stage_일·활동_중": (
+            "Share what's on your heart today…"
+        ),
+        "chat_opening_placeholder_stage_준비·돌봄·쉬는_중": (
+            "Write whatever comes to mind…"
+        ),
+        "chat_opening_placeholder_stage_은퇴_후": (
+            "Slowly, share today's story…"
+        ),
+        "chat_opening_placeholder_age_초등_연령약_7–12세": (
+            "What's the first story you think of today?"
+        ),
+        "chat_opening_placeholder_age_중등_연령약_13–15세": (
+            "What's staying with you right now?"
+        ),
+        "chat_opening_placeholder_age_고등_연령약_16–18세": (
+            "What story feels largest today?"
+        ),
         "chat_opening_placeholder_age_10대": "What comes to mind first?",
         "chat_opening_placeholder_age_20대": "Share what's on your heart today…",
         "chat_opening_placeholder_age_30대": "What's on your mind right now?",
         "chat_opening_placeholder_age_40대": "What would you like to share today?",
         "chat_opening_placeholder_age_50대": "Share your story comfortably…",
+        "chat_opening_placeholder_age_60대": (
+            "Slowly, share today's story…"
+        ),
         "chat_opening_placeholder_age_60대_이상": (
             "Slowly, share today's story…"
+        ),
+        "chat_opening_placeholder_age_70대_이상": (
+            "At your own pace, today's story…"
         ),
     },
     "mn": {

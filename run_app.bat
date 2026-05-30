@@ -1,16 +1,15 @@
 @echo off
 cd /d "%~dp0"
+set PYTHONIOENCODING=utf-8
 echo.
 echo ========================================
-echo  dlinso - 나의 지난 이야기 동반자
+echo  dlinso v2 - 서사 동행자 (Narrative Companion)
+echo  프로젝트: %~dp0  (E:\dlinso_v2 만 사용)
 echo ========================================
-echo  [터미널]  앱 실행 명령만 입력 (여기서 채팅 X)
-echo  [브라우저] 대화/닉네임은 아래 주소 화면에서 입력
-echo.
 echo  http://localhost:8501
-echo  미리보기: http://localhost:8501/?preview=1
+echo  preview: http://localhost:8501/?preview=1
+echo  salon:   http://localhost:8501/?revealed=1
 echo ========================================
 echo.
-cd /d "%~dp0h-bridge-research-assistant"
-".venv\Scripts\python.exe" -m streamlit run app.py
+python -m streamlit run app.py
 pause

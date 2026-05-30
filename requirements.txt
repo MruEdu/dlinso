@@ -1,6 +1,11 @@
-streamlit>=1.46.0
-google-generativeai>=0.8.0
+# dlinso v2 — Streamlit Cloud / 로컬 공통
+# 생성: pip freeze 기준 (2026-05) — pandas 미사용
+
+streamlit>=1.46.0,<2
+openai>=1.52.0,<3
+google-generativeai>=0.8.0,<1
 google-api-python-client>=2.120.0
 google-auth>=2.28.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
+supabase>=2.4.0,<3
