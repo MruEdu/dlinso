@@ -1,4 +1,4 @@
-"""들인소 기능 모듈 — 랜딩·라우팅 메타."""
+"""dlinso 기능 모듈 — 랜딩·라우팅 메타."""
 
 from modules.home_registry import (
     BRAND_TAGLINE,

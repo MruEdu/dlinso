@@ -79,7 +79,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "「{tab_new}」또는 「{tab_return}」탭을 선택해 주세요."
         ),
         "nav_home": "🏠 dlinso",
-        "nav_about": "들인소 소개",
+        "nav_about": "About dlinso",
         "nav_consult": "📖 나의\u00a0이야기",
         "nav_inquiry": "✉️ 문의하기",
         "nav_inquiry_short": "✉️",

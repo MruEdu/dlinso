@@ -713,7 +713,7 @@ def _html_layout_marker(*classes: str) -> None:
 
 
 def render_home_top_bar(*, dark: bool = False) -> None:
-    """홈 전용 상단 — 들인소 소개."""
+    """홈 전용 상단 — About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
     st.markdown('<div class="dlinso-home-mininav-wrap">', unsafe_allow_html=True)
     left, right = st.columns([3, 1], gap="small")

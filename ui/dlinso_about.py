@@ -1,4 +1,4 @@
-"""들인소 소개 — 철학·모듈 안내 다이얼로그."""
+"""About dlinso — 철학·모듈 안내 다이얼로그."""
 
 from __future__ import annotations
 
@@ -14,15 +14,15 @@ def about_intro_panel_copy() -> dict[str, str]:
     """홈 카드 상단 상시 노출용 짧은 소개."""
     if get_lang() == "ko":
         return {
-            "title": "들인소 소개",
+            "title": "About dlinso",
             "lead": (
-                "dlinso(들인소)는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
+                "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
                 "디지털 서사 상담 공간입니다. 검사나 채점이 아니라, 당신의 말과 기억을 "
                 "존중하며 함께 걷는 동행입니다."
             ),
             "philosophy": (
                 "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
-                "들인소는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다."
+                "dlinso는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다."
             ),
         }
     return {
@@ -54,16 +54,16 @@ def about_intro_panel_html() -> str:
 def _about_copy() -> dict[str, str]:
     if get_lang() == "ko":
         return {
-            "title": "들인소 소개",
+            "title": "About dlinso",
             "lead": (
-                "dlinso(들인소)는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
+                "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
                 "디지털 서사 상담 공간입니다. 검사나 채점이 아니라, 당신의 말과 기억을 "
                 "존중하며 함께 걷는 동행입니다."
             ),
             "philosophy_h": "철학",
             "philosophy": (
                 "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
-                "들인소는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
+                "dlinso는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
                 "따뜻하지만 가볍지 않고, 신비롭되지만 멀리 두지 않습니다."
             ),
             "modules_h": "서사 상담실",
@@ -112,7 +112,7 @@ def _dialog_supported() -> bool:
 
 if _dialog_supported():
 
-    @st.dialog("들인소 소개", width="large")  # type: ignore[misc]
+    @st.dialog("About dlinso", width="large")  # type: ignore[misc]
     def dlinso_about_dialog() -> None:
         _render_about_body()
         c = _about_copy()

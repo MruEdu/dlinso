@@ -12,7 +12,7 @@ MODULE_FOREST = "forest"
 MODULE_EMOTION = "emotion"
 
 SALON_SECTION_TITLE = "서사 상담실"
-SALON_GUIDE_LINE = "들인소는 당신의 서사를 찾는 세 가지 상담실입니다"
+SALON_GUIDE_LINE = "dlinso는 당신의 서사를 찾는 세 가지 상담실입니다"
 SALON_GUIDE_SUB = "검사나 채점이 아닌, 당신의 말과 기억을 존중하는 동행입니다. 아래에서 지금 열린 방을 선택하세요."
 BRAND_TAGLINE = "모든 삶은 예술이 된다"
 JOURNEY_CTA_KO = "여정 시작하기"
