@@ -90,9 +90,30 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active):not(:has(.d
     visibility: hidden !important;
     height: 0 !important;
 }}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .block-container {{
+    padding-top: 0 !important;
+}}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .block-container {{
     max-width: 940px !important;
+    padding-top: 0 !important;
     padding-bottom: 2.5rem !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) header[data-testid="stHeader"] {{
+    height: 0 !important;
+    min-height: 0 !important;
+    visibility: hidden !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker)
+section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {{
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.25rem !important;
+    margin-bottom: 0.1rem !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
+    margin-top: 0.35rem !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-about-panel {{
+    margin-top: 0.35rem !important;
 }}
 
 .dlinso-intro-atmosphere {{
@@ -209,6 +230,10 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .bloc
     max-width: 42rem;
     margin: 0 auto 0.25rem;
     padding: 1.25rem 1rem 0.15rem;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
+    padding: 0.15rem 1rem 0 !important;
+    margin-bottom: 0 !important;
 }}
 .dlinso-brand-hero {{
     position: relative; z-index: 2;
