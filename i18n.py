@@ -108,11 +108,11 @@ TEXTS: dict[str, dict[str, str]] = {
             "data/isolation.db 로컬 저장."
         ),
         "isolation_opening": (
-            "안녕, 나는 **연결의 동행자**야. 🌲\n\n"
+            "안녕, 나는 연결의 동행자야. 🌲\n\n"
             "검사나 채점이 아닌, 네 이야기를 존중하는 자리야. "
-            "너는 환자가 아니라, 잠시 에너지가 고여 있는 **고유한 우주**로 대할게.\n\n"
+            "지금 이 순간의 너를, 잠시 에너지가 고여 있는 고유한 우주로 만나 갈게.\n\n"
             "첫 질문 하나만 — "
-            "**당신의 방은 당신을 지키는 요새인가요, 아니면 언젠가 떠날 정거장인가요?** "
+            "당신의 방은 당신을 지키는 요새인가요, 아니면 언젠가 떠날 정거장인가요? "
             "편하게 한 문장부터 적어 줄래?"
         ),
         "isolation_encourage_before_unlock": (
@@ -643,11 +643,11 @@ TEXTS: dict[str, dict[str, str]] = {
             "Stored in data/isolation.db."
         ),
         "isolation_opening": (
-            "Hello, I'm your **Companion of Connection**. 🌲\n\n"
+            "Hello, I'm your Companion of Connection. 🌲\n\n"
             "No tests or scores—we honor your story. "
-            "You are not a patient but a **universe of your own**.\n\n"
+            "I'll meet you as you are now: a quiet universe of your own, with its own rhythm.\n\n"
             "One first question—"
-            "**Is your room a fortress that protects you, or a station you'll leave someday?** "
+            "Is your room a fortress that protects you, or a station you'll leave someday? "
             "Share even one sentence when you're ready."
         ),
         "isolation_encourage_before_unlock": (
