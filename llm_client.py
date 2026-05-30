@@ -92,8 +92,19 @@ def get_openai_client() -> Any:
     return _openai_client
 
 
+def effective_llm_provider() -> str:
+    """설정 provider + 실제 키 존재 여부 — Upstage 없으면 Gemini 자동 폴백."""
+    pref = get_llm_provider()
+    if pref == "upstage" and get_upstage_api_key():
+        return "upstage"
+    if get_gemini_api_key():
+        return "gemini"
+    return pref
+
+
 def is_llm_configured() -> bool:
-    if get_llm_provider() == "upstage":
+    provider = effective_llm_provider()
+    if provider == "upstage":
         return bool(get_upstage_api_key())
     return bool(get_gemini_api_key())
 
@@ -117,7 +128,7 @@ def messages_from_gemini_history(history: list[dict]) -> list[dict[str, Any]]:
 
 def init_llm_client() -> None:
     """provider에 맞게 클라이언트 초기화 — 실패 시 LLMNotConfiguredError."""
-    if get_llm_provider() == "upstage":
+    if effective_llm_provider() == "upstage":
         get_openai_client()
     else:
         _ensure_gemini()
@@ -213,7 +224,7 @@ def generate_text(
     image_mime: str = "image/jpeg",
 ) -> str:
     """단일 프롬프트 완성 — narrative_engine · maieutic 분석용."""
-    if get_llm_provider() == "upstage":
+    if effective_llm_provider() == "upstage":
         messages: list[dict[str, Any]] = []
         if image_bytes:
             b64 = base64.standard_b64encode(image_bytes).decode("ascii")
@@ -346,7 +357,7 @@ def iter_chat_stream(
     gemini_history: build_chat_history(messages) 결과(마지막 user 턴 제외).
     """
     del messages  # history는 gemini_history로 전달
-    if get_llm_provider() == "upstage":
+    if effective_llm_provider() == "upstage":
         history = gemini_history if gemini_history is not None else []
         api_messages = messages_from_gemini_history(history)
         user_content = _upstage_user_content(

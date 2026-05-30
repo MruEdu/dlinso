@@ -39,3 +39,11 @@ CREATE POLICY "anon_insert_isolation_narratives"
     FOR INSERT
     TO anon
     WITH CHECK (true);
+
+-- 재로그인 시 Cloud 복원용 (publishable 키)
+DROP POLICY IF EXISTS "anon_select_isolation_narratives" ON public.isolation_narratives;
+CREATE POLICY "anon_select_isolation_narratives"
+    ON public.isolation_narratives
+    FOR SELECT
+    TO anon
+    USING (true);

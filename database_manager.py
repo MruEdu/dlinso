@@ -424,8 +424,20 @@ class DatabaseManager:
                     "SELECT * FROM users WHERE nickname = ?", (nick,)
                 ).fetchone()
                 if not row:
-                    return False, "user not found"
-                visits = int(row["visit_count"]) + 1
+                    if not password_hash:
+                        return False, "user not found"
+                    self._upsert_user_on_register(
+                        conn,
+                        nickname=nick,
+                        password_hash=password_hash,
+                        lang=lang,
+                        gender=gender,
+                        age_group=age_group,
+                        life_stage=life_stage,
+                    )
+                    visits = 1
+                else:
+                    visits = int(row["visit_count"]) + 1
                 conn.execute(
                     """
                     UPDATE users SET
@@ -988,7 +1000,6 @@ def sync_user_to_supabase(
     now_iso = korea_now_str()
     row: dict[str, Any] = {
         "nickname": nick,
-        "password_hash": password_hash or "",
         "lang": lang or "ko",
         "gender": gender or "",
         "age_group": age_group or "",
@@ -1006,6 +1017,9 @@ def sync_user_to_supabase(
         "last_visit_at": last_visit_at or now_iso,
         "updated_at": now_iso,
     }
+    pw = (password_hash or "").strip()
+    if pw:
+        row["password_hash"] = pw
     if first_visit_at:
         row["first_visit_at"] = first_visit_at
     try:

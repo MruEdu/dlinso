@@ -17,8 +17,10 @@ from env_config import (
     ENV_PATH,
     apply_secrets_to_environ,
     get_database_path,
+    get_gemini_api_key,
     get_isolation_database_path,
     get_llm_provider,
+    get_upstage_api_key,
     is_streamlit_cloud,
 )
 
@@ -251,12 +253,34 @@ def _llm_user_error(exc: BaseException) -> str:
     msg = str(exc)
     low = msg.lower()
     if isinstance(exc, LLMNotConfiguredError):
-        if get_llm_provider() == "upstage":
-            if is_streamlit_cloud():
+        has_upstage = bool(get_upstage_api_key())
+        has_gemini = bool(get_gemini_api_key())
+        if is_streamlit_cloud():
+            if not has_upstage and not has_gemini:
                 return (
-                    "UPSTAGE_API_KEY가 설정되지 않았습니다. "
-                    "Streamlit Cloud **Settings → Secrets**에 키를 추가한 뒤 **Reboot app** 하세요."
+                    "대화 LLM API 키가 없습니다.\n\n"
+                    "Streamlit Cloud → **Settings → Secrets** 에 아래처럼 추가하세요:\n\n"
+                    "```toml\n"
+                    'UPSTAGE_API_KEY = "up_여기에_Upstage_키"\n'
+                    'UPSTAGE_MODEL = "solar-pro3"\n'
+                    'LLM_PROVIDER = "upstage"\n'
+                    "```\n\n"
+                    "Upstage 키: [console.upstage.ai/api-keys](https://console.upstage.ai/api-keys)\n\n"
+                    "또는 Gemini 사용 시:\n"
+                    '```toml\nGEMINI_API_KEY = "AI..."\nLLM_PROVIDER = "gemini"\n```\n\n'
+                    "저장 후 **Manage app → Reboot app** 을 꼭 실행하세요."
                 )
+            if get_llm_provider() == "upstage" and not has_upstage:
+                return (
+                    "UPSTAGE_API_KEY가 비어 있습니다. Secrets에 실제 키(`up_...`)를 넣었는지 확인하고 "
+                    "**Reboot app** 하세요. (템플릿 `UPSTAGE_API_KEY = \"\"` 그대로면 동작하지 않습니다.)"
+                )
+        elif not has_upstage and not has_gemini:
+            return (
+                "UPSTAGE_API_KEY 또는 GEMINI_API_KEY가 필요합니다. "
+                f"`.env` 또는 `.streamlit/secrets.toml` ({ENV_PATH.name})을 확인하세요."
+            )
+        if get_llm_provider() == "upstage" and not has_upstage:
             return (
                 "UPSTAGE_API_KEY가 설정되지 않았습니다. "
                 f"`.env` 또는 `.streamlit/secrets.toml` ({ENV_PATH.name})을 확인하세요."

@@ -36,7 +36,7 @@ FOOTER_BANNER: dict[str, str] = {
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "모든 삶은 예술이 된다",
         "brand_gate_hint": "scroll · click · 시작",
         "hub_eyebrow": "",
@@ -44,7 +44,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "대화로 발견하는 나의 보물,\n\n예술이 되는 나의 삶.\n\n**dlinso**"
         ),
-        "hub_slogan_beta_note": "BETA 2.0 — 기능과 문구가 계속 다듬어지고 있어요.",
+        "hub_slogan_beta_note": "v1.1 — 기능과 문구가 계속 다듬어지고 있어요.",
         "intro_headline": (
             "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
         ),
@@ -558,7 +558,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "en": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "Every life becomes art",
         "brand_gate_hint": "scroll · click · begin",
         "hub_eyebrow": "",
@@ -591,7 +591,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "Discover your treasure through dialogue — your life as art. **dlinso**"
         ),
-        "hub_slogan_beta_note": "BETA 2.0 — features and copy are still evolving.",
+        "hub_slogan_beta_note": "v1.1 — features and copy are still evolving.",
         "lang_label": "Language",
         "tab_new": "First visit",
         "tab_return": "Continue",
@@ -842,7 +842,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "mn": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "Амь бүр урлаг болдог",
         "brand_gate_hint": "scroll · click · эхлэх",
         "hub_eyebrow": "Narrative Research Hub",
@@ -901,7 +901,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ja": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "すべての人生は芸術になる",
         "brand_gate_hint": "scroll · click · はじめる",
         "hub_eyebrow": "Narrative Research Hub",
@@ -959,7 +959,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "zh": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "每一种人生，皆成艺术",
         "brand_gate_hint": "scroll · click · 开始",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1017,7 +1017,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "vi": {
         "app_title": "dlinso",
-        "beta_badge": "Beat2.0",
+        "beta_badge": "1.1",
         "brand_tagline": "Mỗi cuộc đời đều trở thành nghệ thuật",
         "brand_gate_hint": "scroll · click · bắt đầu",
         "hub_eyebrow": "Narrative Research Hub",
