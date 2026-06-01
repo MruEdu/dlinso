@@ -569,7 +569,9 @@ class DatabaseManager:
         module_type: str = "lifespan",
         learning_audience: str = "",
         learning_signals_json: str = "",
+        **_ignored_extra: Any,
     ) -> tuple[bool, str | None]:
+        """_ignored_extra: supabase_guest_id·isolation_signals_json 등 시그니처 밖 키 흡수."""
         if not self.is_connected:
             return False, self._error
 

@@ -3474,10 +3474,11 @@ def execute_isolation_asset_analysis(display: dict, db: DatabaseManager) -> None
     full_reply = format_full_asset_message(asset)
     _append_message("assistant", full_reply, display=full_reply, midpoint=True)
 
-    if db.is_connected:
+    if _is_isolation_mode() or db.is_connected:
         ok, err = save_isolation_turn_local(
             db,
             nickname=st.session_state.participant_id,
+            supabase_guest_id=str(st.session_state.get("supabase_guest_id") or ""),
             user_message="[숲·자아성사회성자산·내부]",
             assistant_message=full_reply,
             participant_id=st.session_state.participant_id,
@@ -3500,6 +3501,9 @@ def execute_isolation_asset_analysis(display: dict, db: DatabaseManager) -> None
         )
         if not ok:
             st.warning(_db_save_warning(err))
+        cloud_err = st.session_state.get("last_supabase_sync_error")
+        if cloud_err and is_streamlit_cloud():
+            st.caption(f"⚠️ Supabase 저장 실패: {cloud_err}")
     st.rerun()
 
 
@@ -3545,11 +3549,12 @@ def execute_isolation_report_analysis(display: dict, db: DatabaseManager) -> Non
     full_reply = format_full_isolation_report_message(report)
     _append_message("assistant", full_reply, display=full_reply, learning_report=True)
 
-    if db.is_connected:
+    if _is_isolation_mode() or db.is_connected:
         sig = report.get("signals") or {}
         ok, err = save_isolation_turn_local(
             db,
             nickname=st.session_state.participant_id,
+            supabase_guest_id=str(st.session_state.get("supabase_guest_id") or ""),
             user_message="[숲·내면항해일지·내부]",
             assistant_message=full_reply,
             participant_id=st.session_state.participant_id,
@@ -3571,6 +3576,9 @@ def execute_isolation_report_analysis(display: dict, db: DatabaseManager) -> Non
         )
         if not ok:
             st.warning(_db_save_warning(err))
+        cloud_err = st.session_state.get("last_supabase_sync_error")
+        if cloud_err and is_streamlit_cloud():
+            st.caption(f"⚠️ Supabase 저장 실패: {cloud_err}")
     st.rerun()
 
 
