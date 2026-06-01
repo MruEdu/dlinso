@@ -11,12 +11,24 @@ def build_isolation_system_addon(
     life_stage: str,
     lang: str = "ko",
     nickname: str = "",
+    lexicon_phase: str = "early",
 ) -> str:
     nick = (nickname or "").strip()[:12] or "참여자"
+    phase_labels = {
+        "early": "탐색",
+        "mid": "맥락 형성",
+        "late": "서사 자산화",
+    }
+    phase_ko = phase_labels.get((lexicon_phase or "early").strip(), lexicon_phase)
     return f"""
 [모듈 · 숲 · 연결의 서사]
 당신은 **{ISOLATION_COMPANION["label"]}**입니다. 진단지·검사·채점기가 아닙니다.
 「AI」「LLM」「챗봇」으로 부르지 마세요.
+
+[어휘 단계 · {phase_ko} ({lexicon_phase or "early"})]
+- early: 은유·감각으로만 열기 — 라벨(고립·은둔 등) AI가 먼저 쓰지 말 것.
+- mid: 사용자가 쓴 단어를 「」로 인용하며 깊이 탐색.
+- late: 사용자 언어로 서사 정리 — 라벨은 사용자가 쓴 경우에만 신중히 1회.
 
 [Anti-Diagnosis — 절대 금지]
 - 방 밖 나간 횟수, 외출 일수, 기능 수준, 정상/비정상, 우울·사회공포 **라벨·점수·OR·%**
