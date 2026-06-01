@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import logging
 import re
@@ -875,6 +876,16 @@ _GUEST_NICK_BLOCKLIST = frozenset(
 )
 
 
+def _log_conversation_param_names() -> frozenset[str]:
+  return frozenset(inspect.signature(DatabaseManager.log_conversation).parameters)
+
+
+def _filter_log_conversation_kwargs(log_kwargs: dict[str, Any]) -> dict[str, Any]:
+    """숲·여정 공통 — log_conversation 시그니처 밖 키 제거(supabase_guest_id 등)."""
+    allowed = _log_conversation_param_names()
+    return {k: v for k, v in log_kwargs.items() if k in allowed}
+
+
 def resolve_supabase_nickname(
     primary: str = "",
     *,
@@ -1000,16 +1011,21 @@ def log_isolation_turn_dual(
         signals_json or str(log_kwargs.get("isolation_signals_json") or "") or ""
     )[:8000]
     log_kwargs = dict(log_kwargs)
+    guest_id = str(log_kwargs.pop("supabase_guest_id", None) or "")
     log_kwargs.pop("isolation_signals_json", None)
     log_kwargs.pop("nickname", None)
+    log_kwargs.pop("user_message", None)
+    log_kwargs.pop("assistant_message", None)
+    log_kwargs.pop("signals_json", None)
     log_kwargs.setdefault("module_type", "isolation")
+    sqlite_kwargs = _filter_log_conversation_kwargs(log_kwargs)
 
     nick = resolve_supabase_nickname(
         nickname,
-        participant_id=str(log_kwargs.get("participant_id") or ""),
-        supabase_guest_id=str(log_kwargs.get("supabase_guest_id") or ""),
+        participant_id=str(sqlite_kwargs.get("participant_id") or ""),
+        supabase_guest_id=guest_id,
     )
-    log_kwargs.setdefault("participant_id", nick)
+    sqlite_kwargs.setdefault("participant_id", nick)
 
     sb_ok = False
     sb_err: str | None = None
@@ -1041,7 +1057,7 @@ def log_isolation_turn_dual(
     ok, err = db.log_conversation(
         user_message=um,
         assistant_message=am,
-        **log_kwargs,
+        **sqlite_kwargs,
     )
     if not ok and sb_ok:
         return True, None
