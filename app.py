@@ -3575,23 +3575,7 @@ def _render_isolation_progress_header() -> dict[str, Any] | None:
             f'<p class="midpoint-encourage-msg">{html.escape(t("isolation_encourage_before_unlock"))}</p>',
             unsafe_allow_html=True,
         )
-    sig = st.session_state.get("isolation_signals")
-    if turns >= 1 and isinstance(sig, dict):
-        from isolation_analysis import render_isolation_recovery_signals
-
-        with st.expander(t("isolation_recovery_signals"), expanded=turns <= 3):
-            render_isolation_recovery_signals(sig)
-    elif isinstance(sig, dict) and sig.get("thin_axis"):
-        labels = {
-            "identity": "자아성",
-            "social": "사회성",
-            "bloom": "고립 인지·재정의",
-            "todd_rose": "안전 맥락",
-            "pattern_seeker": "내면 질서",
-            "dynamics": "마찰·Small Win",
-        }
-        thin = str(sig.get("thin_axis", ""))
-        st.caption(f"지금 대화는 「{labels.get(thin, thin)}」 축을 열어 가고 있어요.")
+    # 회복 신호·4대 렌즈: 내담자 UI 비노출 — Supabase signals_json·LLM 백엔드만 유지
     return dict(prog)
 
 
@@ -3646,17 +3630,7 @@ def _render_learning_progress_header() -> dict[str, Any] | None:
             f'<p class="midpoint-encourage-msg">{html.escape(t("learning_encourage_before_unlock"))}</p>',
             unsafe_allow_html=True,
         )
-    sig = st.session_state.get("learning_signals")
-    if isinstance(sig, dict) and sig.get("thin_axis"):
-        axis_labels = {
-            "bloom": "Bloom · 인지적 창조",
-            "todd_rose": "Jagged 강점",
-            "pattern_seeker": "패턴·체계화",
-            "dynamics": "동역학 · 추진·마찰",
-        }
-        thin = str(sig.get("thin_axis", ""))
-        label = axis_labels.get(thin, thin)
-        st.caption(f"지금 대화는 「{label}」 축을 조심스럽게 열어 가고 있어요.")
+    # 학습 모듈: 대화 중 렌즈 축 캡션 비노출 (백엔드 신호·리포트만 유지)
     prog = dict(prog)
     prog["button_eligible"] = turns >= need
     return prog

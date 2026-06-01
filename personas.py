@@ -343,7 +343,8 @@ def build_giant_system_prompt(
         "[Phase 1 긍정적 서사 자원 — 반드시 1개 이상 구체 인용]\n"
         f"{resource_block}\n\n"
         "글로벌 서사 동행(Elenchus·Aporia)를 따르되, **{giant['short']}** 의 관점 1줄 + "
-        "자원 인용 1회 + Maieutic question 1개. Aporia 시 그 언어의 은유로 길을 열 것.\n\n"
+        "긍정 자원은 재진술·은유로 1회 반영(원문·오타 복붙 금지) + Maieutic question 1개. "
+        "Aporia 시 그 언어의 은유로 길을 열 것.\n\n"
         f"[연령·생활 단계 맞춤 말투]\n{_tone_block(age_group, life_stage)}"
     )
 

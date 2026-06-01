@@ -268,11 +268,14 @@ def render_isolation_report_blocks(report: dict[str, Any]) -> None:
 
 
 def render_isolation_recovery_signals(signals: dict[str, Any] | None) -> None:
-    """대화 중 H-Bridge — 자아성/사회성 회복 신호 패널 (점수·진단 없음)."""
+    """대화 중 회복 신호 패널 — 기본 비노출(임상 안전). 관리자 UI 전용."""
     import streamlit as st
 
+    from modes.isolation import SHOW_CLINICAL_SIGNALS_IN_UI
     from isolation_engine import summarize_recovery_signals
 
+    if not SHOW_CLINICAL_SIGNALS_IN_UI:
+        return
     if not isinstance(signals, dict):
         return
     recap = summarize_recovery_signals(signals)

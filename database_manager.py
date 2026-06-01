@@ -881,11 +881,19 @@ def sync_isolation_narrative_to_supabase(
     if client is None:
         return False, "Supabase URL/Key 미설정 또는 클라이언트 초기화 실패"
 
+    raw_signals = _parse_signals_json(signals_json)
+    if isinstance(raw_signals, dict) and raw_signals:
+        try:
+            from isolation_engine import enrich_isolation_signals_for_storage
+
+            raw_signals = enrich_isolation_signals_for_storage(raw_signals)
+        except Exception:  # noqa: BLE001
+            pass
     row = {
         "nickname": (nickname or "").strip(),
         "user_input": user_input or "",
         "ai_response": ai_response or "",
-        "signals_json": _parse_signals_json(signals_json),
+        "signals_json": raw_signals,
     }
     try:
         client.table(ISOLATION_NARRATIVES_TABLE).insert(row).execute()

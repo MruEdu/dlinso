@@ -10,6 +10,7 @@ import google.generativeai as genai
 from env_config import get_gemini_model_name
 from modes.learning import MIN_USER_TURNS_FOR_LEARNING_REPORT
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from narrative_style import EMPATHETIC_REPHRASE_INSTRUCTION, user_turn_context_for_llm
 from prompts.learning import build_learning_system_addon
 
 LEARNING_COMPANION_NAME = "배움의 정원사"
@@ -58,8 +59,8 @@ GLOBAL_LEARNING_SYSTEM_INSTRUCTION = f"""
 - 관성(습관): 「예전 방식이 끌고 가던 힘」 · 중력(목표): 「끌어당기는 꿈·방향」도 장면과 함께 1~2회는 다룰 것.
 
 [대화 방식]
-- 참여자 발화 = 배움 서사의 한 줄. 되풀이·표면 동의 금지.
-- 응답(2~4문장, 완전한 문장): ① 짧은 인정 ② (있으면) 「인용」 ③ **질문 1개만**
+- 참여자 발화 = 배움 서사의 한 줄. 되풀이·표면 동의·원문 복붙 금지.
+- 응답(2~4문장, 완전한 문장): ① 짧은 인정 ② 공감·재진술(은유·의미 되짚기, 오타 수정) ③ **질문 1개만**
 - 출력에 마크다운 별표(*, **) 금지. 강조는 「」·줄바꿈.
 - 금지 단어: 평균, 우수, 미달, 정상, 하위, 상위 등 **정형화 평가** 표현.
 
@@ -69,7 +70,7 @@ GLOBAL_LEARNING_SYSTEM_INSTRUCTION = f"""
 """
 
 LEARNING_TURN_ADDON_HEADER = """
-[이번 턴 — 배움의 정원사 · 직전 발화만 인용]
+[이번 턴 — 배움의 정원사 · 직전 발화를 재진술로 반영]
 """
 
 LEARNING_EXTRACTION_JSON_PROMPT = """
@@ -295,13 +296,12 @@ def build_global_learning_system_instruction(lang: str = "ko") -> str:
 
 
 def build_learning_turn_addon(*, last_user: str = "", user_turns: int = 0) -> str:
-    block = LEARNING_TURN_ADDON_HEADER
+    block = LEARNING_TURN_ADDON_HEADER + EMPATHETIC_REPHRASE_INSTRUCTION
     if user_turns:
         block += f"\n- 참여자 배움 발화 누적: {user_turns}회."
-    if last_user:
-        block += f"\n- 방금 말(1회만 인용): 「{last_user[:200]}」"
+    block += user_turn_context_for_llm(last_user, max_len=200)
     block += (
-        "\n- 공감 → (선택) 「」 인용 → **질문 1개**. "
+        "\n- 공감·재진술(은유·의미, 원문·오타 복붙 금지) → **질문 1개**. "
         "4대 렌즈(Bloom·Jagged·패턴·동역학) 중 아직 얇은 축을 우선. "
         "동역학 축일 때는 추진력·마찰을 **한 질문**에 녹일 것(이론명 금지). "
         "평균·우수·미달 등 평가 라벨 금지."

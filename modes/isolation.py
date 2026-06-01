@@ -24,11 +24,14 @@ MAIEUTIC_SEED_QUESTIONS: tuple[str, ...] = (
 )
 
 FOUR_FRAMEWORK_LABELS: dict[str, str] = {
-    "bloom": "고립 시간의 재정의 · Analyze→Create",
-    "todd_rose": "비균질(Jagged) 안전 맥락",
+    "bloom": "고립 시간의 재정의",
+    "todd_rose": "비균질 안전 맥락",
     "pattern_seeker": "내면 질서로의 전환",
-    "dynamics": "마찰력 vs 추진력(Small Win)",
+    "dynamics": "마찰력과 작은 추진력",
 }
+
+# 내담자 화면: 실시간 회복 신호·4대 렌즈 패널 비노출 (Supabase·LLM 백엔드만 유지)
+SHOW_CLINICAL_SIGNALS_IN_UI = False
 
 DUAL_AXIS_LABELS: dict[str, str] = {
     "identity": "자아성 · 내가 누구인가",

@@ -9,6 +9,7 @@ import google.generativeai as genai
 
 from env_config import get_gemini_model_name
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from narrative_style import EMPATHETIC_REPHRASE_INSTRUCTION, user_turn_context_for_llm
 from personas import GUIDE_NAME, LANG_REPLY
 NARRATIVE_COMPANION_NAME = GUIDE_NAME
 GARDEN_KEEPER_NAME = NARRATIVE_COMPANION_NAME
@@ -70,12 +71,12 @@ GLOBAL_MAIEUTIC_SYSTEM_INSTRUCTION = f"""
    - 추출 결과를 목록으로 출력하지 말고, **질문 안에만** 녹이세요.
 
 [절대 금지]
-- 참여자 문장 그대로 반복, 템플릿 인사 매 턴 복붙, 조언·처방·라벨 진단
+- 참여자 문장·오타를 그대로 복사·따옴표 인용, 템플릿 인사 매 턴 복붙, 조언·처방·라벨 진단
 === END GLOBAL MAIEUTIC SYSTEM INSTRUCTION ===
 """
 
 MAIEUTIC_TURN_ADDON_HEADER = """
-[이번 턴 보강 — 직전 맥락만 인용, 질문은 새로]
+[이번 턴 보강 — 직전 맥락을 재진술로 반영, 질문은 새로]
 """
 
 
@@ -95,13 +96,12 @@ def build_global_maieutic_system_instruction(lang: str = "ko") -> str:
 
 
 def build_maieutic_addon(*, last_user: str = "", user_turns: int = 0) -> str:
-    block = MAIEUTIC_TURN_ADDON_HEADER
+    block = MAIEUTIC_TURN_ADDON_HEADER + EMPATHETIC_REPHRASE_INSTRUCTION
     if user_turns:
         block += f"\n- 참여자 씨앗(발화) 누적: {user_turns}회."
-    if last_user:
-        block += f"\n- 방금 심어진 씨앗(1회만 인용): 「{last_user[:180]}」"
+    block += user_turn_context_for_llm(last_user, max_len=180)
     block += (
-        "\n- Elenchus → 공감 → Maieutic question 1개. "
+        "\n- Elenchus → 공감(재진술·은유, 원문 복붙 금지) → Maieutic question 1개. "
         "직전 발화의 **핵심 역량·감정 키워드**를 질문에 녹여 과거 장면 회상을 촉진. "
         "서사·장면 은유 중 1가지만. 직전과 다른 질문."
     )

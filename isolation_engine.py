@@ -23,6 +23,7 @@ from modes.isolation import (
     PHASE_EARLY_MAX_TURNS,
 )
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from narrative_style import EMPATHETIC_REPHRASE_INSTRUCTION, user_turn_context_for_llm
 from prompts.isolation import build_isolation_system_addon
 
 ISOLATION_COMPANION_NAME = "연결의 동행자"
@@ -45,18 +46,18 @@ GLOBAL_ISOLATION_SYSTEM_INSTRUCTION = f"""
 대화 단계(탐색→맥락 형성→서사 자산화)와 사용자 발화에 따라 **신중·전략적**으로 조절한다.
 AI가 먼저 쓰지 않을 것: 치료, 재활, 사회복귀, 환자, 취약계층.
 
-[4대 Isolation Framework — 이론명을 말하지 말 것]
-- Bloom: Analyze→Create — 조용한 시간을 새 서사를 쓰는 과정으로
-- Todd Rose: 평균 압박 해소, Jagged 안전 맥락(장소·시간·사람)
-- Pattern Seeker: 방어적 패턴 → 내면 질서로 전환
-- Dynamics: 마찰(두려움) vs Small Win(마음의 틈)
+[4대 서사 축 — 이론명·영문 라벨을 말하지 말 것]
+- 고립 시간의 재정의: 조용한 시간을 새 서사를 쓰는 과정으로
+- 비균질 안전 맥락: 평균 압박 없이 안전한 장소·시간·사람
+- 내면 질서로의 전환: 방어적 패턴을 스스로의 질서로
+- 마찰력과 작은 추진력: 두려움(마찰) vs 마음의 작은 한 걸음
 
 [산파술 시드 — 변형하여 1개]
 - 「당신의 방은 요새인가요, 정거장인가요?」
 - 「세상의 '평균' 중 무엇이 당신을 숨 차게 하나요?」
 - 「어떤 소음이 가장 지치게 하나요?」
 - 「작은 한 걸음을 밀어 준 것은 무엇이었나요?」
-응답: 인정 → (선택)「」인용 → 질문 1개. 별표 금지.
+응답: 인정 → 공감·재진술(은유·의미, 오타·원문 복붙 금지) → 질문 1개. 별표 금지.
 === END GLOBAL ISOLATION SYSTEM INSTRUCTION ===
 """
 
@@ -73,8 +74,9 @@ social: {{
   "relational_longing": "관계·연결에 대한 갈망·두려움"
 }}
 
-[4대 Framework — learning 스키마와 동일]
+[4대 축 — JSON 키만 영문, summary 문장은 한국어]
 bloom, todd_rose, pattern_seeker, dynamics
+(각 summary에 Analyze·Jagged·Small Win 등 영문 이론명 넣지 말 것)
 
 recovery_strength: weak|emerging|clear  (자아·사회 회복 신호 종합)
 thin_axis: identity|social|bloom|todd_rose|pattern_seeker|dynamics
@@ -172,13 +174,13 @@ def build_lexicon_strategy_addon(
         if hits:
             sample = hits[0]
             accept = (
-                f'\n- 사용자가 「{sample}」을(를) 썼다 — **적극 수용·인용**하며 대화에 녹일 것.\n'
-                f'  예: "네가 말한 그 「{sample}」의 시간이 너에게는 어떤 보호막이었을까?"\n'
-                f"  (사용자의 단어를 존중하되, AI가 새로 라벨을 붙이지는 말 것.)"
+                f'\n- 사용자가 「{sample}」을(를) 꺼냈다 — **의미만 수용**하고 은유·재진술로 대화에 녹일 것.\n'
+                f'  (「{sample}」을 답변에 그대로 복사하지 말 것. 오타·깨진 표기도 복붙 금지.)\n'
+                f"  (AI가 새로 행정·진단 라벨을 붙이지는 말 것.)"
             )
         return f"""
 [어휘 전략 · 맥락 형성 단계]
-- 사용자가 먼저 꺼낸 말을 **「」로 인용**하며 깊이 탐색한다.{accept}
+- 사용자가 먼저 꺼낸 말의 **뜻**을 은유·재진술로 되짚으며 깊이 탐색한다.{accept}
 - 사용자가 쓴 민감 어휘: {hit_line}
 - AI가 여전히 먼저 쓰지 않을 것: {never}
 - 아직 은유·질문으로 열 수 있으면 라벨보다 은유를 우선.
@@ -340,6 +342,75 @@ def extract_isolation_signals(
     return base
 
 
+_STORAGE_EN_KO: tuple[tuple[str, str], ...] = (
+    ("Analyze→Create", "분석에서 창조로의 전환"),
+    ("Analyze->Create", "분석에서 창조로의 전환"),
+    ("Jagged", "비균질"),
+    ("jagged", "비균질"),
+    ("Small Win", "작은 추진"),
+    ("small win", "작은 추진"),
+    ("Todd Rose", "수평적 개성·맥락"),
+    ("Bloom", "인지적 재정의"),
+)
+
+
+def _sanitize_storage_text(text: str) -> str:
+    out = text or ""
+    for en, ko in _STORAGE_EN_KO:
+        if en and en in out:
+            out = out.replace(en, ko)
+    return out.strip()
+
+
+def _sanitize_storage_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _sanitize_storage_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_storage_value(v) for v in value]
+    if isinstance(value, str):
+        return _sanitize_storage_text(value)
+    return value
+
+
+def enrich_isolation_signals_for_storage(signals: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Supabase isolation_narratives.signals_json — 관리·연구용 한글 메타 + 원본 신호.
+    내담자 UI에는 노출하지 않음.
+    """
+    if not isinstance(signals, dict):
+        return {}
+    out = _sanitize_storage_value(dict(signals))
+    thin = str(out.get("thin_axis") or "").strip()
+    phase = str(out.get("lexicon_phase") or "").strip()
+    phase_ko = {"early": "탐색", "mid": "맥락 형성", "late": "서사 자산화"}.get(phase, phase)
+    strength = str(out.get("recovery_strength") or "").strip()
+    strength_ko = {
+        "weak": "씨앗",
+        "emerging": "싹틂",
+        "clear": "선명",
+    }.get(strength, strength)
+    out["framework_labels_ko"] = {
+        k: FOUR_FRAMEWORK_LABELS.get(k, k) for k in FOUR_FRAMEWORK_KEYS
+    }
+    out["dual_axis_labels_ko"] = {k: DUAL_AXIS_LABELS.get(k, k) for k in DUAL_AXIS_KEYS}
+    if thin:
+        out["thin_axis_label_ko"] = (
+            DUAL_AXIS_LABELS.get(thin) or FOUR_FRAMEWORK_LABELS.get(thin, thin)
+        )
+    if phase:
+        out["lexicon_phase_ko"] = phase_ko
+    if strength:
+        out["recovery_strength_ko"] = strength_ko
+    recap = summarize_recovery_signals(out)
+    out["admin_recap_ko"] = {
+        "identity": recap.get("identity", ""),
+        "social": recap.get("social", ""),
+        "framework_lines": recap.get("framework_block", ""),
+        "anchor_quote": recap.get("anchor_quote", ""),
+    }
+    return out
+
+
 def summarize_recovery_signals(signals: dict[str, Any] | None) -> dict[str, str]:
     """
     H-Bridge 중간 요약 — 자아성/사회성 회복 신호 + 4대 렌즈 한 줄.
@@ -439,7 +510,7 @@ def build_isolation_depth_addon(
     hint = ""
     if "dynamics" in str(focus).lower() or "추진" in focus:
         hint = " 마찰·추진·마음의 틈을 한 질문에."
-    elif "평균" in focus or "Jagged" in focus:
+    elif "평균" in focus or "비균질" in focus or "안전 맥락" in focus:
         hint = " 가장 편안한 장소·시간·사람을 한 질문에."
     return f"\n\n[서사 깊이 · 보강] **{focus}** 축만 질문 1개.{hint}\n"
 
@@ -511,8 +582,8 @@ def build_full_isolation_system_instruction(
     if thin:
         label = DUAL_AXIS_LABELS.get(thin) or FOUR_FRAMEWORK_LABELS.get(thin, thin)
         parts.append(f"\n\n[실시간 우선 축] {label} — 질문 1개에 반영.\n")
-    if last_user:
-        parts.append(f"\n[방금 말] 「{last_user[:200]}」")
+    parts.append(EMPATHETIC_REPHRASE_INSTRUCTION)
+    parts.append(user_turn_context_for_llm(last_user, max_len=200))
     return "\n".join(parts)
 
 
