@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import sqlite3
+import uuid
 from pathlib import Path
 from typing import Any
+
+_log = logging.getLogger("dlinso.supabase")
 
 from env_config import (
     APP_DIR,
@@ -866,6 +870,42 @@ def is_supabase_configured() -> bool:
     return bool(get_supabase_url() and get_supabase_key())
 
 
+_GUEST_NICK_BLOCKLIST = frozenset(
+    {"", "미리보기", "preview", "anonymous", "익명", "guest"}
+)
+
+
+def resolve_supabase_nickname(
+    primary: str = "",
+    *,
+    participant_id: str = "",
+    supabase_guest_id: str = "",
+) -> str:
+    """
+    Supabase INSERT용 닉네임 — 비어 있거나 미리보기면 세션/임시 guest ID 사용.
+    (빈 nickname으로 INSERT 거부하지 않음 — 테이블에 빈 행 방지)
+    """
+    for candidate in (primary, participant_id, supabase_guest_id):
+        nick = (candidate or "").strip()
+        if nick and nick.lower() not in _GUEST_NICK_BLOCKLIST:
+            return nick
+    return f"guest_{uuid.uuid4().hex[:10]}"
+
+
+def _format_supabase_error(exc: BaseException) -> str:
+    text = str(exc).strip() or exc.__class__.__name__
+    low = text.lower()
+    if "401" in text or "invalid api key" in low or "jwt" in low:
+        return f"{text} — Secrets의 SUPABASE_KEY(URL)를 Supabase Dashboard API 키와 맞춰 주세요."
+    if "403" in text or "row-level security" in low or "rls" in low:
+        return (
+            f"{text} — RLS/anon INSERT 정책 확인: "
+            "scripts/supabase_isolation_narratives.sql 등을 SQL Editor에서 실행했는지, "
+            "publishable(anon) 키를 쓰는지 확인하세요."
+        )
+    return text
+
+
 def sync_isolation_narrative_to_supabase(
     *,
     nickname: str,
@@ -881,6 +921,8 @@ def sync_isolation_narrative_to_supabase(
     if client is None:
         return False, "Supabase URL/Key 미설정 또는 클라이언트 초기화 실패"
 
+    nick = resolve_supabase_nickname(nickname)
+
     raw_signals = _parse_signals_json(signals_json)
     if isinstance(raw_signals, dict) and raw_signals:
         try:
@@ -890,7 +932,7 @@ def sync_isolation_narrative_to_supabase(
         except Exception:  # noqa: BLE001
             pass
     row = {
-        "nickname": (nickname or "").strip(),
+        "nickname": nick,
         "user_input": user_input or "",
         "ai_response": ai_response or "",
         "signals_json": raw_signals,
@@ -899,23 +941,44 @@ def sync_isolation_narrative_to_supabase(
         client.table(ISOLATION_NARRATIVES_TABLE).insert(row).execute()
         return True, None
     except Exception as exc:  # noqa: BLE001
-        return False, str(exc)
+        detail = _format_supabase_error(exc)
+        _log.warning("isolation_narratives INSERT failed: %s", detail)
+        return False, detail
 
 
-def notify_supabase_sync(ok: bool, err: str | None = None) -> None:
+def notify_supabase_sync(ok: bool, err: str | None = None, *, table: str = "") -> None:
+    label = f" ({table})" if table else ""
     if ok:
-        msg = "✅ Supabase 클라우드 DB 저장 완료"
+        msg = f"✅ Supabase 클라우드 DB 저장 완료{label}"
+        _log.info(msg)
         try:
             print(msg, flush=True)
         except UnicodeEncodeError:
-            print("[OK] Supabase 클라우드 DB 저장 완료", flush=True)
+            print(f"[OK] Supabase save{label}", flush=True)
+        if is_streamlit_cloud():
+            try:
+                import streamlit as st
+
+                st.session_state.pop("last_supabase_sync_error", None)
+                st.session_state["last_supabase_sync_ok"] = True
+            except Exception:  # noqa: BLE001
+                pass
     else:
         detail = f": {err}" if err else ""
-        msg = f"❌ Supabase Sync Failed{detail}"
+        msg = f"❌ Supabase Sync Failed{label}{detail}"
+        _log.error(msg)
         try:
             print(msg, flush=True)
         except UnicodeEncodeError:
-            print(f"[FAIL] Supabase Sync Failed{detail}", flush=True)
+            print(f"[FAIL] Supabase Sync Failed{label}{detail}", flush=True)
+        if is_streamlit_cloud():
+            try:
+                import streamlit as st
+
+                st.session_state["last_supabase_sync_error"] = err or "unknown"
+                st.session_state["last_supabase_sync_ok"] = False
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def log_isolation_turn_dual(
@@ -941,7 +1004,37 @@ def log_isolation_turn_dual(
     log_kwargs.pop("nickname", None)
     log_kwargs.setdefault("module_type", "isolation")
 
+    nick = resolve_supabase_nickname(
+        nickname,
+        participant_id=str(log_kwargs.get("participant_id") or ""),
+        supabase_guest_id=str(log_kwargs.get("supabase_guest_id") or ""),
+    )
+    log_kwargs.setdefault("participant_id", nick)
+
+    sb_ok = False
+    sb_err: str | None = None
+    if is_supabase_configured():
+        sb_ok, sb_err = sync_isolation_narrative_to_supabase(
+            nickname=nick,
+            user_input=um,
+            ai_response=am,
+            signals_json=sig,
+        )
+        notify_supabase_sync(
+            sb_ok, sb_err, table=ISOLATION_NARRATIVES_TABLE
+        )
+    elif is_streamlit_cloud():
+        notify_supabase_sync(
+            False,
+            "Supabase URL/Key 미설정 — Streamlit Secrets [supabase] 또는 .env 확인",
+            table=ISOLATION_NARRATIVES_TABLE,
+        )
+
     if not db.is_connected:
+        if sb_ok:
+            return True, None
+        if is_supabase_configured():
+            return False, sb_err or db.error_message or "database not connected"
         return False, db.error_message or "database not connected"
 
     db.ensure_schema()
@@ -950,18 +1043,8 @@ def log_isolation_turn_dual(
         assistant_message=am,
         **log_kwargs,
     )
-    if not ok:
-        return ok, err
-
-    nick = nickname or str(log_kwargs.get("participant_id") or "")
-    if is_supabase_configured():
-        sb_ok, sb_err = sync_isolation_narrative_to_supabase(
-            nickname=nick,
-            user_input=um,
-            ai_response=am,
-            signals_json=sig,
-        )
-        notify_supabase_sync(sb_ok, sb_err)
+    if not ok and sb_ok:
+        return True, None
     return ok, err
 
 
@@ -1021,9 +1104,7 @@ def sync_user_to_supabase(
     if client is None:
         return False, "Supabase 미설정"
 
-    nick = (nickname or "").strip()
-    if not nick:
-        return False, "nickname empty"
+    nick = resolve_supabase_nickname(nickname)
 
     now_iso = korea_now_str()
     row: dict[str, Any] = {
@@ -1054,7 +1135,9 @@ def sync_user_to_supabase(
         client.table(DLINSO_USERS_TABLE).upsert(row, on_conflict="nickname").execute()
         return True, None
     except Exception as exc:  # noqa: BLE001
-        return False, str(exc)
+        detail = _format_supabase_error(exc)
+        _log.warning("dlinso_users upsert failed: %s", detail)
+        return False, detail
 
 
 def sync_user_to_supabase_from_sqlite(db: "DatabaseManager", nickname: str) -> None:
@@ -1110,9 +1193,7 @@ def sync_conversation_turn_to_supabase(
     if client is None:
         return False, "Supabase 미설정"
 
-    nick = (nickname or "").strip()
-    if not nick:
-        return False, "nickname empty"
+    nick = resolve_supabase_nickname(nickname)
 
     row = {
         "nickname": nick,
@@ -1131,16 +1212,27 @@ def sync_conversation_turn_to_supabase(
         client.table(DLINSO_TURNS_TABLE).insert(row).execute()
         return True, None
     except Exception as exc:  # noqa: BLE001
-        return False, str(exc)
+        detail = _format_supabase_error(exc)
+        _log.warning("dlinso_conversation_turns INSERT failed: %s", detail)
+        return False, detail
 
 
 def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
     """여정·학습 — SQLite 성공 후 Supabase 이중 저장 (숲은 isolation_narratives 별도)."""
     if not is_supabase_configured():
+        notify_supabase_sync(
+            False,
+            "Supabase URL/Key 미설정 — Streamlit Secrets [supabase] 확인 후 Reboot",
+            table="cloud_sync",
+        )
         return
 
     module_type = (kwargs.get("module_type") or "lifespan").strip() or "lifespan"
-    nick = (kwargs.get("nickname") or "").strip()
+    nick = resolve_supabase_nickname(
+        str(kwargs.get("nickname") or ""),
+        participant_id=str(kwargs.get("nickname") or ""),
+    )
+    kwargs = {**kwargs, "nickname": nick}
     profile = kwargs.get("profile") or {}
 
     sync_user_to_supabase(
@@ -1196,8 +1288,7 @@ def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
         is_system=bool(kwargs.get("is_system")),
         metadata_json=metadata,
     )
-    if is_streamlit_cloud():
-        notify_supabase_sync(sb_ok, sb_err)
+    notify_supabase_sync(sb_ok, sb_err, table=DLINSO_TURNS_TABLE)
 
     sync_narrative_archive_session(**kwargs)
     if not bool(kwargs.get("is_system")):
@@ -1237,8 +1328,8 @@ def sync_narrative_archive_session(**kwargs: Any) -> None:
     if not is_supabase_configured():
         return
     client = get_supabase_client()
-    nick = (kwargs.get("nickname") or "").strip()
-    if client is None or not nick:
+    nick = resolve_supabase_nickname(str(kwargs.get("nickname") or ""))
+    if client is None:
         return
     module_type = (kwargs.get("module_type") or "lifespan").strip() or "lifespan"
     turns = int(kwargs.get("total_turn_count") or 0)
@@ -1268,7 +1359,10 @@ def sync_narrative_archive_session(**kwargs: Any) -> None:
     }
     try:
         client.table(USER_SESSIONS_TABLE).upsert(row, on_conflict="nickname").execute()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _log.warning(
+            "user_sessions upsert failed: %s", _format_supabase_error(exc)
+        )
         return
 
 
@@ -1283,8 +1377,8 @@ def sync_narrative_asset_from_turn(
     if not is_supabase_configured():
         return
     client = get_supabase_client()
-    nick = (nickname or "").strip()
-    if client is None or not nick:
+    nick = resolve_supabase_nickname(nickname)
+    if client is None:
         return
     try:
         from narrative_export import deidentify_text
@@ -1304,7 +1398,10 @@ def sync_narrative_asset_from_turn(
     }
     try:
         client.table(NARRATIVE_ASSETS_TABLE).insert(row).execute()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _log.warning(
+            "narrative_assets INSERT failed: %s", _format_supabase_error(exc)
+        )
         return
 
 

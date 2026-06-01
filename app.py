@@ -1708,6 +1708,10 @@ def _activate_session(
     from hbridge_analysis import count_user_turns
 
     st.session_state.participant_id = participant_id
+    if not str(st.session_state.get("supabase_guest_id") or "").strip():
+        import uuid
+
+        st.session_state.supabase_guest_id = f"guest_{uuid.uuid4().hex[:10]}"
     st.session_state.password_hash = password_hash_value
     st.session_state.gender = gender
     st.session_state.age_group = age_group
@@ -3030,11 +3034,14 @@ def handle_chat_turn(
     except Exception:  # noqa: BLE001
         user_ko = model_prompt
         reply_ko = full_reply
-    if db.is_connected:
+    if _is_isolation_mode() or db.is_connected:
         if _is_isolation_mode():
             ok, err = save_isolation_turn_local(
                 db,
                 nickname=st.session_state.participant_id,
+                supabase_guest_id=str(
+                    st.session_state.get("supabase_guest_id") or ""
+                ),
                 user_message=model_prompt,
                 assistant_message=full_reply,
                 participant_id=st.session_state.participant_id,
@@ -3057,7 +3064,7 @@ def handle_chat_turn(
                 module_type="isolation",
                 isolation_signals_json=isolation_signals_json,
             )
-        else:
+        elif db.is_connected:
             db.ensure_schema()
             ok, err = db.log_conversation(
                 user_message=model_prompt,
@@ -3085,8 +3092,13 @@ def handle_chat_turn(
                 learning_audience=st.session_state.get("learning_audience", ""),
                 learning_signals_json=learning_signals_json,
             )
+        else:
+            ok, err = False, "로컬 DB 미연결"
         if not ok:
             st.warning(_db_save_warning(err))
+        cloud_err = st.session_state.get("last_supabase_sync_error")
+        if cloud_err and is_streamlit_cloud():
+            st.caption(f"⚠️ Supabase 저장 실패: {cloud_err}")
 
     if st.session_state.get("is_returning_user"):
         st.session_state.is_returning_user = False
