@@ -1967,6 +1967,46 @@ def _is_isolation_mode() -> bool:
     return st.session_state.get("app_mode", MODE_LIFESPAN) == MODE_ISOLATION
 
 
+def maybe_restore_isolation_history_from_cloud() -> None:
+    """
+    숲 — 로그인 탭 없이 앱만 다시 열었을 때(Cloud 재배포·새 세션) Supabase에서 대화 hydrate.
+  """
+    if not _is_isolation_mode() or _is_preview_mode():
+        return
+    if st.session_state.get("_iso_history_hydrated"):
+        return
+    nick = (st.session_state.get("participant_id") or "").strip()
+    if not nick or nick == "미리보기":
+        return
+
+    from hbridge_analysis import count_user_turns
+    from database_manager import fetch_isolation_messages_from_supabase
+
+    ui_turns = count_user_turns(st.session_state.get("messages") or [])
+    stored_turns = int(st.session_state.get("total_user_turns") or 0)
+    st.session_state._iso_history_hydrated = True
+
+    if ui_turns > 0 and (stored_turns <= 0 or ui_turns >= stored_turns):
+        return
+
+    profile = {
+        "lang": st.session_state.get("lang") or "ko",
+        "gender": st.session_state.get("gender") or "",
+        "age_group": st.session_state.get("age_group") or "",
+        "life_stage": st.session_state.get("life_stage") or "",
+    }
+    msgs, turn_count, last_topic = fetch_isolation_messages_from_supabase(
+        nick, profile=profile
+    )
+    if not msgs:
+        return
+    st.session_state.messages = [dict(m) for m in msgs]
+    st.session_state.total_user_turns = max(turn_count, ui_turns, stored_turns)
+    if last_topic:
+        st.session_state.last_visit_topic = last_topic
+    st.session_state.conversation_restored = True
+
+
 def _refresh_isolation_signals(*, force_llm: bool = False) -> dict[str, Any] | None:
     """대화 중 회복 신호 — 기본 휴리스틱(즉시), LLM은 4턴마다 또는 강제 시만."""
     if not _is_isolation_mode():
@@ -2548,6 +2588,7 @@ def reset_user_session() -> None:
         "phase": PHASE_COLLECT,
         "active_giant": None,
         "current_view": VIEW_HOME,
+        "_iso_history_hydrated": False,
     }.items():
         st.session_state[key] = val
 
@@ -2747,6 +2788,23 @@ def render_onboarding(db: DatabaseManager) -> None:
                         admin_reply=found.get("admin_reply", ""),
                         admin_reply_type=found.get("admin_reply_type", "general"),
                     )
+                    if _is_isolation_mode():
+                        from database_manager import (
+                            _sync_isolation_user_profile_to_supabase,
+                        )
+
+                        _sync_isolation_user_profile_to_supabase(
+                            db,
+                            profile["participant_id"],
+                            {
+                                "password_hash": profile["password_hash"],
+                                "lang": profile.get("lang", "ko"),
+                                "gender": profile.get("gender", ""),
+                                "age_group": profile.get("age_group", ""),
+                                "life_stage": profile.get("life_stage", ""),
+                            },
+                        )
+                        maybe_restore_isolation_history_from_cloud()
                     st.rerun()
 
 
@@ -4096,6 +4154,7 @@ def _run_app() -> None:
 
     gemini_ok, gemini_error = init_gemini()
     display = resolve_companion_display()
+    maybe_restore_isolation_history_from_cloud()
     render_chat_toolbar(gemini_ok, gemini_error, db)
 
     with st.container():

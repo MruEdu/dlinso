@@ -421,7 +421,12 @@ class DatabaseManager:
             if m.get("role") == "user"
             and not str(m.get("content") or "").startswith("[")
         )
-        if supa_user_turns <= sqlite_user_turns and len(restored) >= 2:
+        use_supabase = bool(iso_turns) and (
+            (is_streamlit_cloud() and self._is_isolation_database())
+            or supa_user_turns > sqlite_user_turns
+            or len(restored) < 2
+        )
+        if not use_supabase:
             return found
         profile = found.get("profile") or {}
         user_row = {
@@ -1395,9 +1400,8 @@ def log_isolation_turn_dual(
     if not ok:
         return ok, err
 
-    _sync_isolation_user_profile_to_supabase(db, nick, sqlite_kwargs)
-
     # 2) Supabase: 독립 파이프라인 (재시도 + 실패 시 Outbox 적재)
+    # dlinso_users 동기화는 가입 시만(매 턴 upsert 시 레이트리밋·저장 실패 유발)
     if not is_supabase_configured():
         if is_streamlit_cloud():
             notify_supabase_sync(
@@ -2070,6 +2074,40 @@ def find_returning_user_from_supabase(
         return payload
     except Exception:  # noqa: BLE001
         return None
+
+
+def fetch_isolation_messages_from_supabase(
+    nickname: str,
+    *,
+    profile: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], int, str]:
+    """
+    숲 — Supabase isolation_narratives 에서 UI 복원용 messages 반환.
+    (Streamlit Cloud 재접속·세션 초기화 후 hydrate 용)
+    """
+    nick = (nickname or "").strip()
+    if not nick or not is_supabase_configured():
+        return [], 0, ""
+    client = get_supabase_client()
+    if client is None:
+        return [], 0, ""
+    iso_turns = _fetch_isolation_turns_from_supabase(client, nick)
+    if not iso_turns:
+        return [], 0, ""
+    prof = profile or {}
+    user_row = {
+        "nickname": nick,
+        "lang": prof.get("lang") or "ko",
+        "gender": prof.get("gender") or "",
+        "age_group": prof.get("age_group") or "",
+        "life_stage": prof.get("life_stage") or "",
+        "total_turn_count": 0,
+    }
+    payload = _isolation_turns_to_restore_payload(iso_turns, user_row, "")
+    msgs = list(payload.get("restored_messages") or [])
+    turns = int(payload.get("total_turn_count") or 0)
+    topic = str(payload.get("last_topic") or "")
+    return msgs, turns, topic
 
 
 def _fetch_isolation_turns_from_supabase(client: Any, nickname: str) -> list[dict[str, Any]]:
