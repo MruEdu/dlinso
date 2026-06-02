@@ -25,7 +25,14 @@ from env_config import (
 )
 
 apply_secrets_to_environ()
-from database_manager import DatabaseManager, hash_password
+from database_manager import (
+    DatabaseManager,
+    ISOLATION_NARRATIVES_TABLE,
+    hash_password,
+    is_supabase_configured,
+    get_supabase_client,
+    get_supabase_url,
+)
 from isolation_database_manager import IsolationDatabaseManager
 from llm_client import LLMNotConfiguredError, init_llm_client, is_llm_configured, iter_chat_stream
 from narrative_engine import (
@@ -2308,6 +2315,51 @@ def _asset_progress_pct() -> float:
     return min(100.0, effective_user_turn_count() / 10.0 * 100.0)
 
 
+def _supabase_target_table_hint() -> str:
+    if _is_isolation_mode():
+        return f"`{ISOLATION_NARRATIVES_TABLE}` (숲)"
+    if _is_learning_mode():
+        return "`dlinso_conversation_turns` (학습)"
+    return "`dlinso_conversation_turns` (여정)"
+
+
+def render_supabase_cloud_status() -> None:
+    """Streamlit Cloud — Supabase 연결·저장 실패를 화면에 명확히 표시."""
+    if not is_streamlit_cloud():
+        return
+
+    configured = is_supabase_configured()
+    client_ok = get_supabase_client() is not None
+    last_err = str(st.session_state.get("last_supabase_sync_error") or "").strip()
+    table_hint = _supabase_target_table_hint()
+
+    if configured and client_ok and not last_err:
+        st.success(
+            f"클라우드 DB 연결됨 · 대화 저장 테이블: {table_hint} "
+            f"(프로젝트: {get_supabase_url().split('//')[-1][:40]})"
+        )
+        return
+
+    if not configured:
+        st.error(
+            "Supabase Secrets가 비어 있습니다. "
+            "Streamlit Cloud → Settings → Secrets에 [supabase] url/key를 넣고 **Reboot app** 하세요. "
+            f"지금은 대화가 Supabase에 저장되지 않습니다. 확인 테이블: {table_hint}"
+        )
+        return
+
+    if not client_ok:
+        st.error(
+            "Supabase URL/Key는 있으나 클라이언트 초기화에 실패했습니다. "
+            "Secrets의 key가 publishable(anon)인지, URL 끝에 `/`가 없는지 확인 후 Reboot 하세요."
+        )
+        return
+
+    st.warning(
+        f"마지막 클라우드 저장 실패: {last_err} · Table Editor에서 {table_hint} 확인"
+    )
+
+
 def render_chat_toolbar(
     gemini_ok: bool,
     gemini_error: str | None,
@@ -2316,6 +2368,7 @@ def render_chat_toolbar(
     """기록 화면 상단 — 언어(우측)·진척도·내보내기."""
     with st.container():
         _html_layout_marker("chat-toolbar-marker")
+        render_supabase_cloud_status()
         st.markdown(
             f'<p class="archive-room-title">{html.escape(t("archive_title"))} · '
             f'<span style="font-size:0.85em;opacity:0.75">{html.escape(t("archive_subtitle"))}</span></p>',
