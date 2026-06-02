@@ -18,6 +18,7 @@ from modules.home_registry import (
     LEARNING_SPOTLIGHT_TITLE_EN,
     LEARNING_SPOTLIGHT_TITLE_KO,
     LANDING_MODULES,
+    MODULE_CTA_ICON,
     MODULE_LEARNING,
     SALON_GUIDE_LINE,
     SALON_GUIDE_SUB,
@@ -591,6 +592,15 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     box-shadow: 0 18px 48px rgba(34, 34, 34, 0.12),
                 0 0 0 4px rgba(214, 195, 168, 0.25);
 }}
+.dlinso-salon-col--narrative.dlinso-salon-card--live {{
+    border-top: 4px solid #c9a962;
+}}
+.dlinso-salon-col--learning.dlinso-salon-card--live {{
+    border-top: 4px solid #3d5a80;
+}}
+.dlinso-salon-col--forest.dlinso-salon-card--live {{
+    border-top: 4px solid #3d7a5c;
+}}
 .dlinso-learning-spotlight {{
     position: relative;
     z-index: 2;
@@ -691,40 +701,70 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
 }}
 
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--narrative) [data-testid="stButton"],
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) [data-testid="stFormSubmitButton"],
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--learning) [data-testid="stButton"] {{
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) [data-testid="stFormSubmitButton"],
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) [data-testid="stFormSubmitButton"] {{
     width: 100% !important;
     margin-top: 0.55rem !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--narrative) button,
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button,
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--learning) button {{
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) button,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button {{
     width: 100% !important;
     display: block !important;
     margin-top: 0 !important;
-    background: #ebe6de !important;
-    border: 1px solid rgba(34, 34, 34, 0.12) !important;
-    border-radius: 6px !important;
-    color: {TEXT_DARK} !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.04em !important;
-    font-weight: 600 !important;
-    padding: 0.78rem 1rem !important;
-    min-height: 2.85rem !important;
-    box-shadow: 0 3px 10px rgba(34, 34, 34, 0.06) !important;
+    border-radius: 8px !important;
+    font-size: 0.96rem !important;
+    letter-spacing: 0.03em !important;
+    font-weight: 700 !important;
+    padding: 0.82rem 1rem !important;
+    min-height: 3rem !important;
     font-family: {FONT_SANS} !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--narrative) button:hover,
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button {{
+    background: linear-gradient(180deg, #d4b96a 0%, #a8863a 55%, #8f7340 100%) !important;
+    border: 1px solid #7a6535 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(168, 134, 58, 0.35) !important;
+}}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-col--learning) button:hover {{
-    transform: translateY(-1px) !important;
-    background: #e2dcd2 !important;
-    box-shadow: 0 6px 16px rgba(34, 34, 34, 0.1) !important;
-    border-color: rgba(34, 34, 34, 0.2) !important;
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) button {{
+    background: linear-gradient(180deg, #4a6f9a 0%, #2d4a6f 55%, #1e3550 100%) !important;
+    border: 1px solid #1a2f48 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(45, 74, 111, 0.35) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button {{
+    background: linear-gradient(180deg, #52a078 0%, #2d6b4f 55%, #1f4d3a 100%) !important;
+    border: 1px solid #1a4030 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(45, 107, 79, 0.35) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button:hover {{
+    transform: translateY(-2px) !important;
+    filter: brightness(1.06) !important;
+    box-shadow: 0 8px 20px rgba(168, 134, 58, 0.42) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) button:hover {{
+    transform: translateY(-2px) !important;
+    filter: brightness(1.06) !important;
+    box-shadow: 0 8px 20px rgba(45, 74, 111, 0.42) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button:hover {{
+    transform: translateY(-2px) !important;
+    filter: brightness(1.06) !important;
+    box-shadow: 0 8px 20px rgba(45, 107, 79, 0.42) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-card--soon-marker) button {{
@@ -841,7 +881,8 @@ def reveal_home_intro() -> None:
 
 def _module_cta_label(module_id: str) -> str:
     base = module_cta_label(module_id, lang=get_lang())
-    return f"→  {base}"
+    icon = MODULE_CTA_ICON.get(module_id, "→")
+    return f"{icon}  {base}"
 
 
 def _learning_spotlight_copy() -> dict[str, str]:
@@ -1003,6 +1044,7 @@ def _render_module_card(spec, *, spotlight: bool = False) -> None:
         return
     with st.form(key=f"home_form_{module_id}", border=False):
         st.markdown(_card_html(spec, active=True, spotlight=spotlight), unsafe_allow_html=True)
+        _html_layout_marker(f"dlinso-salon-cta--{module_id}")
         submitted = st.form_submit_button(
             _module_cta_label(module_id),
             use_container_width=True,

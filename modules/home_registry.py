@@ -22,6 +22,11 @@ MODULE_CTA_KO: dict[str, str] = {
     MODULE_LEARNING: "여정 시작하기",
     MODULE_FOREST: "숲으로 들어가기",
 }
+MODULE_CTA_ICON: dict[str, str] = {
+    MODULE_NARRATIVE: "✦",
+    MODULE_LEARNING: "◇",
+    MODULE_FOREST: "🌲",
+}
 MODULE_CTA_EN: dict[str, str] = {
     MODULE_NARRATIVE: "Begin Companion",
     MODULE_LEARNING: "Begin Learning Journey",
