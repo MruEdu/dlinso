@@ -170,6 +170,12 @@ class DatabaseManager:
     def error_message(self) -> str | None:
         return self._error
 
+    def _is_isolation_database(self) -> bool:
+        try:
+            return Path(self.db_path).name.lower() == "isolation.db"
+        except OSError:
+            return False
+
     def _connect(self) -> sqlite3.Connection:
         # timeout: 동시 접속(30명)에서 잠금 대기 여유
         conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
@@ -356,10 +362,93 @@ class DatabaseManager:
     ) -> dict[str, Any] | None:
         found = self._find_returning_user_sqlite(nickname, password)
         if found:
-            return found
+            return self._enrich_found_from_isolation_supabase(
+                found, nickname.strip(), hash_password(password)
+            )
         if is_supabase_configured():
             return find_returning_user_from_supabase(nickname, password)
         return None
+
+    def _resolve_last_module_meta(
+        self, conn: sqlite3.Connection, nickname: str
+    ) -> tuple[str, str]:
+        """마지막 모듈 — narrative_logs 기준 (conversations 테이블에는 module_type 없음)."""
+        last_module_type = "isolation" if self._is_isolation_database() else "lifespan"
+        last_learning_audience = ""
+        log_row = conn.execute(
+            """
+            SELECT module_type, learning_audience FROM narrative_logs
+            WHERE user_nickname = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (nickname,),
+        ).fetchone()
+        if log_row:
+            last_module_type = (
+                str(log_row["module_type"] or last_module_type).strip()
+                or last_module_type
+            )
+            last_learning_audience = str(log_row["learning_audience"] or "").strip()
+        return last_module_type, last_learning_audience
+
+    def _enrich_found_from_isolation_supabase(
+        self,
+        found: dict[str, Any],
+        nickname: str,
+        password_hash: str,
+    ) -> dict[str, Any]:
+        """
+        Streamlit Cloud 등 — 로컬 SQLite 대화가 비어도 Supabase isolation_narratives에서 복원.
+        """
+        if not is_supabase_configured():
+            return found
+        restored = list(found.get("restored_messages") or [])
+        client = get_supabase_client()
+        if client is None:
+            return found
+        iso_turns = _fetch_isolation_turns_from_supabase(client, nickname)
+        if not iso_turns:
+            return found
+        supa_user_turns = sum(
+            1
+            for row in iso_turns
+            if str(row.get("user_input") or "").strip()
+            and not str(row.get("user_input") or "").startswith("[")
+        )
+        sqlite_user_turns = sum(
+            1
+            for m in restored
+            if m.get("role") == "user"
+            and not str(m.get("content") or "").startswith("[")
+        )
+        if supa_user_turns <= sqlite_user_turns and len(restored) >= 2:
+            return found
+        profile = found.get("profile") or {}
+        user_row = {
+            "nickname": nickname,
+            "lang": profile.get("lang") or "ko",
+            "gender": profile.get("gender") or "",
+            "age_group": profile.get("age_group") or "",
+            "life_stage": profile.get("life_stage") or "",
+            "total_turn_count": found.get("total_turn_count") or 0,
+        }
+        iso_payload = _isolation_turns_to_restore_payload(
+            iso_turns, user_row, password_hash
+        )
+        merged_msgs = iso_payload.get("restored_messages") or []
+        if not merged_msgs:
+            return found
+        found = dict(found)
+        found["restored_messages"] = merged_msgs
+        found["recent_turns"] = iso_payload.get("recent_turns") or []
+        found["total_turn_count"] = max(
+            int(found.get("total_turn_count") or 0),
+            int(iso_payload.get("total_turn_count") or 0),
+        )
+        found["last_module_type"] = "isolation"
+        if iso_payload.get("last_topic"):
+            found["last_topic"] = iso_payload["last_topic"]
+        return found
 
     def _find_returning_user_sqlite(
         self, nickname: str, password: str
@@ -383,6 +472,9 @@ class DatabaseManager:
                 """,
                 (nick,),
             ).fetchall()
+            last_module_type, last_learning_audience = self._resolve_last_module_meta(
+                conn, nick
+            )
 
         restored_messages, has_midpoint, logged_user_turns = (
             self._build_restored_messages(list(msg_rows))
@@ -407,22 +499,8 @@ class DatabaseManager:
 
         total_turn_count = max(self.get_participant_turn_count(nick), logged_user_turns)
         meta = self.get_admin_reply_meta(nick)
-        last_module_type = "lifespan"
-        last_learning_audience = ""
-        if msg_rows:
-            last_row = msg_rows[-1]
-            try:
-                last_module_type = (
-                    str(last_row["module_type"] or "lifespan").strip() or "lifespan"
-                )
-            except (KeyError, IndexError, TypeError):
-                last_module_type = "lifespan"
-            try:
-                last_learning_audience = str(
-                    last_row["learning_audience"] or ""
-                ).strip()
-            except (KeyError, IndexError, TypeError):
-                last_learning_audience = ""
+        if not msg_rows and self._is_isolation_database():
+            last_module_type = "isolation"
         return {
             "profile": self._user_row_to_profile(user, pw_hash),
             "recent_turns": recent_turns[-MAX_RESTORE_TURNS:],
@@ -1213,6 +1291,52 @@ def notify_supabase_sync(ok: bool, err: str | None = None, *, table: str = "") -
                 pass
 
 
+def _sync_isolation_user_profile_to_supabase(
+    db: "DatabaseManager",
+    nickname: str,
+    log_kwargs: dict[str, Any],
+) -> None:
+    """숲 — Cloud 재접속 시 dlinso_users에 비밀번호·턴 수 동기화."""
+    if not is_supabase_configured() or not db.is_connected:
+        return
+    nick = (nickname or "").strip()
+    if not nick:
+        return
+    try:
+        with db._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE nickname = ?", (nick,)
+            ).fetchone()
+        if not row:
+            return
+        pw = str(log_kwargs.get("password_hash") or row["password_hash"] or "").strip()
+        sync_user_to_supabase(
+            nickname=nick,
+            password_hash=pw,
+            lang=str(log_kwargs.get("lang") or row["lang"] or "ko"),
+            gender=str(log_kwargs.get("gender") or row["gender"] or ""),
+            age_group=str(log_kwargs.get("age_group") or row["age_group"] or ""),
+            life_stage=str(
+                log_kwargs.get("life_stage")
+                or log_kwargs.get("education")
+                or row["life_stage"]
+                or ""
+            ),
+            visit_count=int(row["visit_count"] or 1),
+            total_turn_count=int(row["total_turn_count"] or 0),
+            agency=float(row["agency"] or 50),
+            reflection_depth=float(row["reflection_depth"] or 50),
+            emotional_richness=float(row["emotional_richness"] or 50),
+            relational_connection=float(row["relational_connection"] or 50),
+            life_context=str(row["life_context"] or ""),
+            narrative_stage=str(row["narrative_stage"] or ""),
+            last_user_snippet=str(row["last_user_snippet"] or "")[:280],
+            last_assistant_snippet=str(row["last_assistant_snippet"] or "")[:280],
+        )
+    except Exception:  # noqa: BLE001
+        _log.debug("isolation user supabase sync skipped", exc_info=True)
+
+
 def log_isolation_turn_dual(
     db: "DatabaseManager",
     *,
@@ -1270,6 +1394,8 @@ def log_isolation_turn_dual(
 
     if not ok:
         return ok, err
+
+    _sync_isolation_user_profile_to_supabase(db, nick, sqlite_kwargs)
 
     # 2) Supabase: 독립 파이프라인 (재시도 + 실패 시 Outbox 적재)
     if not is_supabase_configured():

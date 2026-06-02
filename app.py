@@ -1780,14 +1780,16 @@ def _activate_session(
     )
 
     if is_returning:
-        greeting = build_returning_greeting(
-            last_topic, participant_id, lang=lang
-        )
-        st.session_state.messages.append(
-            {"role": "assistant", "content": greeting, "display": greeting}
-        )
-        if restored_messages or recent_turns:
+        has_history = bool(restored_messages) or bool(recent_turns)
+        if has_history:
             st.session_state.conversation_restored = True
+        else:
+            greeting = build_returning_greeting(
+                last_topic, participant_id, lang=lang
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": greeting, "display": greeting}
+            )
 
     st.session_state.onboarding_complete = True
     st.session_state.current_view = VIEW_APP
@@ -2504,6 +2506,9 @@ def _login_restore_payload(found: dict[str, Any]) -> tuple[list[dict[str, Any]] 
         want_mode = module_app_mode(landing_id) or MODE_LIFESPAN
         db_mod = (found.get("last_module_type") or "lifespan").strip()
         if want_mode != db_mod:
+            # 숲: Supabase에서 복원된 대화가 있으면 모듈 불일치여도 표시
+            if want_mode == MODE_ISOLATION and restore_msgs:
+                return restore_msgs, restore_turns
             return None, []
         return restore_msgs, restore_turns
 
