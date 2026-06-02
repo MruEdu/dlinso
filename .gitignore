@@ -22,6 +22,11 @@ __pycache__/
 dist/
 build/
 
+# local sqlite (never commit)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
 # os / ide
 .DS_Store
 Thumbs.db

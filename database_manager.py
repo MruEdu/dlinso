@@ -6,8 +6,10 @@ import hashlib
 import inspect
 import json
 import logging
+import random
 import re
 import sqlite3
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -106,6 +108,24 @@ CREATE TABLE IF NOT EXISTS inquiries (
 CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations(user_nickname, id);
 CREATE INDEX IF NOT EXISTS idx_narrative_logs_user ON narrative_logs(user_nickname, created_at);
 CREATE INDEX IF NOT EXISTS idx_inquiries_user ON inquiries(user_nickname, created_at DESC);
+
+-- Supabase Outbox: 네트워크/레이트리밋으로 실패해도 누락 방지
+CREATE TABLE IF NOT EXISTS supabase_outbox (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at      TEXT NOT NULL,
+    table_name      TEXT NOT NULL,
+    op              TEXT NOT NULL DEFAULT 'insert',
+    nickname        TEXT NOT NULL DEFAULT '',
+    payload_json    TEXT NOT NULL,
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    last_error      TEXT NOT NULL DEFAULT '',
+    last_attempt_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_supabase_outbox_created
+    ON supabase_outbox(created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_supabase_outbox_table
+    ON supabase_outbox(table_name, created_at ASC);
 """
 
 
@@ -151,9 +171,17 @@ class DatabaseManager:
         return self._error
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        # timeout: 동시 접속(30명)에서 잠금 대기 여유
+        conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+        # 동시성: WAL + busy_timeout
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            conn.execute("PRAGMA busy_timeout=30000")
+        except Exception:  # noqa: BLE001
+            pass
         return conn
 
     def _migrate_schema(self, conn: sqlite3.Connection) -> None:
@@ -742,6 +770,11 @@ class DatabaseManager:
                         nick,
                     ),
                 )
+        except Exception as exc:  # noqa: BLE001
+            return False, str(exc)
+
+        # SQLite 저장이 끝난 뒤(커밋 후) Supabase 동기화는 별도 파이프라인으로
+        try:
             cloud_sync_after_log_conversation(
                 nickname=nick,
                 password_hash=password_hash,
@@ -772,9 +805,10 @@ class DatabaseManager:
                 last_user_snippet=user_snip,
                 last_assistant_snippet=assist_snip,
             )
-            return True, None
-        except Exception as exc:  # noqa: BLE001
-            return False, str(exc)
+        except Exception:  # noqa: BLE001
+            pass
+
+        return True, None
 
     def log_inquiry(
         self,
@@ -919,6 +953,183 @@ def _format_supabase_error(exc: BaseException) -> str:
     return text
 
 
+def _looks_retryable_supabase_error(text: str) -> bool:
+    low = (text or "").lower()
+    return any(
+        key in low
+        for key in (
+            "429",
+            "too many requests",
+            "rate limit",
+            "timeout",
+            "timed out",
+            "temporarily unavailable",
+            "service unavailable",
+            "502",
+            "503",
+            "504",
+            "server error",
+            "connection",
+            "network",
+            "reset",
+        )
+    )
+
+
+def _sleep_backoff(attempt: int) -> None:
+    # 1,2,4,8 (+jitter)
+    base = min(8.0, float(2**attempt))
+    jitter = random.uniform(0.0, 0.25)
+    time.sleep(base + jitter)
+
+
+def _sqlite_is_locked_error(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "database is locked" in msg or "database is busy" in msg or "locked" in msg
+
+
+def _enqueue_supabase_outbox(
+    db: "DatabaseManager",
+    *,
+    table_name: str,
+    op: str,
+    nickname: str,
+    payload: dict[str, Any],
+    last_error: str = "",
+) -> None:
+    """Supabase 실패 시 로컬 SQLite에 누락 없이 적재."""
+    try:
+        with db._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO supabase_outbox (
+                    created_at, table_name, op, nickname, payload_json,
+                    attempts, last_error, last_attempt_at
+                ) VALUES (?, ?, ?, ?, ?, 0, ?, '')
+                """,
+                (
+                    korea_now_str(),
+                    (table_name or "").strip(),
+                    (op or "insert").strip(),
+                    (nickname or "").strip(),
+                    json.dumps(payload or {}, ensure_ascii=False)[:20000],
+                    (last_error or "")[:500],
+                ),
+            )
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _flush_supabase_outbox(
+    db: "DatabaseManager",
+    *,
+    client: Any,
+    limit: int = 20,
+) -> tuple[int, int]:
+    """
+    누적된 Outbox를 Supabase로 전송.
+    성공/실패 횟수 반환. (실패는 attempts 증가 + last_error 기록)
+    """
+    if client is None or not db.is_connected:
+        return 0, 0
+
+    sent = 0
+    failed = 0
+    try:
+        with db._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, table_name, op, nickname, payload_json, attempts
+                FROM supabase_outbox
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (int(limit),),
+            ).fetchall()
+
+            for r in rows:
+                oid = int(r["id"])
+                table = str(r["table_name"] or "").strip()
+                op = str(r["op"] or "insert").strip()
+                payload_text = str(r["payload_json"] or "{}")
+                try:
+                    payload = json.loads(payload_text) if payload_text else {}
+                except Exception:  # noqa: BLE001
+                    payload = {}
+                ok, err = _supabase_execute_with_retry(
+                    client,
+                    table=table,
+                    op=op,
+                    payload=payload,
+                )
+                if ok:
+                    conn.execute("DELETE FROM supabase_outbox WHERE id = ?", (oid,))
+                    sent += 1
+                else:
+                    conn.execute(
+                        """
+                        UPDATE supabase_outbox SET
+                            attempts = attempts + 1,
+                            last_error = ?,
+                            last_attempt_at = ?
+                        WHERE id = ?
+                        """,
+                        ((err or "")[:500], korea_now_str(), oid),
+                    )
+                    failed += 1
+    except Exception:  # noqa: BLE001
+        return sent, failed
+
+    return sent, failed
+
+
+def _supabase_execute_with_retry(
+    client: Any,
+    *,
+    table: str,
+    op: str,
+    payload: dict[str, Any],
+    max_attempts: int = 4,
+) -> tuple[bool, str | None]:
+    """
+    Supabase INSERT/UPSERT/UPDATE 재시도(지수 백오프).
+    429/timeout/5xx/network 계열은 재시도. 그 외(401/403 등)는 즉시 실패.
+    """
+    if client is None:
+        return False, "Supabase client is None"
+    tname = (table or "").strip()
+    if not tname:
+        return False, "table is empty"
+    action = (op or "insert").strip().lower()
+
+    last_err: str | None = None
+    for attempt in range(max_attempts):
+        try:
+            q = client.table(tname)
+            if action == "upsert":
+                q = q.upsert(payload, on_conflict="nickname")
+            elif action == "update":
+                # update는 호출부에서 eq를 포함해 payload에 넣지 않으므로 미지원
+                q = q.update(payload)
+            else:
+                q = q.insert(payload)
+            q.execute()
+            return True, None
+        except Exception as exc:  # noqa: BLE001
+            detail = _format_supabase_error(exc)
+            last_err = detail
+            low = detail.lower()
+            # 인증/RLS/키 오류는 재시도해도 해결되지 않음
+            if "401" in detail or "403" in detail or "row-level security" in low:
+                return False, detail
+            if attempt < max_attempts - 1 and _looks_retryable_supabase_error(detail):
+                _sleep_backoff(attempt)
+                continue
+            return False, detail
+
+    return False, last_err
+
+
 def sync_isolation_narrative_to_supabase(
     *,
     nickname: str,
@@ -951,8 +1162,16 @@ def sync_isolation_narrative_to_supabase(
         "signals_json": raw_signals,
     }
     try:
-        client.table(ISOLATION_NARRATIVES_TABLE).insert(row).execute()
-        return True, None
+        ok, err = _supabase_execute_with_retry(
+            client,
+            table=ISOLATION_NARRATIVES_TABLE,
+            op="insert",
+            payload=row,
+            max_attempts=4,
+        )
+        if ok:
+            return True, None
+        return False, err
     except Exception as exc:  # noqa: BLE001
         detail = _format_supabase_error(exc)
         _log.warning("isolation_narratives INSERT failed: %s", detail)
@@ -1029,41 +1248,73 @@ def log_isolation_turn_dual(
     )
     sqlite_kwargs.setdefault("participant_id", nick)
 
-    sb_ok = False
-    sb_err: str | None = None
-    if is_supabase_configured():
-        sb_ok, sb_err = sync_isolation_narrative_to_supabase(
-            nickname=nick,
-            user_input=um,
-            ai_response=am,
-            signals_json=sig,
-        )
-        notify_supabase_sync(
-            sb_ok, sb_err, table=ISOLATION_NARRATIVES_TABLE
-        )
-    elif is_streamlit_cloud():
-        notify_supabase_sync(
-            False,
-            "Supabase URL/Key 미설정 — Streamlit Secrets [supabase] 또는 .env 확인",
-            table=ISOLATION_NARRATIVES_TABLE,
-        )
-
+    # 1) SQLite: 반드시 먼저 저장 (락/동시성 대비 재시도)
     if not db.is_connected:
-        if sb_ok:
-            return True, None
-        if is_supabase_configured():
-            return False, sb_err or db.error_message or "database not connected"
         return False, db.error_message or "database not connected"
 
     db.ensure_schema()
-    ok, err = db.log_conversation(
-        user_message=um,
-        assistant_message=am,
-        **sqlite_kwargs,
-    )
-    if not ok and sb_ok:
+    ok = False
+    err: str | None = None
+    for attempt in range(4):
+        ok, err = db.log_conversation(
+            user_message=um,
+            assistant_message=am,
+            **sqlite_kwargs,
+        )
+        if ok:
+            break
+        if err and _sqlite_is_locked_error(Exception(err)) and attempt < 3:
+            _sleep_backoff(attempt)
+            continue
+        break
+
+    if not ok:
+        return ok, err
+
+    # 2) Supabase: 독립 파이프라인 (재시도 + 실패 시 Outbox 적재)
+    if not is_supabase_configured():
+        if is_streamlit_cloud():
+            notify_supabase_sync(
+                False,
+                "Supabase URL/Key 미설정 — Streamlit Secrets [supabase] 확인 후 Reboot",
+                table=ISOLATION_NARRATIVES_TABLE,
+            )
         return True, None
-    return ok, err
+
+    client = get_supabase_client()
+    if client is None:
+        notify_supabase_sync(
+            False,
+            "Supabase 클라이언트 초기화 실패",
+            table=ISOLATION_NARRATIVES_TABLE,
+        )
+        return True, None
+
+    # 먼저 Outbox 일부 플러시 (이전 실패분)
+    _flush_supabase_outbox(db, client=client, limit=20)
+
+    sb_ok, sb_err = sync_isolation_narrative_to_supabase(
+        nickname=nick,
+        user_input=um,
+        ai_response=am,
+        signals_json=sig,
+    )
+    notify_supabase_sync(sb_ok, sb_err, table=ISOLATION_NARRATIVES_TABLE)
+    if not sb_ok:
+        _enqueue_supabase_outbox(
+            db,
+            table_name=ISOLATION_NARRATIVES_TABLE,
+            op="insert",
+            nickname=nick,
+            payload={
+                "nickname": nick,
+                "user_input": um,
+                "ai_response": am,
+                "signals_json": _parse_signals_json(sig),
+            },
+            last_error=sb_err or "",
+        )
+    return True, None
 
 
 # ---------------------------------------------------------------------------
@@ -1150,8 +1401,16 @@ def sync_user_to_supabase(
     if first_visit_at:
         row["first_visit_at"] = first_visit_at
     try:
-        client.table(DLINSO_USERS_TABLE).upsert(row, on_conflict="nickname").execute()
-        return True, None
+        ok, err = _supabase_execute_with_retry(
+            client,
+            table=DLINSO_USERS_TABLE,
+            op="upsert",
+            payload=row,
+            max_attempts=4,
+        )
+        if ok:
+            return True, None
+        return False, err
     except Exception as exc:  # noqa: BLE001
         detail = _format_supabase_error(exc)
         _log.warning("dlinso_users upsert failed: %s", detail)
@@ -1227,8 +1486,16 @@ def sync_conversation_turn_to_supabase(
         "metadata_json": metadata_json or {},
     }
     try:
-        client.table(DLINSO_TURNS_TABLE).insert(row).execute()
-        return True, None
+        ok, err = _supabase_execute_with_retry(
+            client,
+            table=DLINSO_TURNS_TABLE,
+            op="insert",
+            payload=row,
+            max_attempts=4,
+        )
+        if ok:
+            return True, None
+        return False, err
     except Exception as exc:  # noqa: BLE001
         detail = _format_supabase_error(exc)
         _log.warning("dlinso_conversation_turns INSERT failed: %s", detail)
@@ -1253,7 +1520,23 @@ def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
     kwargs = {**kwargs, "nickname": nick}
     profile = kwargs.get("profile") or {}
 
-    sync_user_to_supabase(
+    client = get_supabase_client()
+    if client is None:
+        notify_supabase_sync(
+            False,
+            "Supabase 클라이언트 초기화 실패",
+            table="cloud_sync",
+        )
+        return
+
+    # Outbox 먼저 일부 플러시
+    try:
+        # kwargs 안에 DB 인스턴스가 없으므로, data/dlinso.db 기준 DB 매니저를 하나 만들어 flush
+        _flush_supabase_outbox(DatabaseManager(), client=client, limit=30)
+    except Exception:  # noqa: BLE001
+        pass
+
+    ok_u, err_u = sync_user_to_supabase(
         nickname=nick,
         password_hash=str(kwargs.get("password_hash") or ""),
         lang=str(kwargs.get("lang") or "ko"),
@@ -1307,6 +1590,47 @@ def cloud_sync_after_log_conversation(**kwargs: Any) -> None:
         metadata_json=metadata,
     )
     notify_supabase_sync(sb_ok, sb_err, table=DLINSO_TURNS_TABLE)
+    if not ok_u:
+        _enqueue_supabase_outbox(
+            DatabaseManager(),
+            table_name=DLINSO_USERS_TABLE,
+            op="upsert",
+            nickname=nick,
+            payload={
+                "nickname": nick,
+                "lang": str(kwargs.get("lang") or "ko"),
+                "gender": str(kwargs.get("gender") or ""),
+                "age_group": str(kwargs.get("age_group") or ""),
+                "life_stage": str(kwargs.get("life_stage") or ""),
+                "visit_count": int(kwargs.get("visit_count") or 1),
+                "total_turn_count": int(kwargs.get("total_turn_count") or 0),
+                "last_user_snippet": str(kwargs.get("last_user_snippet") or "")[:280],
+                "last_assistant_snippet": str(kwargs.get("last_assistant_snippet") or "")[:280],
+                "updated_at": korea_now_str(),
+            },
+            last_error=err_u or "",
+        )
+    if not sb_ok:
+        _enqueue_supabase_outbox(
+            DatabaseManager(),
+            table_name=DLINSO_TURNS_TABLE,
+            op="insert",
+            nickname=nick,
+            payload={
+                "nickname": nick,
+                "module_type": module_type,
+                "turn_type": str(kwargs.get("turn_type") or "conversation"),
+                "user_input": str(kwargs.get("user_message") or ""),
+                "ai_response": str(kwargs.get("assistant_message") or ""),
+                "user_input_ko": str(kwargs.get("user_message_ko") or ""),
+                "ai_response_ko": str(kwargs.get("assistant_message_ko") or ""),
+                "learning_audience": str(kwargs.get("learning_audience") or ""),
+                "is_midpoint": bool(kwargs.get("is_midpoint")),
+                "is_system": bool(kwargs.get("is_system")),
+                "metadata_json": (kwargs.get("metadata_json") or {}),
+            },
+            last_error=sb_err or "",
+        )
 
     sync_narrative_archive_session(**kwargs)
     if not bool(kwargs.get("is_system")):
@@ -1376,11 +1700,29 @@ def sync_narrative_archive_session(**kwargs: Any) -> None:
         "updated_at": korea_now_str(),
     }
     try:
-        client.table(USER_SESSIONS_TABLE).upsert(row, on_conflict="nickname").execute()
-    except Exception as exc:  # noqa: BLE001
-        _log.warning(
-            "user_sessions upsert failed: %s", _format_supabase_error(exc)
+        ok, err = _supabase_execute_with_retry(
+            client,
+            table=USER_SESSIONS_TABLE,
+            op="upsert",
+            payload=row,
+            max_attempts=4,
         )
+        if not ok:
+            raise RuntimeError(err or "user_sessions upsert failed")
+    except Exception as exc:  # noqa: BLE001
+        detail = _format_supabase_error(exc)
+        _log.warning("user_sessions upsert failed: %s", detail)
+        try:
+            _enqueue_supabase_outbox(
+                DatabaseManager(),
+                table_name=USER_SESSIONS_TABLE,
+                op="upsert",
+                nickname=nick,
+                payload=row,
+                last_error=detail,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return
 
 
@@ -1415,11 +1757,29 @@ def sync_narrative_asset_from_turn(
         "source_snippet": raw[:120],
     }
     try:
-        client.table(NARRATIVE_ASSETS_TABLE).insert(row).execute()
-    except Exception as exc:  # noqa: BLE001
-        _log.warning(
-            "narrative_assets INSERT failed: %s", _format_supabase_error(exc)
+        ok, err = _supabase_execute_with_retry(
+            client,
+            table=NARRATIVE_ASSETS_TABLE,
+            op="insert",
+            payload=row,
+            max_attempts=4,
         )
+        if not ok:
+            raise RuntimeError(err or "narrative_assets insert failed")
+    except Exception as exc:  # noqa: BLE001
+        detail = _format_supabase_error(exc)
+        _log.warning("narrative_assets INSERT failed: %s", detail)
+        try:
+            _enqueue_supabase_outbox(
+                DatabaseManager(),
+                table_name=NARRATIVE_ASSETS_TABLE,
+                op="insert",
+                nickname=nick,
+                payload=row,
+                last_error=detail,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return
 
 
