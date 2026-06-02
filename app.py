@@ -1149,6 +1149,16 @@ CUSTOM_CSS = """
         margin-top: 0.15rem;
         line-height: 1.4;
     }
+    /* 대화 입력 — Streamlit 기본 "Press Ctrl+Enter to apply" 숨김 (모바일·PC) */
+    div[data-testid="stVerticalBlock"]:has(.mobile-chat-composer-marker) div[data-testid="InputInstructions"],
+    div[data-testid="stVerticalBlock"]:has(.desktop-chat-composer-marker) div[data-testid="InputInstructions"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
     .narrative-asset-progress-marker + div[data-testid="stMarkdown"] p {
         font-size: 0.88rem;
         font-weight: 600;
@@ -2333,11 +2343,8 @@ def render_supabase_cloud_status() -> None:
     last_err = str(st.session_state.get("last_supabase_sync_error") or "").strip()
     table_hint = _supabase_target_table_hint()
 
+    # 연결 정상 시 배너 숨김 — 학생·모바일 UI 간소화 (실패 시에만 표시)
     if configured and client_ok and not last_err:
-        st.success(
-            f"클라우드 DB 연결됨 · 대화 저장 테이블: {table_hint} "
-            f"(프로젝트: {get_supabase_url().split('//')[-1][:40]})"
-        )
         return
 
     if not configured:
@@ -3915,7 +3922,6 @@ def _render_composer_text_row(
             height=input_height,
             placeholder=placeholder,
             label_visibility="collapsed",
-            max_chars=max_chars,
         )
         current_len = len(st.session_state.get(input_key, "") or "")
         st.markdown(
