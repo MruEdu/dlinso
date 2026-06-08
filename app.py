@@ -54,7 +54,9 @@ from personas import (
     PHASE_COLLECT,
     PHASE_GIANT,
     SERVICE_TITLE,
+    _tone_block,
     build_returning_greeting,
+    build_returning_system_addon,
     detect_distress,
     get_active_display,
     phase_label_ko,
@@ -78,8 +80,8 @@ from maieutic_engine import (
     analyze_uploaded_image,
     build_adaptive_scaffolding_addon,
     build_conversation_phase_addon,
-    build_global_maieutic_system_instruction,
     build_maieutic_addon,
+    build_system_instruction as build_core_system_instruction,
     format_image_display_for_user,
     merge_text_and_image,
 )
@@ -141,7 +143,6 @@ from isolation_engine import (
     save_isolation_turn_local,
 )
 from opening_copy import resolve_opening_message, resolve_opening_placeholder
-from prompts.registry import build_mode_system_addon, build_mode_system_addon_for_module
 from ui.age_entry import render_current_age_context, render_mode_roadmap
 
 os.chdir(APP_DIR)
@@ -2054,45 +2055,33 @@ def resolve_companion_display() -> dict[str, str]:
 
 
 def build_system_instruction() -> str:
+    """생애사적 대화(lifespan) — 모듈 분기 코어 + 런타임 맥락."""
     age = st.session_state.age_group or "30대"
     life_stage = st.session_state.life_stage or "일·활동 중"
     phase = st.session_state.phase
     summary = st.session_state.get("context_summary", "").strip()
-
     lang = get_lang()
-    base = build_global_maieutic_system_instruction(lang)
 
-    module_id = (st.session_state.get("selected_module_id") or "").strip()
-    if module_id and get_landing_module(module_id):
-        base += "\n\n" + build_mode_system_addon_for_module(
-            module_id,
-            phase,
-            giant_key=st.session_state.active_giant,
-            age_group=age,
-            life_stage=life_stage,
-            positive_resources=st.session_state.positive_resources,
-            current_concern=st.session_state.current_concern,
-            lang=lang,
-            is_returning=st.session_state.get("is_returning_user", False),
-            last_topic=st.session_state.get("last_visit_topic", ""),
-            nickname=st.session_state.get("participant_id", ""),
-            learning_audience=st.session_state.get("learning_audience", ""),
+    base = build_core_system_instruction("lifespan", lang)
+    base += f"\n\n[연령·생활 단계 맞춤 말투]\n{_tone_block(age, life_stage)}"
+
+    if st.session_state.get("is_returning_user"):
+        base += build_returning_system_addon(
+            st.session_state.get("last_visit_topic", ""),
+            st.session_state.get("participant_id", ""),
         )
-    else:
-        base += "\n\n" + build_mode_system_addon(
-            st.session_state.get("app_mode", MODE_LIFESPAN),
-            phase,
-            giant_key=st.session_state.active_giant,
-            age_group=age,
-            life_stage=life_stage,
-            positive_resources=st.session_state.positive_resources,
-            current_concern=st.session_state.current_concern,
-            lang=lang,
-            is_returning=st.session_state.get("is_returning_user", False),
-            last_topic=st.session_state.get("last_visit_topic", ""),
-            nickname=st.session_state.get("participant_id", ""),
-            learning_audience=st.session_state.get("learning_audience", ""),
+
+    if phase == PHASE_GIANT and st.session_state.active_giant:
+        giant = GIANTS.get(st.session_state.active_giant, GIANTS["adler"])
+        resources = st.session_state.positive_resources or []
+        resource_block = "\n".join(f"- {r}" for r in resources[:4])
+        base += (
+            f"\n\n[거장 관점 · {giant['label']}]\n"
+            f"- {giant['focus']} 관점을 1줄만 짧게 반영.\n"
+            f"- 현재 고민: {st.session_state.current_concern or '난관'}\n"
         )
+        if resource_block:
+            base += f"- Phase 1에서 모은 이야기:\n{resource_block}\n"
 
     if summary:
         base += f"\n\n[지금까지의 이야기 요약]\n{summary}"
@@ -2101,15 +2090,8 @@ def build_system_instruction() -> str:
         base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
 
     user_turns = effective_user_turn_count()
-    if _is_learning_mode():
-        min_turns = MIN_USER_TURNS_FOR_LEARNING_REPORT
-        report_done = bool(st.session_state.get("learning_report_count", 0))
-    elif _is_isolation_mode():
-        min_turns = MIN_USER_TURNS_FOR_REPORT
-        report_done = bool(st.session_state.get("isolation_report_count", 0))
-    else:
-        min_turns = MIN_USER_TURNS_FOR_MIDPOINT
-        report_done = bool(st.session_state.get("midpoint_analysis_count", 0))
+    min_turns = MIN_USER_TURNS_FOR_MIDPOINT
+    report_done = bool(st.session_state.get("midpoint_analysis_count", 0))
     base += build_conversation_phase_addon(
         user_turns,
         midpoint_completed=report_done,
@@ -2125,34 +2107,16 @@ def build_system_instruction() -> str:
     if user_turns >= min_turns or report_done:
         base += build_adaptive_scaffolding_addon(precision)
 
-    if _is_isolation_mode():
-        ireport = st.session_state.get("last_isolation_report")
-        if isinstance(ireport, dict) and ireport.get("section_inner_strength"):
-            base += (
-                "\n\n[내면 항해 일지 — 공유됨 · 점수 금지]\n"
-                f"{str(ireport.get('section_inner_strength', ''))[:280]}\n"
-            )
-    elif _is_learning_mode():
-        lreport = st.session_state.get("last_learning_report")
-        if isinstance(lreport, dict) and lreport.get("section_prescription"):
-            base += (
-                "\n\n[배움 지도 리포트 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
-                f"- [{lreport.get('title_prescription', TITLE_PRESCRIPTION)}] "
-                f"{str(lreport.get('section_prescription', ''))[:280]}\n"
-                f"- {format_learning_followup()}\n"
-                "- 대화를 종료하지 말고 이어갈 것."
-            )
-    else:
-        report = st.session_state.get("last_midpoint_report")
-        if isinstance(report, dict) and report.get("section_treasure"):
-            base += (
-                "\n\n[중간 마음 지도 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
-                f"- [{report.get('title_treasure', '삶의 보물지도')}] "
-                f"{str(report.get('section_treasure', ''))[:280]}\n"
-                '- 마무리 질문: "이 지도가 당신의 마음과 닮았나요? '
-                '조금 더 들려주고 싶은 장면이 있다면 말씀해 주세요."\n'
-                "- 대화를 종료하지 말고 이어갈 것."
-            )
+    report = st.session_state.get("last_midpoint_report")
+    if isinstance(report, dict) and report.get("section_treasure"):
+        base += (
+            "\n\n[중간 마음 지도 — 참여자와 공유됨 · 수치는 말하지 말 것]\n"
+            f"- [{report.get('title_treasure', '삶의 보물지도')}] "
+            f"{str(report.get('section_treasure', ''))[:280]}\n"
+            '- 마무리 질문: "이 지도가 당신의 마음과 닮았나요? '
+            '조금 더 들려주고 싶은 장면이 있다면 말씀해 주세요."\n'
+            "- 대화를 종료하지 말고 이어갈 것."
+        )
 
     base += _conversation_style_addon()
     return base
@@ -2223,7 +2187,7 @@ def _update_story_thread(user_text: str, assistant_text: str) -> None:
     u = (user_text or "").strip()[:80]
     a = (assistant_text or "").strip()[:120]
     if u and a:
-        st.session_state.story_thread = f"최근: 씨앗 「{u}」 → 서사 동행자 「{a}」"
+        st.session_state.story_thread = f"최근: 「{u}」 → 「{a}」"
 
 
 def _chat_max_output_tokens() -> int:

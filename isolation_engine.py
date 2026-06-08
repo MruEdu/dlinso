@@ -23,6 +23,7 @@ from modes.isolation import (
     PHASE_EARLY_MAX_TURNS,
 )
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from maieutic_engine import build_system_instruction
 from narrative_style import EMPATHETIC_REPHRASE_INSTRUCTION, user_turn_context_for_llm
 from prompts.isolation import build_isolation_system_addon
 
@@ -539,7 +540,7 @@ def build_full_isolation_system_instruction(
     )
     depths = _heuristic_depth([last_user] if last_user else texts[-1:])
     parts = [
-        build_global_isolation_system_instruction(lang),
+        build_system_instruction("isolation", lang),
         build_isolation_system_addon(
             age_group=age_group,
             life_stage=life_stage,

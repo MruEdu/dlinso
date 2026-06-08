@@ -10,6 +10,7 @@ import google.generativeai as genai
 from env_config import get_gemini_model_name
 from modes.learning import MIN_USER_TURNS_FOR_LEARNING_REPORT
 from narrative_engine import LANG_NAMES, _extract_json, ensure_gemini_configured
+from maieutic_engine import build_system_instruction
 from narrative_style import EMPATHETIC_REPHRASE_INSTRUCTION, user_turn_context_for_llm
 from prompts.learning import build_learning_system_addon
 
@@ -301,9 +302,8 @@ def build_learning_turn_addon(*, last_user: str = "", user_turns: int = 0) -> st
         block += f"\n- 참여자 배움 발화 누적: {user_turns}회."
     block += user_turn_context_for_llm(last_user, max_len=200)
     block += (
-        "\n- 공감·재진술(은유·의미, 원문·오타 복붙 금지) → **질문 1개**. "
-        "4대 렌즈(Bloom·Jagged·패턴·동역학) 중 아직 얇은 축을 우선. "
-        "동역학 축일 때는 추진력·마찰을 **한 질문**에 녹일 것(이론명 금지). "
+        "\n- 담백한 단문 2개 이내. 구체적 학습 맥락(시간·장소·행동) 위주. "
+        "원문·오타 복붙·학술 태그·번호 매기기 금지. "
         "평균·우수·미달 등 평가 라벨 금지."
     )
     return block
@@ -403,7 +403,7 @@ def build_full_learning_system_instruction(
 ) -> str:
     """샌드박스·앱 공통 — 배움의 정원사 전체 system instruction."""
     parts = [
-        build_global_learning_system_instruction(lang),
+        build_system_instruction("learning", lang),
         build_learning_system_addon(
             learning_audience=learning_audience,
             age_group=age_group,
