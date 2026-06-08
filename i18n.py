@@ -1,27 +1,25 @@
-"""UI 다국어 사전 — ko / en / mn / ja / zh / vi."""
+"""UI 다국어 사전 — ko(기본) / en / mn / zh / ja."""
 
 from __future__ import annotations
 
 import streamlit as st
 
-LANG_CODES = ("ko", "en", "mn", "ja", "zh", "vi")
+LANG_CODES = ("ko", "en", "mn", "zh", "ja")
 
 LANG_LABELS: dict[str, str] = {
     "ko": "한국어",
     "en": "English",
     "mn": "Монгол",
-    "ja": "日本語",
     "zh": "中文",
-    "vi": "Tiếng Việt",
+    "ja": "日本語",
 }
 
 LANG_FULL: dict[str, str] = {
     "ko": "Korean",
     "en": "English",
     "mn": "Mongolian",
-    "ja": "Japanese",
     "zh": "Chinese",
-    "vi": "Vietnamese",
+    "ja": "Japanese",
 }
 
 # 하단 배너 — 언어 선택과 무관하게 한/영 병기 (글로벌 공통)
@@ -118,6 +116,16 @@ TEXTS: dict[str, dict[str, str]] = {
             "data/isolation.db 로컬 저장."
         ),
         "home_version_note": "v1.2 · 마음챙김(숨결) 포함 4모듈",
+        "salon_guide_line": (
+            "dlinso — Dlinso Narrative Archive · 당신의 삶을 데이터 자산으로"
+        ),
+        "salon_guide_sub": (
+            "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. "
+            "아래에서 기록실을 선택하세요."
+        ),
+        "salon_section_title": "서사 기록실",
+        "home_scroll_cue": "또는 화면 아무 곳을 눌러 · 스크롤해 주세요",
+        "home_coming_soon": "준비 중",
         "mode_mindfulness_label": "숨결 · 마음 챙김",
         "mode_mindfulness_desc": (
             "호흡·신체 감각·감정을 판단 없이 알아차리는 마음챙김 대화. "
@@ -672,6 +680,16 @@ TEXTS: dict[str, dict[str, str]] = {
             "Stored in data/isolation.db."
         ),
         "home_version_note": "v1.2 · 4 modules incl. Mindfulness (Breath)",
+        "salon_guide_line": (
+            "dlinso — Dlinso Narrative Archive · your life as narrative data"
+        ),
+        "salon_guide_sub": (
+            "Not tests or scores—a digital archive to withdraw and record "
+            "words and memories. Choose a room below."
+        ),
+        "salon_section_title": "Narrative Archive",
+        "home_scroll_cue": "Or tap anywhere · scroll to continue",
+        "home_coming_soon": "Coming soon",
         "mode_mindfulness_label": "Breath · Mindful Presence",
         "mode_mindfulness_desc": (
             "Mindfulness dialogue—breath, body, and feeling without judgment. "

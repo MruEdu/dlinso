@@ -1471,7 +1471,10 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
     idx += 1
 
     with cols[idx]:
-        st.empty()
+        if on_brand_home:
+            render_language_selector(key="nav_lang", compact=True)
+        else:
+            st.empty()
     idx += 1
 
     if on_brand_home and idx < len(cols):
@@ -4146,8 +4149,9 @@ def _run_app() -> None:
     home_gate = view in (VIEW_HOME, VIEW_INTRO) and not st.session_state.get(
         "home_intro_revealed", False
     )
+    on_home_view = view in (VIEW_HOME, VIEW_INTRO)
     if not home_gate:
-        render_hybrid_nav(include_lang=not chat_screen)
+        render_hybrid_nav(include_lang=not chat_screen and not on_home_view)
 
     if view == VIEW_INQUIRY:
         with st.container():

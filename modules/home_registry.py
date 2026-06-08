@@ -70,6 +70,8 @@ class LandingModuleSpec:
     description_en: str = ""
     outcome_line1: str = ""
     outcome_line2: str = ""
+    outcome_line1_en: str = ""
+    outcome_line2_en: str = ""
 
 
 LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
@@ -84,6 +86,8 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
         description_en="Weaving the path you have walked into art",
         outcome_line1="대화가 쌓이면 당신만의 서사가 선명해집니다.",
         outcome_line2="10턴 이후, 마음 지도 리포트로 삶의 흐름을 돌아볼 수 있습니다.",
+        outcome_line1_en="As dialogue accumulates, your narrative becomes clearer.",
+        outcome_line2_en="After 10 turns, revisit your life flow with a mind-map report.",
     ),
     LandingModuleSpec(
         MODULE_LEARNING,
@@ -96,6 +100,8 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
         description_en="Tracing your summit along the learning horizon",
         outcome_line1="배움 습관·동기·환경을 깊이 이해하게 됩니다.",
         outcome_line2="학습 서사 리포트로 강점과 보완 영역을 확인합니다.",
+        outcome_line1_en="Understand your learning habits, motivation, and context in depth.",
+        outcome_line2_en="Learning narrative reports highlight strengths and growth areas.",
     ),
     LandingModuleSpec(
         MODULE_FOREST,
@@ -108,6 +114,8 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
         description_en="A forest where selfhood and connection breathe in stillness",
         outcome_line1="자아성·사회성 궤적을 검사 없이 이야기로 열어 갑니다.",
         outcome_line2="6턴 자산 · 10턴 내면 항해 일지 · data/isolation.db 로컬 저장.",
+        outcome_line1_en="Open selfhood and social recovery arcs through story—not diagnosis.",
+        outcome_line2_en="6-turn assets · 10-turn inner voyage log · stored locally in data/isolation.db.",
     ),
     LandingModuleSpec(
         MODULE_EMOTION,
@@ -120,6 +128,8 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
         description_en="A delicate dialogue with the tides within",
         outcome_line1="호흡·신체 감각·감정을 판단 없이 알아차리는 공간입니다.",
         outcome_line2="담백한 단문으로 현재에 머무는 마음챙김 대화.",
+        outcome_line1_en="A space to notice breath, body, and feeling without judgment.",
+        outcome_line2_en="Plain, short mindfulness dialogue that stays in the present.",
     ),
 )
 

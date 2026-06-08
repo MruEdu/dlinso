@@ -8,7 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.version import APP_VERSION_LABEL
-from i18n import get_lang, t
+from i18n import get_lang, render_language_selector, t
 from modules.home_registry import (
     LEARNING_SPOTLIGHT_CTA_EN,
     LEARNING_SPOTLIGHT_CTA_KO,
@@ -21,9 +21,6 @@ from modules.home_registry import (
     LANDING_MODULES,
     MODULE_CTA_ICON,
     MODULE_LEARNING,
-    SALON_GUIDE_LINE,
-    SALON_GUIDE_SUB,
-    SALON_SECTION_TITLE,
     active_deep_link_module_id,
     get_landing_module,
     module_cta_label,
@@ -114,12 +111,28 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) [data-tes
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) > section.main {{
     padding-top: 0 !important;
 }}
-/* 하이브리드 네비 — 랜딩 전용 초소형 */
+/* 하이브리드 네비 — 랜딩 전용 초소형 · 상단 고정 */
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type {{
-    padding: 0.12rem 0.35rem 0.15rem !important;
-    margin: 0 !important;
-    box-shadow: 0 1px 6px rgba(50, 40, 70, 0.05) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 200 !important;
+    padding: 0.35rem 0.35rem 0.4rem !important;
+    margin: 0 0 0.15rem !important;
+    background: rgba(250, 249, 246, 0.94) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: 0 1px 8px rgba(50, 40, 70, 0.08) !important;
+    border-bottom: 1px solid rgba(80, 70, 60, 0.08) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type
+[data-testid="stSelectbox"] div[data-baseweb="select"] {{
+    min-height: 2rem !important;
+    font-size: 0.78rem !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    border: 1px solid rgba(60, 50, 40, 0.14) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker) .hybrid-brand {{
     line-height: 1.1 !important;
@@ -851,10 +864,32 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active) .dlinso-bra
     font-style: normal;
     letter-spacing: 0.14em;
 }}
+div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker) {{
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 200 !important;
+    padding: 0.4rem 0 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+    background: rgba(250, 248, 244, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border-bottom: 1px solid rgba(80, 70, 60, 0.08) !important;
+}}
+div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
+[data-testid="stSelectbox"] {{
+    margin: 0 !important;
+}}
+div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
+[data-testid="stSelectbox"] div[data-baseweb="select"] {{
+    font-size: 0.8rem !important;
+    min-height: 2.1rem !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    border: 1px solid rgba(60, 50, 40, 0.16) !important;
+    box-shadow: 0 1px 4px rgba(40, 30, 20, 0.06) !important;
+}}
 .dlinso-home-mininav-wrap {{
     position: relative; z-index: 50;
-    padding: 0.35rem 0 0.5rem;
-    max-width: 940px; margin: 0 auto;
+    padding: 0; max-width: 940px; margin: 0 auto;
 }}
 .lab-footer-brand {{
     text-align: center; padding: 2rem 1rem 1.25rem;
@@ -977,16 +1012,18 @@ def _version_pill_html() -> str:
 
 
 def render_home_top_bar(*, dark: bool = False) -> None:
-    """홈 전용 상단 — About dlinso."""
+    """홈 전용 상단 — 언어 · About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
     st.markdown('<div class="dlinso-home-mininav-wrap">', unsafe_allow_html=True)
-    left, right = st.columns([3, 1], gap="small")
+    left, mid, right = st.columns([2.2, 1.3, 1.3], gap="small")
     with left:
         color = "#c8c4be" if dark else TEXT_DARK
         st.markdown(
             f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">dlinso</span>',
             unsafe_allow_html=True,
         )
+    with mid:
+        render_language_selector(key="home_lang", compact=True)
     with right:
         if st.button(
             t("nav_about"),
@@ -1043,7 +1080,15 @@ def _brand_hero_html(*, lifted: bool) -> str:
     return intro_bg + hero_inner
 
 
+def _module_card_title_parts(spec) -> tuple[str, str]:
+    lang = get_lang()
+    title_src = spec.title if lang == "ko" else (spec.title_en or spec.title)
+    parts = title_src.split(" · ", 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
 def _card_html(spec, *, active: bool, spotlight: bool = False) -> str:
+    lang = get_lang()
     state = "dlinso-salon-card--live" if active else "dlinso-salon-card--soon"
     marker = "dlinso-salon-card-marker" if active else "dlinso-salon-card--soon-marker"
     spot = " dlinso-salon-card--spotlight" if spotlight else ""
@@ -1052,17 +1097,20 @@ def _card_html(spec, *, active: bool, spotlight: bool = False) -> str:
         if spec.status_badge
         else ""
     )
-    parts = spec.title.split(" · ", 1)
-    word = html.escape(parts[0])
-    sub = html.escape(parts[1]) if len(parts) > 1 else ""
+    word, sub = _module_card_title_parts(spec)
+    word = html.escape(word)
+    sub = html.escape(sub)
     sub_html = f'<p class="dlinso-salon-card-sub">{sub}</p>' if sub else ""
-    desc_en = (
-        f'<p class="dlinso-salon-card-desc-en">{html.escape(spec.description_en)}</p>'
-        if spec.description_en
-        else ""
-    )
-    o1 = html.escape(spec.outcome_line1) if spec.outcome_line1 else ""
-    o2 = html.escape(spec.outcome_line2) if spec.outcome_line2 else ""
+    if lang == "ko":
+        desc = spec.description
+        o1_raw, o2_raw = spec.outcome_line1, spec.outcome_line2
+    else:
+        desc = spec.description_en or spec.description
+        o1_raw = spec.outcome_line1_en or spec.outcome_line1
+        o2_raw = spec.outcome_line2_en or spec.outcome_line2
+    desc_en = ""
+    o1 = html.escape(o1_raw) if o1_raw else ""
+    o2 = html.escape(o2_raw) if o2_raw else ""
     outcomes = ""
     if o1 or o2:
         outcomes = (
@@ -1077,7 +1125,7 @@ def _card_html(spec, *, active: bool, spotlight: bool = False) -> str:
         f'data-module-id="{html.escape(spec.id)}">'
         f"{badge}"
         f'<h2 class="dlinso-salon-card-word">{word}</h2>{sub_html}'
-        f'<p class="dlinso-salon-card-desc">{html.escape(spec.description)}</p>'
+        f'<p class="dlinso-salon-card-desc">{html.escape(desc)}</p>'
         f"{desc_en}{outcomes}</article>"
     )
 
@@ -1087,7 +1135,12 @@ def _render_module_card(spec, *, spotlight: bool = False) -> None:
     module_id = spec.id
     if not active:
         st.markdown(_card_html(spec, active=False, spotlight=spotlight), unsafe_allow_html=True)
-        st.button("coming soon", key=f"home_module_disabled_{module_id}", disabled=True, use_container_width=True)
+        st.button(
+            t("home_coming_soon"),
+            key=f"home_module_disabled_{module_id}",
+            disabled=True,
+            use_container_width=True,
+        )
         return
     with st.form(key=f"home_form_{module_id}", border=False):
         st.markdown(_card_html(spec, active=True, spotlight=spotlight), unsafe_allow_html=True)
@@ -1117,7 +1170,7 @@ def _render_intro_gate() -> None:
     st.markdown('<div class="dlinso-reveal-overlay-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.button("dlinso-reveal", key="home_reveal_fullclick", on_click=reveal_home_intro)
     st.markdown(
-        '<p class="dlinso-scroll-cue">또는 화면 아무 곳을 눌러 · 스크롤해 주세요</p>',
+        f'<p class="dlinso-scroll-cue">{html.escape(t("home_scroll_cue"))}</p>',
         unsafe_allow_html=True,
     )
     st.markdown('<div style="height:18vh" aria-hidden="true"></div>', unsafe_allow_html=True)
@@ -1133,15 +1186,15 @@ def _render_salon_section() -> None:
     st.markdown(about_intro_panel_html(), unsafe_allow_html=True)
     st.markdown(
         f'<div class="dlinso-salon-guide">'
-        f'<p class="dlinso-salon-guide-title">{html.escape(SALON_GUIDE_LINE)}</p>'
-        f'<p class="dlinso-salon-guide-sub">{html.escape(SALON_GUIDE_SUB)}</p>'
+        f'<p class="dlinso-salon-guide-title">{html.escape(t("salon_guide_line"))}</p>'
+        f'<p class="dlinso-salon-guide-sub">{html.escape(t("salon_guide_sub"))}</p>'
         f"</div>",
         unsafe_allow_html=True,
     )
     _render_learning_spotlight()
     st.markdown(
         f'<section class="dlinso-salon-section">'
-        f'<h2 class="dlinso-salon-heading">{html.escape(SALON_SECTION_TITLE)}</h2></section>',
+        f'<h2 class="dlinso-salon-heading">{html.escape(t("salon_section_title"))}</h2></section>',
         unsafe_allow_html=True,
     )
     st.markdown('<div class="dlinso-salon-grid">', unsafe_allow_html=True)
