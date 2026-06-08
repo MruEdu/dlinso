@@ -601,6 +601,9 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
 .dlinso-salon-col--forest.dlinso-salon-card--live {{
     border-top: 4px solid #3d7a5c;
 }}
+.dlinso-salon-col--emotion.dlinso-salon-card--live {{
+    border-top: 4px solid #7a8fa8;
+}}
 .dlinso-learning-spotlight {{
     position: relative;
     z-index: 2;
@@ -705,7 +708,9 @@ div[data-testid="column"]:has(.dlinso-salon-cta--narrative) [data-testid="stForm
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-cta--learning) [data-testid="stFormSubmitButton"],
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-cta--forest) [data-testid="stFormSubmitButton"] {{
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) [data-testid="stFormSubmitButton"],
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) [data-testid="stFormSubmitButton"] {{
     width: 100% !important;
     margin-top: 0.55rem !important;
 }}
@@ -714,7 +719,9 @@ div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button,
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-cta--learning) button,
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
-div[data-testid="column"]:has(.dlinso-salon-cta--forest) button {{
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button {{
     width: 100% !important;
     display: block !important;
     margin-top: 0 !important;
@@ -749,6 +756,13 @@ div[data-testid="column"]:has(.dlinso-salon-cta--forest) button {{
     box-shadow: 0 4px 14px rgba(45, 107, 79, 0.35) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button {{
+    background: linear-gradient(180deg, #9aadc4 0%, #6b849e 55%, #556b82 100%) !important;
+    border: 1px solid #4a5f75 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(107, 132, 158, 0.35) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button:hover {{
     transform: translateY(-2px) !important;
     filter: brightness(1.06) !important;
@@ -765,6 +779,12 @@ div[data-testid="column"]:has(.dlinso-salon-cta--forest) button:hover {{
     transform: translateY(-2px) !important;
     filter: brightness(1.06) !important;
     box-shadow: 0 8px 20px rgba(45, 107, 79, 0.42) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button:hover {{
+    transform: translateY(-2px) !important;
+    filter: brightness(1.06) !important;
+    box-shadow: 0 8px 20px rgba(107, 132, 158, 0.42) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-card--soon-marker) button {{
