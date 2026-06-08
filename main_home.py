@@ -848,13 +848,18 @@ div[data-testid="column"]:has(.dlinso-salon-card--soon-marker) button {{
     background: #f5f5f5 !important;
 }}
 
-div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
-.dlinso-reveal-overlay-marker ~ div button {{
+.dlinso-reveal-hidden-btn-marker ~ div[data-testid="stElementContainer"] {{
     position: fixed !important; inset: 0 !important;
     width: 100vw !important; height: 100vh !important;
     opacity: 0 !important; z-index: 25 !important;
-    border: none !important; background: transparent !important;
-    cursor: pointer !important;
+    margin: 0 !important; padding: 0 !important;
+    pointer-events: auto !important;
+}}
+.dlinso-reveal-hidden-btn-marker ~ div[data-testid="stElementContainer"] button {{
+    width: 100% !important; height: 100% !important;
+    min-height: 100vh !important;
+    opacity: 0 !important; border: none !important;
+    background: transparent !important; cursor: pointer !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
 .dlinso-gate-enter-wrap ~ div button {{
@@ -913,6 +918,24 @@ div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
     position: relative; z-index: 50;
     padding: 0; max-width: 940px; margin: 0 auto;
 }}
+.dlinso-mininav-brand {{
+    font-size: 0.82rem; letter-spacing: 0.2em; color: {TEXT_DARK};
+    line-height: 2.1rem;
+}}
+div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
+[data-testid="stHorizontalBlock"] {{
+    align-items: center !important;
+}}
+@media (max-width: 600px) {{
+    div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker) {{
+        padding-left: 0.35rem !important;
+        padding-right: 0.35rem !important;
+    }}
+    div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
+    [data-testid="stSelectbox"] {{
+        min-width: 6.5rem !important;
+    }}
+}}
 .lab-footer-brand {{
     text-align: center; padding: 2rem 1rem 0.85rem;
     color: {TEXT_MID}; font-size: 0.78rem;
@@ -965,15 +988,6 @@ REVEAL_INTERACTION_JS = """
     if (isUiControl(ev)) return;
     reveal();
   }, { once: true, capture: true });
-  let scrolled = false;
-  let scrollReady = false;
-  setTimeout(function () { scrollReady = true; }, 900);
-  function onScroll() {
-    if (!scrollReady || scrolled) return;
-    const y = parentWin.scrollY || doc.documentElement.scrollTop || 0;
-    if (y > 120) { scrolled = true; reveal(); }
-  }
-  parentWin.addEventListener("scroll", onScroll, { passive: true });
 })();
 </script>
 """
@@ -986,6 +1000,21 @@ def sync_home_intro_revealed() -> bool:
         st.session_state.home_intro_revealed = True
         return True
     return False
+
+
+def _wants_intro_gate() -> bool:
+    """스플래시 게이트 — ?gate=1 일 때만 (기본은 살롱 바로 노출)."""
+    return query_param_str("gate").lower() in ("1", "true", "yes")
+
+
+def ensure_home_salon_ready() -> bool:
+    """모바일·PC 동일 — 기본 진입은 서사 기록실(살롱) + 상단 네비."""
+    if sync_home_intro_revealed():
+        return True
+    if _wants_intro_gate():
+        return False
+    reveal_home_intro()
+    return True
 
 
 def reveal_home_intro() -> None:
@@ -1066,23 +1095,22 @@ def render_home_top_bar(*, dark: bool = False) -> None:
     """홈 전용 상단 — 언어 · About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
     st.markdown('<div class="dlinso-home-mininav-wrap">', unsafe_allow_html=True)
-    left, mid, right = st.columns([2.2, 1.3, 1.3], gap="small")
-    with left:
-        color = "#c8c4be" if dark else TEXT_DARK
+    brand_color = "#c8c4be" if dark else TEXT_DARK
+    row1_left, row1_right = st.columns([1, 1.15], gap="small")
+    with row1_left:
         st.markdown(
-            f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">dlinso</span>',
+            f'<span class="dlinso-mininav-brand" style="color:{brand_color};">dlinso</span>',
             unsafe_allow_html=True,
         )
-    with mid:
+    with row1_right:
         render_language_selector(key="home_lang", compact=True)
-    with right:
-        if st.button(
-            t("nav_about"),
-            key="home_nav_about",
-            use_container_width=True,
-            type="secondary",
-        ):
-            open_dlinso_about()
+    if st.button(
+        t("nav_about"),
+        key="home_nav_about",
+        use_container_width=True,
+        type="secondary",
+    ):
+        open_dlinso_about()
     st.markdown("</div>", unsafe_allow_html=True)
     render_dlinso_about_expander_if_needed()
 
@@ -1217,8 +1245,13 @@ def _render_intro_gate() -> None:
         reveal_home_intro()
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown('<div class="dlinso-reveal-overlay-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-    st.button("dlinso-reveal", key="home_reveal_fullclick", on_click=reveal_home_intro)
+    st.markdown('<div class="dlinso-reveal-hidden-btn-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.button(
+        "dlinso-reveal",
+        key="home_reveal_fullclick",
+        on_click=reveal_home_intro,
+        label_visibility="collapsed",
+    )
     st.markdown(
         f'<p class="dlinso-scroll-cue">{html.escape(t("home_scroll_cue"))}</p>',
         unsafe_allow_html=True,
@@ -1276,7 +1309,7 @@ def render_main_home() -> bool:
     _html_layout_marker("dlinso-landing-root-marker")
     if "home_intro_revealed" not in st.session_state:
         st.session_state.home_intro_revealed = False
-    if sync_home_intro_revealed():
+    if ensure_home_salon_ready():
         _render_salon_section()
         return True
     _render_intro_gate()

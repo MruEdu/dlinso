@@ -91,6 +91,7 @@ from narrative_engine import (
 )
 from core.views import VIEW_APP, VIEW_HOME, VIEW_INQUIRY, VIEW_INTRO
 from main_home import (
+    ensure_home_salon_ready,
     render_home_footer_minimal,
     render_main_home,
     sync_home_intro_revealed,
@@ -4175,6 +4176,8 @@ def _run_app() -> None:
     db = resolve_active_db()
 
     view = st.session_state.get("current_view", VIEW_HOME)
+    if view in (VIEW_HOME, VIEW_INTRO):
+        ensure_home_salon_ready()
     chat_screen = is_ready_for_chat() and view == VIEW_APP
     home_gate = view in (VIEW_HOME, VIEW_INTRO) and not st.session_state.get(
         "home_intro_revealed", False
