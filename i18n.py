@@ -36,7 +36,7 @@ FOOTER_BANNER: dict[str, str] = {
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "archive_title": "서사 기록실",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "서사 인출 시작",
@@ -52,7 +52,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "대화로 발견하는 나의 보물,\n\n예술이 되는 나의 삶.\n\n**dlinso**"
         ),
-        "hub_slogan_beta_note": "v1.1 — 기능과 문구가 계속 다듬어지고 있어요.",
+        "hub_slogan_beta_note": "v1.2 — 기능과 문구가 계속 다듬어지고 있어요.",
         "intro_headline": (
             "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
         ),
@@ -116,6 +116,17 @@ TEXTS: dict[str, dict[str, str]] = {
             "고립·은둔을 위한 Anti-Diagnosis 서사 — 행정 지표가 아닌 "
             "자아성·사회성 회복 궤적. 6턴 자산, 10턴 내면 항해 일지. "
             "data/isolation.db 로컬 저장."
+        ),
+        "mode_mindfulness_label": "숨결 · 마음 챙김",
+        "mode_mindfulness_desc": (
+            "호흡·신체 감각·감정을 판단 없이 알아차리는 마음챙김 대화. "
+            "담백한 단문으로 현재에 머무는 안전 기지."
+        ),
+        "mindfulness_opening": (
+            "안녕, 나는 마음챙김 가이드야. 🌬️\n\n"
+            "여기서는 잘해야 한다는 말 없이, 지금 이 순간의 호흡과 몸의 느낌만 "
+            "천천히 따라가면 돼.\n\n"
+            "편하게 앉아서, 지금 숨이 들어오고 나가는 느낌부터 한 줄 적어 줄래?"
         ),
         "isolation_opening": (
             "안녕, 나는 연결의 동행자야. 🌲\n\n"
@@ -566,7 +577,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "en": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "archive_title": "Narrative Archive",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "Begin narrative withdrawal",
@@ -607,7 +618,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "Discover your treasure through dialogue — your life as art. **dlinso**"
         ),
-        "hub_slogan_beta_note": "v1.1 — features and copy are still evolving.",
+        "hub_slogan_beta_note": "v1.2 — features and copy are still evolving.",
         "lang_label": "Language",
         "tab_new": "First visit",
         "tab_return": "Continue",
@@ -658,6 +669,17 @@ TEXTS: dict[str, dict[str, str]] = {
             "Anti-diagnosis narrative for solitude — identity & social recovery, "
             "not admin metrics. Assets at 6 turns, voyage log at 10. "
             "Stored in data/isolation.db."
+        ),
+        "mode_mindfulness_label": "Breath · Mindful Presence",
+        "mode_mindfulness_desc": (
+            "Mindfulness dialogue—breath, body, and feeling without judgment. "
+            "Short, calm prompts to stay with the present."
+        ),
+        "mindfulness_opening": (
+            "Hello, I'm your mindfulness guide. 🌬️\n\n"
+            "No need to do it right—just notice your breath and body, slowly, "
+            "in this moment.\n\n"
+            "When you're ready, write one line about how your breath feels right now."
         ),
         "isolation_opening": (
             "Hello, I'm your Companion of Connection. 🌲\n\n"
@@ -858,7 +880,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "mn": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "brand_tagline": "Амь бүр урлаг болдог",
         "brand_gate_hint": "scroll · click · эхлэх",
         "hub_eyebrow": "Narrative Research Hub",
@@ -917,7 +939,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ja": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "brand_tagline": "すべての人生は芸術になる",
         "brand_gate_hint": "scroll · click · はじめる",
         "hub_eyebrow": "Narrative Research Hub",
@@ -975,7 +997,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "zh": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "brand_tagline": "每一种人生，皆成艺术",
         "brand_gate_hint": "scroll · click · 开始",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1033,7 +1055,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "vi": {
         "app_title": "dlinso",
-        "beta_badge": "1.1",
+        "beta_badge": "1.2",
         "brand_tagline": "Mỗi cuộc đời đều trở thành nghệ thuật",
         "brand_gate_hint": "scroll · click · bắt đầu",
         "hub_eyebrow": "Narrative Research Hub",

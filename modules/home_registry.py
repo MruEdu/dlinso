@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN
+from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN, MODE_MINDFULNESS
 
 MODULE_NARRATIVE = "narrative"
 MODULE_LEARNING = "learning"
@@ -21,16 +21,19 @@ MODULE_CTA_KO: dict[str, str] = {
     MODULE_NARRATIVE: "동행 시작하기",
     MODULE_LEARNING: "여정 시작하기",
     MODULE_FOREST: "숲으로 들어가기",
+    MODULE_EMOTION: "숨결 시작하기",
 }
 MODULE_CTA_ICON: dict[str, str] = {
     MODULE_NARRATIVE: "✦",
     MODULE_LEARNING: "◇",
     MODULE_FOREST: "🌲",
+    MODULE_EMOTION: "🌬️",
 }
 MODULE_CTA_EN: dict[str, str] = {
     MODULE_NARRATIVE: "Begin Companion",
     MODULE_LEARNING: "Begin Learning Journey",
     MODULE_FOREST: "Enter the Forest",
+    MODULE_EMOTION: "Begin Mindful Breath",
 }
 
 # ?module=learning 딥링크 전용 카피
@@ -110,14 +113,13 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
         MODULE_EMOTION,
         "숨결 · 마음 챙김",
         "내면의 물결을 마주하는 섬세한 대화",
-        None,
-        False,
-        status_badge="coming soon",
-        prompt_channel="emotion",
+        MODE_MINDFULNESS,
+        True,
+        prompt_channel="mindfulness",
         title_en="Breath · Mindful Presence",
         description_en="A delicate dialogue with the tides within",
-        outcome_line1="정서의 결을 섬세하게 따라가는 공간입니다.",
-        outcome_line2="곧 문을 열 예정입니다.",
+        outcome_line1="호흡·신체 감각·감정을 판단 없이 알아차리는 공간입니다.",
+        outcome_line2="담백한 단문으로 현재에 머무는 마음챙김 대화.",
     ),
 )
 

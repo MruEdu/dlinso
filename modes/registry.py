@@ -7,6 +7,7 @@ from dataclasses import dataclass
 MODE_LIFESPAN = "lifespan"
 MODE_LEARNING = "learning"
 MODE_ISOLATION = "isolation"
+MODE_MINDFULNESS = "mindfulness"
 MODE_ASSESSMENT = "assessment"
 MODE_COUNSELING = "counseling"
 MODE_RESEARCH = "research"
@@ -42,6 +43,13 @@ APP_MODES: tuple[AppModeSpec, ...] = (
         MODE_ISOLATION,
         "mode_isolation_label",
         "mode_isolation_desc",
+        True,
+        "mode_tag_open",
+    ),
+    AppModeSpec(
+        MODE_MINDFULNESS,
+        "mode_mindfulness_label",
+        "mode_mindfulness_desc",
         True,
         "mode_tag_open",
     ),

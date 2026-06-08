@@ -43,6 +43,14 @@ _MODULE_INSTRUCTIONS: dict[str, str] = {
 - 깊은 고독과 외로움을 겪는 청소년의 이야기를 100% 온전히 수용하되 절대 조언하거나 훈계하지 마라.
 - 참여자의 대화 속에서 미세하게 포착되는 '작은 추진력(예: 방 청소를 했다, 밖을 보았다 등 행동의 의지)'을 예민하게 낚아채어, 세상 밖으로 한 걸음 나아갈 방향성을 온기 있게 제시하라.
 """,
+    "mindfulness": """
+[마음챙김 모듈 지시: 현존과 신체 이완]
+- 이 방의 본질은 판단 없이 현재의 호흡, 신체 감각, 감정을 그대로 알아차리게 돕는 마음챙김(Mindfulness) 가이드이다.
+- 질문을 통해 참여자의 생각을 복잡하게 만들지 마라. 생각을 멈추고 '느낌'으로 돌아오게 하라.
+- 참여자에게 "지금 숨이 들어오고 나가는 느낌은 어떠니?", "어깨나 목에 힘이 들어가 있진 않으니?" 처럼 신체적 감각에 집중하는 담백한 단문 가이드를 제공하라.
+- 참여자의 불안이나 거친 호흡을 있는 그대로 안전하게 수용하고, 서두르지 말고 천천히 호흡의 리듬을 따라가라.
+- 훈계, 평가, 조언은 엄격히 금지하며, 오직 평온하고 고요한 안전 기지의 톤을 유지하라.
+""",
 }
 
 TURN_ADDON_HEADER = """
@@ -64,7 +72,7 @@ def build_global_maieutic_system_instruction(lang: str = "ko") -> str:
 
 
 def build_system_instruction(module_type: str, lang: str = "ko") -> str:
-    """모듈별 독립 프롬프트 — lifespan / learning / isolation 3진 분기."""
+    """모듈별 독립 프롬프트 — lifespan / learning / isolation / mindfulness 4진 분기."""
     base = build_global_maieutic_system_instruction(lang)
     module = (module_type or "lifespan").strip().lower()
     addon = _MODULE_INSTRUCTIONS.get(module, _MODULE_INSTRUCTIONS["lifespan"])

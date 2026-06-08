@@ -1475,7 +1475,7 @@ _EMOTION_HINTS_KO: tuple[str, ...] = (
 
 
 def _cloud_sync_modules() -> frozenset[str]:
-    return frozenset({"lifespan", "learning"})
+    return frozenset({"lifespan", "learning", "mindfulness"})
 
 
 def sync_user_to_supabase(

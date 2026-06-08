@@ -103,7 +103,7 @@ from modules.home_registry import (
     reconcile_landing_module_session,
     sync_landing_module_from_query,
 )
-from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN
+from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN, MODE_MINDFULNESS
 from modes.isolation import (
     MIN_USER_TURNS_FOR_ASSET,
     MIN_USER_TURNS_FOR_REPORT,
@@ -115,6 +115,7 @@ from modes.learning import (
     get_learning_display,
     is_valid_learning_audience,
 )
+from modes.mindfulness import get_mindfulness_display
 from ui.learning_audience import (
     render_learning_audience_selectbox,
     render_learning_audience_selector,
@@ -1968,6 +1969,21 @@ def _is_isolation_mode() -> bool:
     return st.session_state.get("app_mode", MODE_LIFESPAN) == MODE_ISOLATION
 
 
+def _is_mindfulness_mode() -> bool:
+    return st.session_state.get("app_mode", MODE_LIFESPAN) == MODE_MINDFULNESS
+
+
+def _resolve_log_module_type() -> str:
+    """Supabase dlinso_conversation_turns.module_type 값."""
+    if _is_learning_mode():
+        return "learning"
+    if _is_isolation_mode():
+        return "isolation"
+    if _is_mindfulness_mode():
+        return "mindfulness"
+    return "lifespan"
+
+
 def maybe_restore_isolation_history_from_cloud() -> None:
     """
     숲 — 로그인 탭 없이 앱만 다시 열었을 때(Cloud 재배포·새 세션) Supabase에서 대화 hydrate.
@@ -2049,18 +2065,43 @@ def resolve_companion_display() -> dict[str, str]:
         return get_learning_display(st.session_state.get("learning_audience", ""))
     if _is_isolation_mode():
         return get_isolation_display()
+    if _is_mindfulness_mode():
+        return get_mindfulness_display()
     return get_active_display(
         st.session_state.phase, st.session_state.active_giant
     )
 
 
 def build_system_instruction() -> str:
+    """모듈 분기 코어 + 런타임 맥락 (lifespan / mindfulness)."""
+    lang = get_lang()
+    if _is_mindfulness_mode():
+        return _build_mindfulness_system_instruction(lang)
+    return _build_lifespan_system_instruction(lang)
+
+
+def _build_mindfulness_system_instruction(lang: str) -> str:
+    age = st.session_state.age_group or "30대"
+    life_stage = st.session_state.life_stage or "일·활동 중"
+    summary = st.session_state.get("context_summary", "").strip()
+
+    base = build_core_system_instruction("mindfulness", lang)
+    base += f"\n\n[연령·생활 단계 맞춤 말투]\n{_tone_block(age, life_stage)}"
+    if summary:
+        base += f"\n\n[지금까지의 대화 요약]\n{summary}"
+    thread = st.session_state.get("story_thread", "").strip()
+    if thread:
+        base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
+    base += _conversation_style_addon()
+    return base
+
+
+def _build_lifespan_system_instruction(lang: str) -> str:
     """생애사적 대화(lifespan) — 모듈 분기 코어 + 런타임 맥락."""
     age = st.session_state.age_group or "30대"
     life_stage = st.session_state.life_stage or "일·활동 중"
     phase = st.session_state.phase
     summary = st.session_state.get("context_summary", "").strip()
-    lang = get_lang()
 
     base = build_core_system_instruction("lifespan", lang)
     base += f"\n\n[연령·생활 단계 맞춤 말투]\n{_tone_block(age, life_stage)}"
@@ -2336,6 +2377,8 @@ def _supabase_target_table_hint() -> str:
         return f"`{ISOLATION_NARRATIVES_TABLE}` (숲)"
     if _is_learning_mode():
         return "`dlinso_conversation_turns` (학습)"
+    if _is_mindfulness_mode():
+        return "`dlinso_conversation_turns` (마음챙김)"
     return "`dlinso_conversation_turns` (여정)"
 
 
@@ -2391,6 +2434,8 @@ def render_chat_toolbar(
         with left:
             if _is_learning_mode():
                 companion = resolve_companion_display()["short"]
+            elif _is_mindfulness_mode():
+                companion = resolve_companion_display()["short"]
             else:
                 companion = phase_label_ko(
                     st.session_state.phase, st.session_state.active_giant
@@ -2438,7 +2483,7 @@ def render_chat_toolbar(
                     st.session_state.life_summary = ""
                     st.session_state._request_summary = False
                     st.rerun()
-            elif st.session_state.messages:
+            elif st.session_state.messages and not _is_mindfulness_mode():
                 if st.button(t("finish_chat"), use_container_width=True, key="chat_finish"):
                     st.session_state._request_summary = True
                     st.rerun()
@@ -2451,11 +2496,7 @@ def render_chat_toolbar(
             )
 
         with st.expander(t("btn_view_life_archive"), expanded=False):
-            mod = (
-                "learning"
-                if _is_learning_mode()
-                else ("isolation" if _is_isolation_mode() else "lifespan")
-            )
+            mod = _resolve_log_module_type()
             payload = build_export_payload(
                 nickname=st.session_state.participant_id,
                 messages=st.session_state.messages,
@@ -2524,6 +2565,8 @@ def _login_restore_payload(found: dict[str, Any]) -> tuple[list[dict[str, Any]] 
         aud = (found.get("last_learning_audience") or "").strip()
         if aud:
             st.session_state.learning_audience = aud
+    elif db_mod == "mindfulness":
+        apply_landing_module_selection("emotion")
     else:
         apply_landing_module_selection("narrative")
     return restore_msgs, restore_turns
@@ -2857,6 +2900,8 @@ def render_chat_area(display: dict) -> None:
         render_current_age_context(placement="chat")
         if _is_isolation_mode():
             opening = t("isolation_opening")
+        elif _is_mindfulness_mode():
+            opening = t("mindfulness_opening")
         elif _is_learning_mode():
             aud = str(st.session_state.get("learning_audience") or "").strip()
             if is_valid_learning_audience(aud):
@@ -2923,6 +2968,21 @@ def iter_reply_stream(
             report_completed=bool(st.session_state.get("learning_report_count", 0)),
             context_summary=str(st.session_state.get("context_summary") or ""),
             live_signals=st.session_state.get("learning_signals"),
+        )
+        return
+
+    if _is_mindfulness_mode():
+        api_messages = messages
+        yield from iter_chat_stream(
+            api_messages,
+            user_prompt,
+            system=build_system_instruction(),
+            temperature=0.72,
+            top_p=0.88,
+            max_tokens=_chat_max_output_tokens(),
+            gemini_history=build_gemini_history(api_messages),
+            image_bytes=image_bytes,
+            image_mime=image_mime,
         )
         return
 
@@ -3005,7 +3065,7 @@ def handle_chat_turn(
         except Exception:  # noqa: BLE001
             pass
 
-    if not _is_learning_mode() and not _is_isolation_mode():
+    if not _is_learning_mode() and not _is_isolation_mode() and not _is_mindfulness_mode():
         maybe_switch_to_giant(model_prompt)
 
     user_extra: dict[str, Any] = {}
@@ -3173,9 +3233,7 @@ def handle_chat_turn(
                 narrative_themes=st.session_state.get("narrative_themes", ""),
                 metaphors=st.session_state.get("metaphors", ""),
                 turning_points=st.session_state.get("turning_points", ""),
-                module_type=(
-                    "learning" if _is_learning_mode() else "lifespan"
-                ),
+                module_type=_resolve_log_module_type(),
                 learning_audience=st.session_state.get("learning_audience", ""),
                 learning_signals_json=learning_signals_json,
             )
@@ -4175,6 +4233,9 @@ def _run_app() -> None:
                         composer_queued = render_chat_composer_body()
                     else:
                         composer_queued = False
+                elif _is_mindfulness_mode():
+                    render_chat_area(display)
+                    composer_queued = render_chat_composer_body()
                 else:
                     midpoint_prog = _render_midpoint_progress_header()
                     render_chat_area(display)
