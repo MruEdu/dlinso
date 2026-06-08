@@ -884,8 +884,8 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
 }}
 .dlinso-gate-footer-wrap {{
     position: relative; z-index: 35;
-    max-width: 940px; margin: 0.5rem auto 0;
-    padding: 0 1rem 1.75rem;
+    max-width: 940px; margin: 0 auto;
+    padding: 0 1rem;
     pointer-events: none;
 }}
 .dlinso-gate-footer-brand {{
@@ -893,11 +893,34 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
     font-size: 0.76rem; letter-spacing: 0.1em;
     color: {INTRO_MUTED}; font-family: {FONT_SANS};
 }}
+div[data-testid="stVerticalBlock"]:has(.dlinso-gate-footer-marker) {{
+    position: relative; z-index: 35;
+    margin-top: 1.75rem !important;
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 20px)) !important;
+}}
 div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
-.dlinso-gate-footer-wrap hr {{
+div[data-testid="stVerticalBlock"]:has(.dlinso-gate-footer-marker) hr {{
     margin: 0.65rem auto 0.75rem !important;
     border-color: rgba(80, 70, 60, 0.12) !important;
     max-width: 18rem;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
+div[data-testid="stVerticalBlock"]:has(.dlinso-gate-footer-marker) [data-testid="stMarkdown"] div {{
+    margin-bottom: 0.5rem !important;
+}}
+.dlinso-gate-footer-spacer {{
+    display: block;
+    height: calc(2.75rem + env(safe-area-inset-bottom, 16px));
+    pointer-events: none;
+}}
+@media (max-width: 600px) {{
+    div[data-testid="stVerticalBlock"]:has(.dlinso-gate-footer-marker) {{
+        margin-top: 2rem !important;
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 24px)) !important;
+    }}
+    .dlinso-gate-footer-spacer {{
+        height: calc(3.25rem + env(safe-area-inset-bottom, 24px));
+    }}
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active) .dlinso-brand-domain {{
     color: {TEXT_DARK} !important;
@@ -1260,6 +1283,10 @@ def _render_intro_gate_footer() -> None:
         unsafe_allow_html=True,
     )
     render_copyright_footer()
+    st.markdown(
+        '<div class="dlinso-gate-footer-spacer" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
