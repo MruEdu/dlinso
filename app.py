@@ -95,6 +95,7 @@ from main_home import (
     render_main_home,
     sync_home_intro_revealed,
 )
+from ui.copyright_footer import render_copyright_footer
 from ui.dlinso_about import open_dlinso_about, render_dlinso_about_expander_if_needed
 from modules.home_registry import (
     apply_landing_module_selection,
@@ -1364,6 +1365,7 @@ def render_lab_footer(*, intro_bridge: bool = False) -> None:
         """,
         unsafe_allow_html=True,
     )
+    render_copyright_footer()
 
 
 def _simple_bold_html(text: str) -> str:

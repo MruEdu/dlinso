@@ -35,6 +35,7 @@ from ui.dlinso_about import (
     open_dlinso_about,
     render_dlinso_about_expander_if_needed,
 )
+from ui.copyright_footer import render_copyright_footer
 
 INTRO_BG_TOP = "#faf8f4"
 INTRO_BG = "#f0ebe3"
@@ -565,35 +566,20 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
 .dlinso-version-pill {{
     display: inline-block;
     vertical-align: middle;
-    margin-left: 0.45rem;
-    padding: 0.18rem 0.62rem;
+    margin: 0.3rem auto 0;
+    padding: 0.08rem 0.42rem;
     font-family: {FONT_SANS};
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #fff;
-    background: linear-gradient(135deg, #8a9eb5 0%, #5c7088 100%);
-    border: 1px solid rgba(74, 92, 112, 0.45);
+    background: linear-gradient(135deg, #9aadc4 0%, #6b849e 100%);
+    border: 1px solid rgba(74, 92, 112, 0.35);
     border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(92, 112, 136, 0.28);
-}}
-.dlinso-version-row {{
-    text-align: center;
-    margin: 0.35rem auto 0.85rem;
-    font-family: {FONT_SANS};
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: {TEXT_MID};
-    font-weight: 600;
-}}
-.dlinso-home-mininav-wrap .dlinso-version-pill {{
-    margin-left: 0.35rem;
-    font-size: 0.62rem;
-    padding: 0.14rem 0.5rem;
+    box-shadow: 0 1px 4px rgba(92, 112, 136, 0.2);
 }}
 .dlinso-brand-hero .dlinso-version-pill {{
-    margin: 0.55rem auto 0;
     display: inline-block;
 }}
 .dlinso-salon-grid {{
@@ -990,14 +976,6 @@ def _version_pill_html() -> str:
     return f'<span class="dlinso-version-pill" aria-label="version {label}">{label}</span>'
 
 
-def _version_row_html() -> str:
-    note = html.escape(t("home_version_note"))
-    return (
-        f'<p class="dlinso-version-row">'
-        f'{_version_pill_html()}<span> · {note}</span></p>'
-    )
-
-
 def render_home_top_bar(*, dark: bool = False) -> None:
     """홈 전용 상단 — About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
@@ -1006,8 +984,7 @@ def render_home_top_bar(*, dark: bool = False) -> None:
     with left:
         color = "#c8c4be" if dark else TEXT_DARK
         st.markdown(
-            f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">'
-            f'dlinso {_version_pill_html()}</span>',
+            f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">dlinso</span>',
             unsafe_allow_html=True,
         )
     with right:
@@ -1161,12 +1138,10 @@ def _render_salon_section() -> None:
         f"</div>",
         unsafe_allow_html=True,
     )
-    st.markdown(_version_row_html(), unsafe_allow_html=True)
     _render_learning_spotlight()
     st.markdown(
         f'<section class="dlinso-salon-section">'
-        f'<h2 class="dlinso-salon-heading">{html.escape(SALON_SECTION_TITLE)}'
-        f'{_version_pill_html()}</h2></section>',
+        f'<h2 class="dlinso-salon-heading">{html.escape(SALON_SECTION_TITLE)}</h2></section>',
         unsafe_allow_html=True,
     )
     st.markdown('<div class="dlinso-salon-grid">', unsafe_allow_html=True)
@@ -1210,3 +1185,4 @@ def render_home_footer_minimal() -> None:
         f'<p class="lab-footer-brand">dlinso.com · {html.escape(t("brand_tagline"))}</p>',
         unsafe_allow_html=True,
     )
+    render_copyright_footer()
