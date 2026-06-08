@@ -9,7 +9,7 @@ def render_copyright_footer() -> None:
     st.markdown("---")
     st.markdown(
         """
-    <div style="text-align: center; color: #888888; font-size: 0.82rem; line-height: 1.6; margin-top: 15px; margin-bottom: 10px; font-family: sans-serif;">
+    <div style="text-align: center; color: #888888; font-size: 0.82rem; line-height: 1.6; margin-top: 15px; margin-bottom: 4px; font-family: sans-serif;">
         <p style="margin: 0; font-weight: 500;">
             Copyright © 2026 <b>DLINSO</b>. All Rights Reserved.
         </p>

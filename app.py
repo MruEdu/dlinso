@@ -549,7 +549,27 @@ CUSTOM_CSS = """
     .inquiry-fab-anchor.fab-low ~ div[data-testid="stElementContainer"] {
         bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px)) !important;
     }
-    .inquiry-fab-anchor ~ div[data-testid="stElementContainer"] {
+    .inquiry-fab-anchor.fab-inline ~ div[data-testid="stElementContainer"] {
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        z-index: 1 !important;
+        width: min(100%, 22rem) !important;
+        max-width: 22rem !important;
+        margin: 0.75rem auto 0.25rem !important;
+        padding: 0 !important;
+    }
+    .inquiry-fab-anchor.fab-inline ~ div[data-testid="stElementContainer"] button {
+        background: #fff !important;
+        color: #2a2520 !important;
+        border: 1px solid rgba(72, 62, 50, 0.16) !important;
+        box-shadow: 0 2px 10px rgba(48, 40, 32, 0.07) !important;
+        font-weight: 600 !important;
+    }
+    .inquiry-fab-anchor.fab-above-chat ~ div[data-testid="stElementContainer"],
+    .inquiry-fab-anchor.fab-low ~ div[data-testid="stElementContainer"] {
         position: fixed !important;
         left: 50% !important;
         right: auto !important;
@@ -560,7 +580,8 @@ CUSTOM_CSS = """
         margin: 0 !important;
         padding: 0 !important;
     }
-    .inquiry-fab-anchor ~ div[data-testid="stElementContainer"] button {
+    .inquiry-fab-anchor.fab-above-chat ~ div[data-testid="stElementContainer"] button,
+    .inquiry-fab-anchor.fab-low ~ div[data-testid="stElementContainer"] button {
         width: 100% !important;
         min-height: 2.75rem !important;
         border-radius: 999px !important;
@@ -572,6 +593,12 @@ CUSTOM_CSS = """
         font-weight: 600 !important;
         letter-spacing: -0.02em !important;
         white-space: nowrap !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.home-foot-marker) {
+        text-align: center;
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 0 0.5rem 1.75rem !important;
     }
     /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림(:has 숨김은 대화 패널 오동작 유발) */
     @media (min-width: 601px) {
@@ -1538,10 +1565,13 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
 
 
 def render_inquiry_fab(*, above_chat_input: bool = True) -> None:
-    """하단 문의 바 — 모든 화면에서 원클릭 접근."""
+    """하단 문의 바 — 대화 화면은 고정, 홈·온보딩은 푸터 안 인라인."""
     if st.session_state.get("current_view") == VIEW_INQUIRY:
         return
-    pos_cls = "fab-above-chat" if above_chat_input else "fab-low"
+    if above_chat_input:
+        pos_cls = "fab-above-chat"
+    else:
+        pos_cls = "fab-inline"
     st.markdown(
         f'<div class="inquiry-fab-anchor {pos_cls}" aria-hidden="true"></div>',
         unsafe_allow_html=True,
@@ -4166,7 +4196,7 @@ def _run_app() -> None:
             with st.container():
                 _html_layout_marker("home-foot-marker")
                 render_home_footer_minimal()
-            render_inquiry_fab(above_chat_input=False)
+                render_inquiry_fab(above_chat_input=False)
         return
 
     if not is_ready_for_chat():

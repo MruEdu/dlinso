@@ -583,21 +583,36 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     font-weight: 600;
     text-transform: uppercase;
 }}
+.dlinso-brand-title-row {{
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.42em;
+    flex-wrap: nowrap;
+    width: 100%;
+    margin: 0;
+}}
+.dlinso-brand-title-row .dlinso-brand-domain {{
+    margin: 0;
+    display: inline;
+}}
 .dlinso-version-pill {{
     display: inline-block;
-    vertical-align: middle;
-    margin: 0.3rem auto 0;
-    padding: 0.08rem 0.42rem;
+    vertical-align: baseline;
+    margin: 0;
+    padding: 0.06rem 0.38rem;
     font-family: {FONT_SANS};
-    font-size: 0.58rem;
+    font-size: clamp(0.5rem, 1.5vw, 0.65rem);
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;
     background: linear-gradient(135deg, #9aadc4 0%, #6b849e 100%);
     border: 1px solid rgba(74, 92, 112, 0.35);
     border-radius: 999px;
-    box-shadow: 0 1px 4px rgba(92, 112, 136, 0.2);
+    box-shadow: 0 1px 3px rgba(92, 112, 136, 0.18);
+    transform: translateY(-0.12em);
+    flex-shrink: 0;
 }}
 .dlinso-brand-hero .dlinso-version-pill {{
     display: inline-block;
@@ -899,10 +914,11 @@ div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
     padding: 0; max-width: 940px; margin: 0 auto;
 }}
 .lab-footer-brand {{
-    text-align: center; padding: 2rem 1rem 1.25rem;
+    text-align: center; padding: 2rem 1rem 0.85rem;
     color: {TEXT_MID}; font-size: 0.78rem;
     letter-spacing: 0.1em;
     font-family: {FONT_SANS};
+    margin: 0;
 }}
 </style>
 """
@@ -1036,6 +1052,16 @@ def _version_pill_html() -> str:
     return f'<span class="dlinso-version-pill" aria-label="version {label}">{label}</span>'
 
 
+def _brand_title_row_html(*, include_version: bool = True) -> str:
+    version = _version_pill_html() if include_version else ""
+    return (
+        f'<div class="dlinso-brand-title-row">'
+        f'<h1 class="dlinso-brand-domain">dlinso</h1>'
+        f"{version}"
+        f"</div>"
+    )
+
+
 def render_home_top_bar(*, dark: bool = False) -> None:
     """홈 전용 상단 — 언어 · About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
@@ -1081,13 +1107,12 @@ def _brand_hero_html(*, lifted: bool) -> str:
     gate_hint = html.escape(t("brand_gate_hint"))
     if lifted:
         plaque_inner = (
-            f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
-            f'{_version_pill_html()}'
+            f"{_brand_title_row_html()}"
             f'<p class="dlinso-brand-tagline">{tagline_text}</p>'
         )
     else:
         plaque_inner = (
-            f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
+            f"{_brand_title_row_html()}"
             f'<p class="dlinso-brand-gate-lead">{tagline_text}</p>'
             f'<span class="dlinso-brand-soon">{gate_hint}</span>'
         )
@@ -1260,7 +1285,7 @@ def render_main_home() -> bool:
 
 def render_home_footer_minimal() -> None:
     st.markdown(
-        f'<p class="lab-footer-brand">dlinso.com · {html.escape(t("brand_tagline"))}</p>',
+        f'<p class="lab-footer-brand">dlinso · {html.escape(t("brand_tagline"))}</p>',
         unsafe_allow_html=True,
     )
     render_copyright_footer()
