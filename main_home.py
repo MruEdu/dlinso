@@ -879,8 +879,25 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
 .dlinso-scroll-cue {{
     text-align: center; font-size: 0.78rem; letter-spacing: 0.12em;
     color: {INTRO_MUTED};
-    margin-top: 0.5rem; padding-bottom: 1.5rem; pointer-events: none;
+    margin-top: 0.5rem; padding-bottom: 0.75rem; pointer-events: none;
     line-height: 1.5;
+}}
+.dlinso-gate-footer-wrap {{
+    position: relative; z-index: 35;
+    max-width: 940px; margin: 0.5rem auto 0;
+    padding: 0 1rem 1.75rem;
+    pointer-events: none;
+}}
+.dlinso-gate-footer-brand {{
+    text-align: center; margin: 0 0 0.35rem;
+    font-size: 0.76rem; letter-spacing: 0.1em;
+    color: {INTRO_MUTED}; font-family: {FONT_SANS};
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
+.dlinso-gate-footer-wrap hr {{
+    margin: 0.65rem auto 0.75rem !important;
+    border-color: rgba(80, 70, 60, 0.12) !important;
+    max-width: 18rem;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active) .dlinso-brand-domain {{
     color: {TEXT_DARK} !important;
@@ -1234,6 +1251,18 @@ def _render_module_card(spec, *, spotlight: bool = False) -> None:
         navigate_to_landing_module(module_id)
 
 
+def _render_intro_gate_footer() -> None:
+    """게이트(?gate=1) 하단 — 브랜드 한 줄 + 판권."""
+    _html_layout_marker("dlinso-gate-footer-marker")
+    st.markdown('<div class="dlinso-gate-footer-wrap">', unsafe_allow_html=True)
+    st.markdown(
+        f'<p class="dlinso-gate-footer-brand">dlinso · {html.escape(t("brand_tagline"))}</p>',
+        unsafe_allow_html=True,
+    )
+    render_copyright_footer()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def _render_intro_gate() -> None:
     render_home_top_bar(dark=False)
     _html_layout_marker("dlinso-intro-gate-active")
@@ -1258,7 +1287,7 @@ def _render_intro_gate() -> None:
         f'<p class="dlinso-scroll-cue">{html.escape(t("home_scroll_cue"))}</p>',
         unsafe_allow_html=True,
     )
-    st.markdown('<div style="height:18vh" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_intro_gate_footer()
     components.html(REVEAL_INTERACTION_JS, height=0)
 
 
