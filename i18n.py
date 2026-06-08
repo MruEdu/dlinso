@@ -1138,9 +1138,18 @@ from i18n_opening import merge_opening_i18n
 merge_opening_i18n(TEXTS)
 
 
+def normalize_lang(code: str | None) -> str:
+    """세션·위젯에 남은 구 언어 코드(vi 등)를 ko로 정리."""
+    if code in LANG_CODES:
+        return code
+    return "ko"
+
+
 def get_lang() -> str:
-    code = st.session_state.get("lang", "ko")
-    return code if code in LANG_CODES else "ko"
+    code = normalize_lang(st.session_state.get("lang", "ko"))
+    if st.session_state.get("lang") != code:
+        st.session_state.lang = code
+    return code
 
 
 def t(key: str, lang: str | None = None) -> str:
@@ -1160,15 +1169,16 @@ def render_language_selector(
 ) -> None:
     """언어 선택 — 각 언어의 고유 이름(한국어, English, 日本語 …)으로 표시."""
     current = get_lang()
-    idx = LANG_CODES.index(current) if current in LANG_CODES else 0
+    widget_val = st.session_state.get(key)
+    if widget_val not in LANG_CODES:
+        st.session_state[key] = current
     choice = st.selectbox(
         t("lang_label"),
         options=list(LANG_CODES),
         format_func=lambda c: LANG_LABELS[c],
-        index=idx,
         key=key,
         label_visibility="collapsed" if compact else "visible",
     )
-    if choice != st.session_state.get("lang"):
+    if choice != current:
         st.session_state.lang = choice
         st.rerun()

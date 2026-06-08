@@ -127,8 +127,15 @@ section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type
+[data-testid="stSelectbox"] {{
+    min-width: 5.25rem !important;
+    flex-shrink: 0 !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type
 [data-testid="stSelectbox"] div[data-baseweb="select"] {{
     min-height: 2rem !important;
+    min-width: 5.25rem !important;
     font-size: 0.78rem !important;
     border-radius: 999px !important;
     background: #fff !important;
@@ -920,17 +927,35 @@ REVEAL_INTERACTION_JS = """
     }
     return false;
   }
-  function reveal() { if (!clickHiddenReveal()) navigateReveal(); }
+  function isUiControl(ev) {
+    const t = ev.target;
+    if (!t || !t.closest) return false;
+    return Boolean(
+      t.closest("[data-testid='stButton'] button") ||
+      t.closest("[data-testid='stSelectbox']") ||
+      t.closest("[data-baseweb='select']") ||
+      t.closest("[data-baseweb='popover']") ||
+      t.closest(".dlinso-home-mininav-marker")
+    );
+  }
+  function reveal() {
+    if (clickHiddenReveal()) return;
+    setTimeout(function () {
+      if (!clickHiddenReveal()) navigateReveal();
+    }, 150);
+  }
   if (!doc.querySelector(".dlinso-intro-gate-active")) return;
   doc.body.addEventListener("click", function (ev) {
-    if (ev.target.closest("[data-testid='stButton'] button")) return;
+    if (isUiControl(ev)) return;
     reveal();
   }, { once: true, capture: true });
   let scrolled = false;
+  let scrollReady = false;
+  setTimeout(function () { scrollReady = true; }, 900);
   function onScroll() {
-    if (scrolled) return;
+    if (!scrollReady || scrolled) return;
     const y = parentWin.scrollY || doc.documentElement.scrollTop || 0;
-    if (y > 48) { scrolled = true; reveal(); }
+    if (y > 120) { scrolled = true; reveal(); }
   }
   parentWin.addEventListener("scroll", onScroll, { passive: true });
 })();

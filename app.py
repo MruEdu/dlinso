@@ -1451,7 +1451,7 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
         "home_intro_revealed", False
     )
 
-    ratios: list[float] = [1.0, 0.5]
+    ratios: list[float] = [1.0, 0.9 if on_brand_home else 0.5]
     if on_brand_home:
         ratios.append(0.78)
     ratios.extend([0.95, 1.1, 0.82])
