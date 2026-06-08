@@ -854,12 +854,15 @@ div[data-testid="column"]:has(.dlinso-salon-card--soon-marker) button {{
     opacity: 0 !important; z-index: 25 !important;
     margin: 0 !important; padding: 0 !important;
     pointer-events: auto !important;
+    overflow: hidden !important;
+    font-size: 0 !important; line-height: 0 !important;
 }}
 .dlinso-reveal-hidden-btn-marker ~ div[data-testid="stElementContainer"] button {{
     width: 100% !important; height: 100% !important;
     min-height: 100vh !important;
     opacity: 0 !important; border: none !important;
     background: transparent !important; cursor: pointer !important;
+    color: transparent !important; font-size: 0 !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-intro-gate-active)
 .dlinso-gate-enter-wrap ~ div button {{
@@ -1250,7 +1253,6 @@ def _render_intro_gate() -> None:
         "dlinso-reveal",
         key="home_reveal_fullclick",
         on_click=reveal_home_intro,
-        label_visibility="collapsed",
     )
     st.markdown(
         f'<p class="dlinso-scroll-cue">{html.escape(t("home_scroll_cue"))}</p>',
