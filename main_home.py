@@ -7,6 +7,7 @@ import html
 import streamlit as st
 import streamlit.components.v1 as components
 
+from core.version import APP_VERSION_LABEL
 from i18n import get_lang, t
 from modules.home_registry import (
     LEARNING_SPOTLIGHT_CTA_EN,
@@ -561,6 +562,40 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     font-weight: 600;
     text-transform: uppercase;
 }}
+.dlinso-version-pill {{
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.45rem;
+    padding: 0.18rem 0.62rem;
+    font-family: {FONT_SANS};
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(135deg, #8a9eb5 0%, #5c7088 100%);
+    border: 1px solid rgba(74, 92, 112, 0.45);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(92, 112, 136, 0.28);
+}}
+.dlinso-version-row {{
+    text-align: center;
+    margin: 0.35rem auto 0.85rem;
+    font-family: {FONT_SANS};
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: {TEXT_MID};
+    font-weight: 600;
+}}
+.dlinso-home-mininav-wrap .dlinso-version-pill {{
+    margin-left: 0.35rem;
+    font-size: 0.62rem;
+    padding: 0.14rem 0.5rem;
+}}
+.dlinso-brand-hero .dlinso-version-pill {{
+    margin: 0.55rem auto 0;
+    display: inline-block;
+}}
 .dlinso-salon-grid {{
     position: relative;
     z-index: 2;
@@ -950,6 +985,19 @@ def _html_layout_marker(*classes: str) -> None:
     st.markdown(f'<div class="{" ".join(classes)}" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 
+def _version_pill_html() -> str:
+    label = html.escape(APP_VERSION_LABEL)
+    return f'<span class="dlinso-version-pill" aria-label="version {label}">{label}</span>'
+
+
+def _version_row_html() -> str:
+    note = html.escape(t("home_version_note"))
+    return (
+        f'<p class="dlinso-version-row">'
+        f'{_version_pill_html()}<span> · {note}</span></p>'
+    )
+
+
 def render_home_top_bar(*, dark: bool = False) -> None:
     """홈 전용 상단 — About dlinso."""
     _html_layout_marker("dlinso-home-mininav-marker")
@@ -958,7 +1006,8 @@ def render_home_top_bar(*, dark: bool = False) -> None:
     with left:
         color = "#c8c4be" if dark else TEXT_DARK
         st.markdown(
-            f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">dlinso</span>',
+            f'<span style="font-size:0.82rem;letter-spacing:0.2em;color:{color};">'
+            f'dlinso {_version_pill_html()}</span>',
             unsafe_allow_html=True,
         )
     with right:
@@ -994,6 +1043,7 @@ def _brand_hero_html(*, lifted: bool) -> str:
     if lifted:
         plaque_inner = (
             f'<h1 class="dlinso-brand-domain">dlinso.com</h1>'
+            f'{_version_pill_html()}'
             f'<p class="dlinso-brand-tagline">{tagline_text}</p>'
         )
     else:
@@ -1111,10 +1161,12 @@ def _render_salon_section() -> None:
         f"</div>",
         unsafe_allow_html=True,
     )
+    st.markdown(_version_row_html(), unsafe_allow_html=True)
     _render_learning_spotlight()
     st.markdown(
         f'<section class="dlinso-salon-section">'
-        f'<h2 class="dlinso-salon-heading">{html.escape(SALON_SECTION_TITLE)}</h2></section>',
+        f'<h2 class="dlinso-salon-heading">{html.escape(SALON_SECTION_TITLE)}'
+        f'{_version_pill_html()}</h2></section>',
         unsafe_allow_html=True,
     )
     st.markdown('<div class="dlinso-salon-grid">', unsafe_allow_html=True)

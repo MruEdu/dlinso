@@ -230,11 +230,13 @@ HERO_CARD_INLINE_STYLE = """
 </style>
 """
 
+from core.version import APP_VERSION_LABEL
+
 TOKEN_DIET_MESSAGE_THRESHOLD = 28
 
 
 def _beta_badge_html() -> str:
-    label = html.escape((t("beta_badge") or "Beta").strip())
+    label = html.escape((t("beta_badge") or APP_VERSION_LABEL).strip())
     return f'<span class="beta-badge" title="{label}">{label}</span>'
 
 
