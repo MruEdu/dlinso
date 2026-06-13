@@ -3335,7 +3335,10 @@ def _take_pending_turn() -> dict[str, Any] | None:
     return turn
 
 
-def _input_char_limit() -> int:
+def _input_char_limit() -> int | None:
+    """입력 글자 상한. None = 제한 없음(모바일)."""
+    if _is_mobile_client():
+        return None
     if st.session_state.get("extended_input_unlocked"):
         return EXTENDED_INPUT_CHAR_LIMIT
     return DEFAULT_INPUT_CHAR_LIMIT
@@ -4047,12 +4050,13 @@ def _render_composer_text_row(
             label_visibility="collapsed",
         )
         current_len = len(st.session_state.get(input_key, "") or "")
-        st.markdown(
-            f'<p class="char-counter-hint">({current_len:,} / {max_chars:,}자)</p>',
-            unsafe_allow_html=True,
-        )
-        if st.session_state.get("extended_input_unlocked"):
-            st.caption(t("midpoint_char_mobile_hint"))
+        if max_chars is not None:
+            st.markdown(
+                f'<p class="char-counter-hint">({current_len:,} / {max_chars:,}자)</p>',
+                unsafe_allow_html=True,
+            )
+            if st.session_state.get("extended_input_unlocked"):
+                st.caption(t("midpoint_char_mobile_hint"))
     with send_col:
         _html_layout_marker(send_marker)
         submitted = st.button(
@@ -4064,7 +4068,7 @@ def _render_composer_text_row(
     if not submitted:
         return ""
     text = (draft or "").strip()
-    if len(text) > max_chars:
+    if max_chars is not None and len(text) > max_chars:
         st.warning(t("midpoint_char_over").format(limit=max_chars))
         return ""
     return text
