@@ -474,7 +474,15 @@ CUSTOM_CSS = """
             min-width: 6.5rem !important;
         }
     }
-    /* Streamlit 기본 빨간 primary → dlinso 보라색 (전역) */
+    /* Streamlit 버튼 라벨(p/span) — 전역 본문색(#3a342e) 덮어쓰기 방지 */
+    section.main button p,
+    section.main button span,
+    section.main [data-testid="stButton"] button p,
+    section.main [data-testid="stButton"] button span,
+    section.main button[data-testid="baseButton-primary"] p,
+    section.main button[data-testid="baseButton-secondary"] p {
+        color: inherit !important;
+    }
     section.main button[kind="primary"],
     section.main button[kind="primaryFormSubmit"],
     section.main [data-testid="stFormSubmitButton"] button,
@@ -1119,20 +1127,29 @@ CUSTOM_CSS = """
         margin-top: 0.35rem !important;
         animation: midpoint-reward-pop 0.7s cubic-bezier(0.34, 1.35, 0.64, 1) both;
     }
-    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) button,
-    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-reveal-marker) button {
+    /* 마음 지도 버튼만 — :has() 조상 선택은 10턴 이후 전역 버튼 오염 원인 */
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-marker)
+        + div[data-testid="stElementContainer"] button,
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-reveal-marker)
+        + div[data-testid="stElementContainer"] button {
         width: 100% !important;
-        background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%) !important;
+        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
         color: #ffffff !important;
-        border: 2px solid #d4af37 !important;
+        border: 2px solid #8f7340 !important;
         font-weight: 700 !important;
         min-height: 2.85rem !important;
         border-radius: 10px !important;
         letter-spacing: -0.02em !important;
         box-shadow:
-            0 0 0 1px rgba(212, 175, 55, 0.35),
-            0 6px 22px rgba(212, 175, 55, 0.28),
-            0 4px 14px rgba(15, 23, 42, 0.32) !important;
+            0 0 0 1px rgba(201, 169, 98, 0.35),
+            0 6px 22px rgba(168, 134, 58, 0.28),
+            0 4px 14px rgba(90, 70, 50, 0.18) !important;
+    }
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-marker)
+        + div[data-testid="stElementContainer"] button p,
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-reveal-marker)
+        + div[data-testid="stElementContainer"] button p {
+        color: #ffffff !important;
     }
     .midpoint-essay-block {
         margin: 0.85rem 0 1.15rem;
@@ -1172,14 +1189,39 @@ CUSTOM_CSS = """
         line-height: 1.75;
         color: #5c5048;
     }
-    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-marker) button:hover,
-    div[data-testid="stVerticalBlock"]:has(.midpoint-btn-reveal-marker) button:hover {
-        background: linear-gradient(180deg, #1d4ed8 0%, #172554 100%) !important;
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-marker)
+        + div[data-testid="stElementContainer"] button:hover,
+    div[data-testid="stElementContainer"]:has(.midpoint-btn-reveal-marker)
+        + div[data-testid="stElementContainer"] button:hover {
+        background: linear-gradient(180deg, #d4b96a 0%, #b8944a 100%) !important;
         color: #ffffff !important;
-        border-color: #f0d78c !important;
+        border-color: #a8863a !important;
         box-shadow:
-            0 0 0 2px rgba(240, 215, 140, 0.45),
-            0 8px 26px rgba(212, 175, 55, 0.35) !important;
+            0 0 0 2px rgba(212, 185, 106, 0.45),
+            0 8px 26px rgba(168, 134, 58, 0.35) !important;
+    }
+    /* 기록실 상단 — 초기화·요약본 버튼 (모바일 전폭) */
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button {
+        background: linear-gradient(180deg, #faf7f0 0%, #f0e8dc 100%) !important;
+        color: #3a342e !important;
+        border: 1px solid rgba(168, 134, 58, 0.42) !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(90, 70, 50, 0.08) !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button:hover {
+        background: linear-gradient(180deg, #fff9f2 0%, #f5ebe0 100%) !important;
+        color: #2e2824 !important;
+        border-color: rgba(201, 169, 98, 0.65) !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button[kind="primary"],
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button[data-testid="baseButton-primary"] {
+        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #8f7340 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button[kind="primary"] p,
+    div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button[data-testid="baseButton-primary"] p {
+        color: #ffffff !important;
     }
     .char-counter-hint {
         font-size: 0.78rem;
