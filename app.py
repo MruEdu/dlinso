@@ -241,6 +241,8 @@ HERO_CARD_INLINE_STYLE = """
 from core.version import APP_VERSION_LABEL
 
 TOKEN_DIET_MESSAGE_THRESHOLD = 28
+CHAT_DISPLAY_COLLAPSE_AFTER_TURNS = 6
+CHAT_DISPLAY_RECENT_TURNS = 2
 
 
 def _beta_badge_html() -> str:
@@ -958,6 +960,33 @@ CUSTOM_CSS = """
         font-size: 0.82rem;
         color: #6b5f55;
         margin-bottom: 0.75rem;
+    }
+    .chat-past-summary {
+        background: linear-gradient(135deg, #f8f4ec 0%, #f0ebe3 100%);
+        border: 1px solid rgba(168, 134, 58, 0.28);
+        border-radius: 12px;
+        padding: 0.75rem 0.9rem;
+        margin: 0.35rem 0 0.65rem;
+    }
+    .chat-past-summary-title {
+        margin: 0 0 0.4rem;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #5a4a38;
+        letter-spacing: -0.01em;
+    }
+    .chat-past-summary-body {
+        margin: 0;
+        font-size: 0.86rem;
+        line-height: 1.62;
+        color: #4a4038;
+        white-space: pre-wrap;
+    }
+    .chat-recent-divider {
+        font-size: 0.78rem;
+        color: #8a7a68;
+        margin: 0.15rem 0 0.45rem;
+        letter-spacing: 0.04em;
     }
     .input-hint {
         background: #fff9f2;
@@ -1871,6 +1900,8 @@ def _activate_session(
         has_history = count_user_turns(st.session_state.messages) > 0
         if has_history:
             st.session_state.conversation_restored = True
+            st.session_state.pop("_chat_display_summary_digest", None)
+            st.session_state.pop("_chat_summary_upto_idx", None)
         else:
             greeting = build_returning_greeting(
                 last_topic, participant_id, lang=lang
@@ -2108,6 +2139,8 @@ def maybe_restore_isolation_history_from_cloud() -> None:
     if last_topic:
         st.session_state.last_visit_topic = last_topic
     st.session_state.conversation_restored = True
+    st.session_state.pop("_chat_display_summary_digest", None)
+    st.session_state.pop("_chat_summary_upto_idx", None)
 
 
 def maybe_restore_lifespan_history_from_cloud() -> None:
@@ -2152,6 +2185,8 @@ def maybe_restore_lifespan_history_from_cloud() -> None:
     if last_topic:
         st.session_state.last_visit_topic = last_topic
     st.session_state.conversation_restored = True
+    st.session_state.pop("_chat_display_summary_digest", None)
+    st.session_state.pop("_chat_summary_upto_idx", None)
 
 
 def _refresh_isolation_signals(*, force_llm: bool = False) -> dict[str, Any] | None:
@@ -2495,6 +2530,8 @@ def _reset_chat_state() -> None:
         else:
             st.session_state[key] = 0 if key == "diet_applied_count" else ""
     st.session_state.pop("_chat_input_focused", None)
+    st.session_state.pop("_chat_display_summary_digest", None)
+    st.session_state.pop("_chat_summary_upto_idx", None)
 
 
 def _asset_progress_pct() -> float:
@@ -3024,6 +3061,96 @@ def render_main_header(display: dict) -> None:
     render_hub_slogan_banner()
 
 
+def _split_messages_for_display(
+    messages: list[dict],
+    *,
+    recent_turns: int = CHAT_DISPLAY_RECENT_TURNS,
+) -> tuple[list[dict], list[dict]]:
+    """표시용 — 오래된 구간과 최근 N턴(사용자 발화 기준) 분리."""
+    from hbridge_analysis import count_user_turns
+
+    if count_user_turns(messages) <= CHAT_DISPLAY_COLLAPSE_AFTER_TURNS:
+        return [], list(messages)
+
+    user_turns_seen = 0
+    split_idx = 0
+    for i in range(len(messages) - 1, -1, -1):
+        msg = messages[i]
+        if msg.get("role") != "user":
+            continue
+        if not str(msg.get("content") or "").strip() and not str(
+            msg.get("display") or ""
+        ).strip():
+            continue
+        user_turns_seen += 1
+        if user_turns_seen >= recent_turns:
+            split_idx = i
+            break
+    return messages[:split_idx], messages[split_idx:]
+
+
+def _fallback_display_summary(older_messages: list[dict], *, max_chars: int = 340) -> str:
+    snippets: list[str] = []
+    for msg in older_messages[-10:]:
+        text = _user_visible_text(msg).replace("\n", " ").strip()
+        if not text:
+            continue
+        role = "나" if msg.get("role") == "user" else "동행자"
+        snippets.append(f"{role}: {text[:72]}")
+    if not snippets:
+        return ""
+    joined = " / ".join(snippets)
+    if len(joined) <= max_chars:
+        return joined
+    return joined[: max_chars - 1].rstrip() + "…"
+
+
+def _ensure_display_context_summary(
+    older_messages: list[dict],
+    hidden_turns: int,
+) -> str:
+    """긴 대화 UI — 과거 구간 요약(증분 갱신·LLM·폴백)."""
+    cached = str(st.session_state.get("context_summary") or "").strip()
+    upto = int(st.session_state.get("_chat_summary_upto_idx") or 0)
+    if upto > len(older_messages):
+        upto = 0
+
+    if upto >= len(older_messages) and cached:
+        return cached
+    if not older_messages:
+        return cached
+
+    chunk = older_messages[upto:]
+    summary = cached
+    try:
+        if chunk:
+            with st.spinner(t("chat_past_summary_generating")):
+                summary = summarize_messages(chunk, cached)
+        summary = (summary or cached or _fallback_display_summary(older_messages)).strip()
+    except Exception:  # noqa: BLE001
+        summary = (cached or _fallback_display_summary(older_messages)).strip()
+
+    if summary:
+        st.session_state.context_summary = summary
+    st.session_state._chat_summary_upto_idx = len(older_messages)
+    st.session_state._chat_display_summary_digest = (hidden_turns, len(older_messages))
+    return summary
+
+
+def _render_one_chat_message(message: dict, display: dict) -> None:
+    avatar = "🧑" if message["role"] == "user" else display["emoji"]
+    with st.chat_message(message["role"], avatar=avatar):
+        if message.get("image_bytes"):
+            st.image(message["image_bytes"], use_container_width=True)
+            caption = _user_visible_text(message)
+            if caption:
+                st.markdown(caption)
+        else:
+            body = _user_visible_text(message)
+            if body:
+                st.markdown(body)
+
+
 def render_chat_area(display: dict) -> None:
     if st.session_state.life_summary:
         st.markdown(
@@ -3058,18 +3185,39 @@ def render_chat_area(display: dict) -> None:
             f'<div class="opening-guide">{opening}</div>',
             unsafe_allow_html=True,
         )
-    for message in st.session_state.messages:
-        avatar = "🧑" if message["role"] == "user" else display["emoji"]
-        with st.chat_message(message["role"], avatar=avatar):
-            if message.get("image_bytes"):
-                st.image(message["image_bytes"], use_container_width=True)
-                caption = _user_visible_text(message)
-                if caption:
-                    st.markdown(caption)
-            else:
-                body = _user_visible_text(message)
-                if body:
-                    st.markdown(body)
+        return
+
+    messages = list(st.session_state.messages)
+    from hbridge_analysis import count_user_turns
+
+    total_turns = count_user_turns(messages)
+    if total_turns > CHAT_DISPLAY_COLLAPSE_AFTER_TURNS:
+        older, recent = _split_messages_for_display(messages)
+        hidden_turns = count_user_turns(older)
+        summary = _ensure_display_context_summary(older, hidden_turns)
+        if summary:
+            st.markdown(
+                f'<div class="chat-past-summary">'
+                f'<p class="chat-past-summary-title">'
+                f"{html.escape(t('chat_past_summary_title').format(turns=hidden_turns))}"
+                f"</p>"
+                f'<p class="chat-past-summary-body">{html.escape(summary)}</p>'
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with st.expander(t("chat_view_full_history"), expanded=False):
+            for message in messages:
+                _render_one_chat_message(message, display)
+        st.markdown(
+            f'<p class="chat-recent-divider">{html.escape(t("chat_recent_turns_divider"))}</p>',
+            unsafe_allow_html=True,
+        )
+        for message in recent:
+            _render_one_chat_message(message, display)
+        return
+
+    for message in messages:
+        _render_one_chat_message(message, display)
 
 
 def iter_reply_stream(
