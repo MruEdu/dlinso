@@ -360,11 +360,12 @@ class DatabaseManager:
     def find_returning_user(
         self, nickname: str, password: str
     ) -> dict[str, Any] | None:
+        nick = nickname.strip()
+        pw_hash = hash_password(password)
         found = self._find_returning_user_sqlite(nickname, password)
         if found:
-            return self._enrich_found_from_isolation_supabase(
-                found, nickname.strip(), hash_password(password)
-            )
+            found = self._enrich_found_from_isolation_supabase(found, nick, pw_hash)
+            return self._enrich_found_from_dlinso_supabase(found, nick, pw_hash)
         if is_supabase_configured():
             return find_returning_user_from_supabase(nickname, password)
         return None
@@ -453,6 +454,72 @@ class DatabaseManager:
         found["last_module_type"] = "isolation"
         if iso_payload.get("last_topic"):
             found["last_topic"] = iso_payload["last_topic"]
+        return found
+
+    def _enrich_found_from_dlinso_supabase(
+        self,
+        found: dict[str, Any],
+        nickname: str,
+        password_hash: str,
+    ) -> dict[str, Any]:
+        """
+        Streamlit Cloud — 로컬 SQLite 대화가 비어도 Supabase dlinso_conversation_turns에서 복원.
+        """
+        if not is_supabase_configured() or self._is_isolation_database():
+            return found
+        client = get_supabase_client()
+        if client is None:
+            return found
+        turns = _fetch_dlinso_turns_from_supabase(client, nickname)
+        if not turns:
+            return found
+        restored = list(found.get("restored_messages") or [])
+        sqlite_user_turns = _count_restored_user_turns(restored)
+        supa_user_turns = sum(
+            1
+            for row in turns
+            if str(row.get("user_input") or "").strip()
+            and not str(row.get("user_input") or "").startswith("[")
+            and not bool(row.get("is_system"))
+        )
+        use_supabase = bool(turns) and (
+            is_streamlit_cloud()
+            or supa_user_turns > sqlite_user_turns
+            or len(restored) < 2
+        )
+        if not use_supabase:
+            return found
+        profile = found.get("profile") or {}
+        user_row = {
+            "nickname": nickname,
+            "lang": profile.get("lang") or "ko",
+            "gender": profile.get("gender") or "",
+            "age_group": profile.get("age_group") or "",
+            "life_stage": profile.get("life_stage") or "",
+            "total_turn_count": found.get("total_turn_count") or 0,
+        }
+        payload = _turns_to_restore_payload(turns, user_row, password_hash)
+        merged_msgs = payload.get("restored_messages") or []
+        if not merged_msgs:
+            return found
+        found = dict(found)
+        found["restored_messages"] = merged_msgs
+        found["recent_turns"] = payload.get("recent_turns") or []
+        found["total_turn_count"] = max(
+            int(found.get("total_turn_count") or 0),
+            int(payload.get("total_turn_count") or 0),
+        )
+        found["has_midpoint"] = bool(found.get("has_midpoint")) or bool(
+            payload.get("has_midpoint")
+        )
+        found["last_module_type"] = payload.get("last_module_type") or found.get(
+            "last_module_type"
+        )
+        found["last_learning_audience"] = payload.get(
+            "last_learning_audience"
+        ) or found.get("last_learning_audience", "")
+        if payload.get("last_topic"):
+            found["last_topic"] = payload["last_topic"]
         return found
 
     def _find_returning_user_sqlite(
@@ -2108,6 +2175,61 @@ def fetch_isolation_messages_from_supabase(
     turns = int(payload.get("total_turn_count") or 0)
     topic = str(payload.get("last_topic") or "")
     return msgs, turns, topic
+
+
+def _count_restored_user_turns(messages: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for msg in messages
+        if msg.get("role") == "user"
+        and str(msg.get("content") or "").strip()
+        and not str(msg.get("content") or "").startswith("[")
+    )
+
+
+def _fetch_dlinso_turns_from_supabase(
+    client: Any, nickname: str
+) -> list[dict[str, Any]]:
+    try:
+        resp = (
+            client.table(DLINSO_TURNS_TABLE)
+            .select("*")
+            .eq("nickname", nickname)
+            .order("created_at")
+            .execute()
+        )
+        return list(getattr(resp, "data", None) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def fetch_dlinso_messages_from_supabase(
+    nickname: str,
+    *,
+    profile: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], int, str]:
+    """여정·학습·마음챙김 — Supabase turns → UI messages."""
+    client = get_supabase_client()
+    nick = (nickname or "").strip()
+    if client is None or not nick:
+        return [], 0, ""
+    turns = _fetch_dlinso_turns_from_supabase(client, nick)
+    if not turns:
+        return [], 0, ""
+    prof = profile or {}
+    user_row = {
+        "nickname": nick,
+        "lang": prof.get("lang") or "ko",
+        "gender": prof.get("gender") or "",
+        "age_group": prof.get("age_group") or "",
+        "life_stage": prof.get("life_stage") or "",
+        "total_turn_count": 0,
+    }
+    payload = _turns_to_restore_payload(turns, user_row, "")
+    msgs = list(payload.get("restored_messages") or [])
+    turn_count = int(payload.get("total_turn_count") or 0)
+    topic = str(payload.get("last_topic") or "")
+    return msgs, turn_count, topic
 
 
 def _fetch_isolation_turns_from_supabase(client: Any, nickname: str) -> list[dict[str, Any]]:

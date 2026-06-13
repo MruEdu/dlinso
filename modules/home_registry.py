@@ -176,7 +176,22 @@ def _reset_module_conversation_state() -> None:
     st.session_state.pop("_chat_input_focused", None)
 
 
-def apply_landing_module_selection(module_id: str) -> bool:
+def module_id_from_db_type(db_module_type: str) -> str:
+    """narrative_logs / Supabase module_type → 살롱 카드 id."""
+    key = (db_module_type or "lifespan").strip().lower()
+    return {
+        "isolation": MODULE_FOREST,
+        "learning": MODULE_LEARNING,
+        "mindfulness": MODULE_EMOTION,
+        "lifespan": MODULE_NARRATIVE,
+    }.get(key, MODULE_NARRATIVE)
+
+
+def apply_landing_module_selection(
+    module_id: str,
+    *,
+    preserve_conversation: bool = False,
+) -> bool:
     import streamlit as st
 
     spec = get_landing_module(module_id)
@@ -191,16 +206,16 @@ def apply_landing_module_selection(module_id: str) -> bool:
     st.session_state.app_mode = spec.app_mode
 
     if spec.app_mode == MODE_LEARNING:
-        if module_changed:
+        if module_changed and not preserve_conversation:
             st.session_state.learning_audience = ""
     elif spec.app_mode != MODE_ISOLATION:
         st.session_state.learning_audience = ""
-    if spec.app_mode == MODE_ISOLATION and module_changed:
+    if spec.app_mode == MODE_ISOLATION and module_changed and not preserve_conversation:
         st.session_state.isolation_signals = None
         st.session_state.last_isolation_asset = None
         st.session_state.last_isolation_report = None
 
-    if module_changed:
+    if module_changed and not preserve_conversation:
         _reset_module_conversation_state()
 
     try:

@@ -107,6 +107,7 @@ from modules.home_registry import (
     apply_landing_module_selection,
     get_landing_module,
     module_app_mode,
+    module_id_from_db_type,
     reconcile_landing_module_session,
     sync_landing_module_from_query,
 )
@@ -1867,7 +1868,7 @@ def _activate_session(
     )
 
     if is_returning:
-        has_history = bool(restored_messages) or bool(recent_turns)
+        has_history = count_user_turns(st.session_state.messages) > 0
         if has_history:
             st.session_state.conversation_restored = True
         else:
@@ -2098,6 +2099,50 @@ def maybe_restore_isolation_history_from_cloud() -> None:
         "life_stage": st.session_state.get("life_stage") or "",
     }
     msgs, turn_count, last_topic = fetch_isolation_messages_from_supabase(
+        nick, profile=profile
+    )
+    if not msgs:
+        return
+    st.session_state.messages = [dict(m) for m in msgs]
+    st.session_state.total_user_turns = max(turn_count, ui_turns, stored_turns)
+    if last_topic:
+        st.session_state.last_visit_topic = last_topic
+    st.session_state.conversation_restored = True
+
+
+def maybe_restore_lifespan_history_from_cloud() -> None:
+    """
+    여정·학습·마음챙김 — 로그인 직후·재배포 세션에서 Supabase 대화 hydrate.
+    """
+    if (
+        _is_isolation_mode()
+        or _is_preview_mode()
+        or not is_supabase_configured()
+    ):
+        return
+    if st.session_state.get("_lifespan_history_hydrated"):
+        return
+    nick = (st.session_state.get("participant_id") or "").strip()
+    if not nick or nick == "미리보기" or not st.session_state.get("onboarding_complete"):
+        return
+
+    from hbridge_analysis import count_user_turns
+    from database_manager import fetch_dlinso_messages_from_supabase
+
+    ui_turns = count_user_turns(st.session_state.get("messages") or [])
+    stored_turns = int(st.session_state.get("total_user_turns") or 0)
+    st.session_state._lifespan_history_hydrated = True
+
+    if ui_turns > 0 and (stored_turns <= 0 or ui_turns >= stored_turns):
+        return
+
+    profile = {
+        "lang": st.session_state.get("lang") or "ko",
+        "gender": st.session_state.get("gender") or "",
+        "age_group": st.session_state.get("age_group") or "",
+        "life_stage": st.session_state.get("life_stage") or "",
+    }
+    msgs, turn_count, last_topic = fetch_dlinso_messages_from_supabase(
         nick, profile=profile
     )
     if not msgs:
@@ -2623,37 +2668,42 @@ def render_chat_toolbar(
         if not db.is_connected and db.error_message:
             st.warning(db.error_message)
 
+def _apply_db_module_for_restore(found: dict[str, Any]) -> None:
+    """재방문 복원 — DB 마지막 모듈로 전환(대화는 _activate_session에서 채움)."""
+    db_mod = (found.get("last_module_type") or "lifespan").strip()
+    apply_landing_module_selection(
+        module_id_from_db_type(db_mod),
+        preserve_conversation=True,
+    )
+    if db_mod == "learning":
+        aud = (found.get("last_learning_audience") or "").strip()
+        if aud:
+            st.session_state.learning_audience = aud
+
+
 def _login_restore_payload(found: dict[str, Any]) -> tuple[list[dict[str, Any]] | None, list[dict[str, str]]]:
     """
-    랜딩에서 고른 모듈과 DB 마지막 모듈이 다르면 복원하지 않음.
-    (여정 카드 → 동행 대화가 붙는 현상 방지)
+    재방문 시 DB에 저장된 모듈·대화 기준으로 복원.
+    (홈에서 다른 카드를 골랐어도 기록이 있으면 DB 모듈로 맞춤)
     """
     restore_msgs = found.get("restored_messages")
     restore_turns = list(found.get("recent_turns") or [])
+    has_restore_data = bool(restore_msgs) or bool(restore_turns)
     landing_id = (st.session_state.get("selected_module_id") or "").strip()
+    db_mod = (found.get("last_module_type") or "lifespan").strip()
 
     if landing_id:
         want_mode = module_app_mode(landing_id) or MODE_LIFESPAN
-        db_mod = (found.get("last_module_type") or "lifespan").strip()
         if want_mode != db_mod:
-            # 숲: Supabase에서 복원된 대화가 있으면 모듈 불일치여도 표시
-            if want_mode == MODE_ISOLATION and restore_msgs:
+            if want_mode == MODE_ISOLATION and has_restore_data:
+                return restore_msgs, restore_turns
+            if has_restore_data:
+                _apply_db_module_for_restore(found)
                 return restore_msgs, restore_turns
             return None, []
         return restore_msgs, restore_turns
 
-    db_mod = (found.get("last_module_type") or "lifespan").strip()
-    if db_mod == "isolation":
-        apply_landing_module_selection("forest")
-    elif db_mod == "learning":
-        apply_landing_module_selection("learning")
-        aud = (found.get("last_learning_audience") or "").strip()
-        if aud:
-            st.session_state.learning_audience = aud
-    elif db_mod == "mindfulness":
-        apply_landing_module_selection("emotion")
-    else:
-        apply_landing_module_selection("narrative")
+    _apply_db_module_for_restore(found)
     return restore_msgs, restore_turns
 
 
@@ -2681,6 +2731,7 @@ def reset_user_session() -> None:
         "active_giant": None,
         "current_view": VIEW_HOME,
         "_iso_history_hydrated": False,
+        "_lifespan_history_hydrated": False,
     }.items():
         st.session_state[key] = val
 
@@ -2897,6 +2948,8 @@ def render_onboarding(db: DatabaseManager) -> None:
                             },
                         )
                         maybe_restore_isolation_history_from_cloud()
+                    else:
+                        maybe_restore_lifespan_history_from_cloud()
                     st.rerun()
 
 
@@ -4311,6 +4364,7 @@ def _run_app() -> None:
     gemini_ok, gemini_error = init_gemini()
     display = resolve_companion_display()
     maybe_restore_isolation_history_from_cloud()
+    maybe_restore_lifespan_history_from_cloud()
     render_chat_toolbar(gemini_ok, gemini_error, db)
 
     with st.container():
