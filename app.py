@@ -76,6 +76,11 @@ from hbridge_analysis import (
     run_intra_individual_or_pipeline,
 )
 from i18n import FOOTER_BANNER, get_lang, render_language_selector, t
+from repeat_guard import (
+    build_repeat_retry_prompt,
+    guard_reply_against_duplicates,
+    reply_needs_reguard,
+)
 from maieutic_engine import (
     analyze_uploaded_image,
     build_adaptive_scaffolding_addon,
@@ -2978,6 +2983,7 @@ def iter_reply_stream(
     *,
     image_bytes: bytes | None = None,
     image_mime: str | None = None,
+    repeat_retry: bool = False,
 ) -> Iterator[str]:
     """Solar/Gemini 스트리밍 — 배움 모드는 learning_engine 전용."""
     if _is_isolation_mode():
@@ -3011,12 +3017,14 @@ def iter_reply_stream(
 
     if _is_mindfulness_mode():
         api_messages = messages
+        mindfulness_temp = 0.55 if repeat_retry else 0.72
+        mindfulness_top_p = 0.82 if repeat_retry else 0.88
         yield from iter_chat_stream(
             api_messages,
             user_prompt,
             system=build_system_instruction(),
-            temperature=0.72,
-            top_p=0.88,
+            temperature=mindfulness_temp,
+            top_p=mindfulness_top_p,
             max_tokens=_chat_max_output_tokens(),
             gemini_history=build_gemini_history(api_messages),
             image_bytes=image_bytes,
@@ -3025,12 +3033,14 @@ def iter_reply_stream(
         return
 
     api_messages = messages
+    lifespan_temp = 0.52 if repeat_retry else 0.82
+    lifespan_top_p = 0.85 if repeat_retry else 0.92
     yield from iter_chat_stream(
         api_messages,
         user_prompt,
         system=build_system_instruction(),
-        temperature=0.82,
-        top_p=0.92,
+        temperature=lifespan_temp,
+        top_p=lifespan_top_p,
         max_tokens=_chat_max_output_tokens(),
         gemini_history=build_gemini_history(api_messages),
         image_bytes=image_bytes,
@@ -3136,10 +3146,47 @@ def handle_chat_turn(
         except Exception as exc:  # noqa: BLE001
             yield _llm_user_error(exc)
 
+    def _collect_reply(prompt: str, *, repeat_retry: bool = False) -> str:
+        chunks: list[str] = []
+        try:
+            for piece in iter_reply_stream(
+                messages_for_gemini_api(),
+                prompt,
+                image_bytes=image_bytes,
+                image_mime=image_mime,
+                repeat_retry=repeat_retry,
+            ):
+                chunks.append(piece)
+        except Exception as exc:  # noqa: BLE001
+            return _llm_user_error(exc)
+        return "".join(chunks).strip()
+
+    use_repeat_guard = not _is_learning_mode() and not _is_isolation_mode()
+
     try:
         with st.chat_message("assistant", avatar=display["emoji"]):
-            streamed = st.write_stream(_reply_token_stream())
-            full_reply = (streamed or "").strip() if isinstance(streamed, str) else ""
+            if use_repeat_guard:
+                full_reply = _collect_reply(model_prompt)
+                if reply_needs_reguard(
+                    full_reply,
+                    st.session_state.messages,
+                    display_text,
+                ):
+                    with st.spinner("다시 생각하고 있어요…"):
+                        full_reply = guard_reply_against_duplicates(
+                            full_reply,
+                            st.session_state.messages,
+                            display_text,
+                            regenerate=lambda: _collect_reply(
+                                build_repeat_retry_prompt(display_text),
+                                repeat_retry=True,
+                            ),
+                            lang=get_lang(),
+                        )
+                st.markdown(full_reply)
+            else:
+                streamed = st.write_stream(_reply_token_stream())
+                full_reply = (streamed or "").strip() if isinstance(streamed, str) else ""
     except Exception as exc:  # noqa: BLE001
         full_reply = _llm_user_error(exc)
         with st.chat_message("assistant", avatar=display["emoji"]):
