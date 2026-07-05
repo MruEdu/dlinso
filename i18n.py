@@ -34,7 +34,7 @@ FOOTER_BANNER: dict[str, str] = {
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "archive_title": "서사 기록실",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "서사 인출 시작",
@@ -590,7 +590,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "en": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "archive_title": "Narrative Archive",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "Begin narrative withdrawal",
@@ -908,7 +908,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "mn": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "brand_tagline": "Амь бүр урлаг болдог",
         "brand_gate_hint": "scroll · click · эхлэх",
         "hub_eyebrow": "Narrative Research Hub",
@@ -971,7 +971,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ja": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "brand_tagline": "すべての人生は芸術になる",
         "brand_gate_hint": "scroll · click · はじめる",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1033,7 +1033,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "zh": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "brand_tagline": "每一种人生，皆成艺术",
         "brand_gate_hint": "scroll · click · 开始",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1095,7 +1095,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "vi": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.2",
+        "beta_badge": "v1.2.3",
         "brand_tagline": "Mỗi cuộc đời đều trở thành nghệ thuật",
         "brand_gate_hint": "scroll · click · bắt đầu",
         "hub_eyebrow": "Narrative Research Hub",

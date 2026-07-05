@@ -829,6 +829,27 @@ div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button {{
     transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button p,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) button p,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button p,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button p,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button span,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--learning) button span,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--forest) button span,
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
+div[data-testid="column"]:has(.dlinso-salon-cta--emotion) button span {{
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
 div[data-testid="column"]:has(.dlinso-salon-cta--narrative) button {{
     background: linear-gradient(180deg, #d4b96a 0%, #a8863a 55%, #8f7340 100%) !important;
     border: 1px solid #7a6535 !important;

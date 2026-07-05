@@ -459,10 +459,16 @@ CUSTOM_CSS = """
     }
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="primary"],
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
-        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
-        color: #fff !important;
-        border: 1px solid #5b4cdb !important;
-        box-shadow: 0 2px 10px rgba(108, 92, 231, 0.3) !important;
+        background: linear-gradient(180deg, #8f7340 0%, #6b5528 55%, #4a3a1a 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #c9a962 !important;
+        box-shadow: 0 2px 10px rgba(10, 22, 40, 0.45) !important;
+    }
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="primary"] p,
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[data-testid="baseButton-primary"] p {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
     }
     /* PC — 브랜드 좌측, 메뉴 우측 정렬 */
     @media (min-width: 601px) {
@@ -483,14 +489,33 @@ CUSTOM_CSS = """
             min-width: 6.5rem !important;
         }
     }
-    /* Streamlit 버튼 라벨(p/span) — 전역 본문색(#3a342e) 덮어쓰기 방지 */
-    section.main button p,
-    section.main button span,
-    section.main [data-testid="stButton"] button p,
-    section.main [data-testid="stButton"] button span,
-    section.main button[data-testid="baseButton-primary"] p,
-    section.main button[data-testid="baseButton-secondary"] p {
-        color: inherit !important;
+    /* Streamlit 버튼 라벨(p/span) — 전역 본문색(#3a342e) inherit 차단, 대비 확보 */
+    div[data-testid="stAppViewContainer"] section.main button p,
+    div[data-testid="stAppViewContainer"] section.main button span,
+    div[data-testid="stAppViewContainer"] section.main [data-testid="stButton"] button p,
+    div[data-testid="stAppViewContainer"] section.main [data-testid="stButton"] button span {
+        opacity: 1 !important;
+    }
+    div[data-testid="stAppViewContainer"] section.main button[kind="primary"] p,
+    div[data-testid="stAppViewContainer"] section.main button[kind="primary"] span,
+    div[data-testid="stAppViewContainer"] section.main button[kind="primaryFormSubmit"] p,
+    div[data-testid="stAppViewContainer"] section.main button[kind="primaryFormSubmit"] span,
+    div[data-testid="stAppViewContainer"] section.main button[data-testid="baseButton-primary"] p,
+    div[data-testid="stAppViewContainer"] section.main button[data-testid="baseButton-primary"] span,
+    div[data-testid="stAppViewContainer"] section.main [data-testid="stFormSubmitButton"] button p,
+    div[data-testid="stAppViewContainer"] section.main [data-testid="stFormSubmitButton"] button span,
+    div[data-testid="stAppViewContainer"] section.main [data-testid="baseButton-primary"] p {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stAppViewContainer"] section.main button[kind="secondary"] p,
+    div[data-testid="stAppViewContainer"] section.main button[kind="secondary"] span,
+    div[data-testid="stAppViewContainer"] section.main button[data-testid="baseButton-secondary"] p,
+    div[data-testid="stAppViewContainer"] section.main button[data-testid="baseButton-secondary"] span {
+        color: #1a1628 !important;
+        -webkit-text-fill-color: #1a1628 !important;
+        font-weight: 600 !important;
     }
     section.main button[kind="primary"],
     section.main button[kind="primaryFormSubmit"],
@@ -498,20 +523,27 @@ CUSTOM_CSS = """
     section.main .stButton > button[kind="primary"],
     section.main button[data-testid="baseButton-primary"],
     section.main [data-testid="baseButton-primary"] {
-        background-color: #6c5ce7 !important;
-        background: linear-gradient(180deg, #c9a962 0%, #a8863a 100%) !important;
+        background-color: #5c4a24 !important;
+        background: linear-gradient(180deg, #8f7340 0%, #6b5528 55%, #4a3a1a 100%) !important;
         color: #ffffff !important;
-        border: 1px solid #5b4cdb !important;
-        box-shadow: 0 2px 12px rgba(108, 92, 231, 0.32) !important;
+        border: 1px solid #3d3018 !important;
+        box-shadow: 0 2px 12px rgba(74, 58, 26, 0.35) !important;
     }
     section.main button[kind="primary"]:hover,
     section.main button[kind="primaryFormSubmit"]:hover,
     section.main [data-testid="stFormSubmitButton"] button:hover,
     section.main .stButton > button[kind="primary"]:hover {
         background-color: #5b4cdb !important;
-        background: linear-gradient(180deg, #6c5ce7 0%, #5b4cdb 100%) !important;
-        border-color: #4a3ec9 !important;
+        background: linear-gradient(180deg, #6c5ce7 0%, #5b4cdb 55%, #4338ca 100%) !important;
+        border-color: #3d32b8 !important;
         color: #ffffff !important;
+    }
+    section.main button[kind="primary"]:hover p,
+    section.main button[kind="primaryFormSubmit"]:hover p,
+    section.main [data-testid="stFormSubmitButton"] button:hover p,
+    section.main .stButton > button[kind="primary"]:hover p {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     section.main button[kind="primary"]:active,
     section.main button[kind="primaryFormSubmit"]:active,
@@ -528,19 +560,33 @@ CUSTOM_CSS = """
         padding: clamp(0.85rem, 3vw, 1.1rem) clamp(1rem, 4vw, 1.5rem) !important;
         border-radius: clamp(12px, 3vw, 16px) !important;
     }
-    /* 네비 secondary — 회색 톤 (빨간 기본색 방지) */
+    /* 네비 secondary — 어두운 상단바에서도 선명하게 */
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="secondary"],
     section.main button[kind="secondary"] {
-        background-color: rgba(255, 252, 248, 0.9) !important;
-        background: rgba(255, 252, 248, 0.92) !important;
-        color: #5c5048 !important;
-        border: 1px solid rgba(108, 92, 231, 0.25) !important;
+        background-color: #f5f0e6 !important;
+        background: linear-gradient(180deg, #faf7f0 0%, #ede4d4 100%) !important;
+        color: #1a1628 !important;
+        border: 1px solid rgba(201, 169, 98, 0.55) !important;
+        box-shadow: 0 1px 6px rgba(10, 22, 40, 0.12) !important;
+    }
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="secondary"] p,
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="secondary"] span,
+    section.main button[kind="secondary"] p,
+    section.main button[kind="secondary"] span {
+        color: #1a1628 !important;
+        -webkit-text-fill-color: #1a1628 !important;
+        font-weight: 600 !important;
     }
     section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="secondary"]:hover,
     section.main button[kind="secondary"]:hover {
-        background-color: #f0ebff !important;
-        border-color: #6c5ce7 !important;
-        color: #5b4cdb !important;
+        background: linear-gradient(180deg, #fff9f2 0%, #f0e8dc 100%) !important;
+        border-color: #c9a962 !important;
+        color: #0a1628 !important;
+    }
+    section.main .block-container > div[data-testid="stVerticalBlock"]:first-of-type button[kind="secondary"]:hover p,
+    section.main button[kind="secondary"]:hover p {
+        color: #0a1628 !important;
+        -webkit-text-fill-color: #0a1628 !important;
     }
     /* 하단 채팅 입력 — 상단 메뉴와 겹치지 않음 */
     [data-testid="stBottomBlockContainer"] {
