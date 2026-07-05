@@ -1,4 +1,4 @@
-"""메인 홈 4모듈 — 서사 상담실 · app_mode 라우팅."""
+"""메인 홈 서사 기록실 — app_mode 라우팅 (홈 노출은 enabled만)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ MODULE_EMOTION = "emotion"
 
 SALON_SECTION_TITLE = "서사 기록실"
 SALON_GUIDE_LINE = "dlinso — Dlinso Narrative Archive · 당신의 삶을 데이터 자산으로"
-SALON_GUIDE_SUB = "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. 아래에서 기록실을 선택하세요."
+SALON_GUIDE_SUB = "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. 아래 두 기록실 중 하나를 선택하세요."
 BRAND_TAGLINE = "모든 삶은 예술이 된다"
 JOURNEY_CTA_KO = "여정 시작하기"
 JOURNEY_CTA_EN = "Begin the Narrative"
@@ -77,24 +77,24 @@ class LandingModuleSpec:
 LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
     LandingModuleSpec(
         MODULE_NARRATIVE,
-        "동행 · 삶의 기록",
-        "지나온 길을 예술로 엮어 가는 시간",
+        "동행 · 삶의 서사",
+        "지나온 길과 남은 이야기를 함께 기록합니다",
         MODE_LIFESPAN,
         True,
         prompt_channel="lifespan",
-        title_en="Companion · Life as Record",
-        description_en="Weaving the path you have walked into art",
-        outcome_line1="대화가 쌓이면 당신만의 서사가 선명해집니다.",
-        outcome_line2="10턴 이후, 마음 지도 리포트로 삶의 흐름을 돌아볼 수 있습니다.",
-        outcome_line1_en="As dialogue accumulates, your narrative becomes clearer.",
-        outcome_line2_en="After 10 turns, revisit your life flow with a mind-map report.",
+        title_en="Companion · Life Narrative",
+        description_en="Recording the path walked and the stories still unfolding",
+        outcome_line1="은퇴·이민·가족사 — 당신만의 삶을 차분히 짚어 갑니다.",
+        outcome_line2="10턴 이후, 마음 지도 리포트로 흐름을 돌아볼 수 있습니다.",
+        outcome_line1_en="Retirement, migration, family history — your life, traced with care.",
+        outcome_line2_en="After 10 turns, revisit your flow with a mind-map report.",
     ),
     LandingModuleSpec(
         MODULE_LEARNING,
         "여정 · 배움의 등고선",
         "나만의 봉우리를 찾아가는 배움의 지형",
         MODE_LEARNING,
-        True,
+        False,
         prompt_channel="learning",
         title_en="Journey · Contour of Learning",
         description_en="Tracing your summit along the learning horizon",
@@ -105,24 +105,24 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
     ),
     LandingModuleSpec(
         MODULE_FOREST,
-        "숲 · 연결의 서사",
-        "고요함 속에 자아와 연결이 숨 쉬는 숲",
+        "숲 · 연결과 고요",
+        "고립과 회복을 검사 없이, 이야기로 열어 갑니다",
         MODE_ISOLATION,
         True,
         prompt_channel="forest",
-        title_en="Forest · Narrative of Connection",
-        description_en="A forest where selfhood and connection breathe in stillness",
-        outcome_line1="자아성·사회성 궤적을 검사 없이 이야기로 열어 갑니다.",
-        outcome_line2="6턴 자산 · 10턴 내면 항해 일지 · data/isolation.db 로컬 저장.",
-        outcome_line1_en="Open selfhood and social recovery arcs through story—not diagnosis.",
-        outcome_line2_en="6-turn assets · 10-turn inner voyage log · stored locally in data/isolation.db.",
+        title_en="Forest · Connection & Stillness",
+        description_en="Isolation and recovery opened through story—not diagnosis",
+        outcome_line1="자아성·사회성 궤적을 행정 지표가 아닌 대화로 탐색합니다.",
+        outcome_line2="6턴 자산 · 10턴 내면 항해 일지.",
+        outcome_line1_en="Explore selfhood and social arcs through dialogue—not forms.",
+        outcome_line2_en="6-turn assets · 10-turn inner voyage log.",
     ),
     LandingModuleSpec(
         MODULE_EMOTION,
         "숨결 · 마음 챙김",
         "내면의 물결을 마주하는 섬세한 대화",
         MODE_MINDFULNESS,
-        True,
+        False,
         prompt_channel="mindfulness",
         title_en="Breath · Mindful Presence",
         description_en="A delicate dialogue with the tides within",
@@ -134,6 +134,11 @@ LANDING_MODULES: tuple[LandingModuleSpec, ...] = (
 )
 
 _MODULE_BY_ID = {m.id: m for m in LANDING_MODULES}
+
+
+def enabled_landing_modules() -> tuple[LandingModuleSpec, ...]:
+    """홈 살롱 카드에 노출할 모듈 (enabled + app_mode)."""
+    return tuple(m for m in LANDING_MODULES if m.enabled and m.app_mode)
 
 
 def get_landing_module(module_id: str) -> LandingModuleSpec | None:

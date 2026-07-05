@@ -239,7 +239,7 @@ HERO_CARD_INLINE_STYLE = """
 </style>
 """
 
-from core.version import APP_VERSION_LABEL
+from core.version import APP_DEPLOY_DOT, APP_VERSION_LABEL
 
 TOKEN_DIET_MESSAGE_THRESHOLD = 28
 CHAT_DISPLAY_COLLAPSE_AFTER_TURNS = 6
@@ -248,7 +248,12 @@ CHAT_DISPLAY_RECENT_TURNS = 2
 
 def _beta_badge_html() -> str:
     label = html.escape((t("beta_badge") or APP_VERSION_LABEL).strip())
-    return f'<span class="beta-badge" title="{label}">{label}</span>'
+    dot = (
+        '<span class="dlinso-deploy-dot" aria-hidden="true"></span>'
+        if APP_DEPLOY_DOT
+        else ""
+    )
+    return f'<span class="beta-badge" title="{label}">{dot}{label}</span>'
 
 
 def _html_layout_marker(*css_classes: str) -> None:
@@ -758,6 +763,60 @@ CUSTOM_CSS = """
             padding-top: 1rem !important;
             padding-bottom: 1rem !important;
         }
+        /* 상담(대화) 화면 — 모바일 여백·헤더 압축 */
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .hero-header {
+            padding: 0.55rem 0.65rem 0.45rem !important;
+            margin-bottom: 0.25rem !important;
+            border-radius: 12px !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .hero-title {
+            font-size: 1.05rem !important;
+            margin-bottom: 0.2rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .hero-salon-module {
+            font-size: 0.88rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .hero-desc {
+            font-size: 0.82rem !important;
+            line-height: 1.45 !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .profile-strip {
+            margin-top: 0.45rem !important;
+            gap: 0.3rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .profile-pill {
+            min-height: 1.85rem !important;
+            padding: 0.28rem 0.45rem !important;
+            font-size: 0.72rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-content-pad-marker) .hub-slogan-info {
+            display: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) .gentle-record {
+            display: none !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) .archive-room-title {
+            font-size: 0.82rem !important;
+            margin-bottom: 0.15rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) .archive-progress-label {
+            font-size: 0.72rem !important;
+            margin: 0.15rem 0 0.1rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) .phase-badge {
+            font-size: 0.72rem !important;
+            padding: 0.15rem 0.5rem !important;
+            margin-bottom: 0.15rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stProgress"] {
+            margin-bottom: 0.25rem !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.chat-toolbar-marker) [data-testid="stHorizontalBlock"] button {
+            min-height: 2.15rem !important;
+            font-size: 0.74rem !important;
+            padding: 0.35rem 0.25rem !important;
+        }
     }
     .status-card {
         background: rgba(255, 252, 248, 0.85);
@@ -1064,7 +1123,9 @@ CUSTOM_CSS = """
         vertical-align: 0.2em;
     }
     .beta-badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28em;
         vertical-align: middle;
         margin-left: 0.45rem;
         padding: 0.12rem 0.55rem;
@@ -1076,6 +1137,16 @@ CUSTOM_CSS = """
         background: linear-gradient(135deg, #f0ebe3 0%, #e0d6c8 100%);
         border: 1px solid rgba(140, 120, 100, 0.35);
         border-radius: 999px;
+    }
+    .beta-badge .dlinso-deploy-dot,
+    .dlinso-version-pill .dlinso-deploy-dot {
+        display: inline-block;
+        width: 0.42em;
+        height: 0.42em;
+        border-radius: 50%;
+        background: #3ecf6e;
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.45);
+        flex-shrink: 0;
     }
     .research-reply-box {
         background: linear-gradient(135deg, #f4faf6 0%, #e8f2ec 100%);

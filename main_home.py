@@ -7,7 +7,7 @@ import html
 import streamlit as st
 import streamlit.components.v1 as components
 
-from core.version import APP_VERSION_LABEL
+from core.version import APP_DEPLOY_DOT, APP_VERSION_LABEL
 from i18n import get_lang, render_language_selector, t
 from modules.home_registry import (
     LEARNING_SPOTLIGHT_CTA_EN,
@@ -18,10 +18,10 @@ from modules.home_registry import (
     LEARNING_SPOTLIGHT_STEPS_KO,
     LEARNING_SPOTLIGHT_TITLE_EN,
     LEARNING_SPOTLIGHT_TITLE_KO,
-    LANDING_MODULES,
     MODULE_CTA_ICON,
     MODULE_LEARNING,
     active_deep_link_module_id,
+    enabled_landing_modules,
     get_landing_module,
     module_cta_label,
     navigate_to_landing_module,
@@ -219,6 +219,33 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     }}
     div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
         padding: 0 0.35rem 0 !important;
+    }}
+    div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-about-panel {{
+        display: none !important;
+    }}
+    .dlinso-salon-guide {{
+        margin-bottom: 0.85rem !important;
+        padding: 0.65rem 0.75rem !important;
+    }}
+    .dlinso-salon-guide-title {{
+        font-size: clamp(1.05rem, 4.2vw, 1.35rem) !important;
+    }}
+    .dlinso-salon-guide-sub {{
+        font-size: 0.88rem !important;
+        line-height: 1.5 !important;
+    }}
+    .dlinso-salon-card {{
+        min-height: 8.5rem !important;
+        padding: 0.85rem 0.8rem 0.5rem !important;
+    }}
+    .dlinso-salon-grid {{
+        padding-bottom: 1rem !important;
+    }}
+    .dlinso-salon-heading {{
+        margin-bottom: 0.65rem !important;
+    }}
+    .dlinso-brand-hero--lifted {{
+        margin-bottom: 0.15rem !important;
     }}
 }}
 
@@ -597,7 +624,9 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     display: inline;
 }}
 .dlinso-version-pill {{
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28em;
     vertical-align: baseline;
     margin: 0;
     padding: 0.06rem 0.38rem;
@@ -612,6 +641,15 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     border-radius: 999px;
     box-shadow: 0 1px 3px rgba(92, 112, 136, 0.18);
     transform: translateY(-0.12em);
+    flex-shrink: 0;
+}}
+.dlinso-version-pill .dlinso-deploy-dot {{
+    display: inline-block;
+    width: 0.42em;
+    height: 0.42em;
+    border-radius: 50%;
+    background: #3ecf6e;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.55);
     flex-shrink: 0;
 }}
 .dlinso-brand-hero .dlinso-version-pill {{
@@ -1121,7 +1159,15 @@ def _html_layout_marker(*classes: str) -> None:
 
 def _version_pill_html() -> str:
     label = html.escape(APP_VERSION_LABEL)
-    return f'<span class="dlinso-version-pill" aria-label="version {label}">{label}</span>'
+    dot = (
+        '<span class="dlinso-deploy-dot" aria-hidden="true"></span>'
+        if APP_DEPLOY_DOT
+        else ""
+    )
+    return (
+        f'<span class="dlinso-version-pill" aria-label="version {label}">'
+        f"{dot}{label}</span>"
+    )
 
 
 def _brand_title_row_html(*, include_version: bool = True) -> str:
@@ -1333,33 +1379,40 @@ def _render_salon_section() -> None:
         unsafe_allow_html=True,
     )
     _render_learning_spotlight()
-    st.markdown(
-        f'<section class="dlinso-salon-section">'
-        f'<h2 class="dlinso-salon-heading">{html.escape(t("salon_section_title"))}</h2></section>',
-        unsafe_allow_html=True,
-    )
-    st.markdown('<div class="dlinso-salon-grid">', unsafe_allow_html=True)
-    learning_focus = active_deep_link_module_id() == MODULE_LEARNING
-    narrative = get_landing_module("narrative")
-    learning = get_landing_module("learning")
-    forest = get_landing_module("forest")
-    emotion = get_landing_module("emotion")
-    col_narrative, col_learning = st.columns(2, gap="medium")
-    with col_narrative:
-        if narrative:
-            _render_module_card(narrative)
-    with col_learning:
-        if learning:
-            _render_module_card(learning, spotlight=learning_focus)
-    st.markdown("<div style='height:0.65rem'></div>", unsafe_allow_html=True)
-    col_forest, col_emotion = st.columns(2, gap="medium")
-    with col_forest:
-        if forest:
-            _render_module_card(forest)
-    with col_emotion:
-        if emotion:
-            _render_module_card(emotion)
-    st.markdown("</div>", unsafe_allow_html=True)
+    visible = enabled_landing_modules()
+    if visible:
+        st.markdown(
+            f'<section class="dlinso-salon-section">'
+            f'<h2 class="dlinso-salon-heading">{html.escape(t("salon_section_title"))}</h2></section>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('<div class="dlinso-salon-grid">', unsafe_allow_html=True)
+        focus_id = active_deep_link_module_id()
+        if len(visible) == 1:
+            _render_module_card(visible[0], spotlight=focus_id == visible[0].id)
+        elif len(visible) == 2:
+            col_a, col_b = st.columns(2, gap="medium")
+            with col_a:
+                _render_module_card(
+                    visible[0], spotlight=focus_id == visible[0].id
+                )
+            with col_b:
+                _render_module_card(
+                    visible[1], spotlight=focus_id == visible[1].id
+                )
+        else:
+            for row_start in range(0, len(visible), 2):
+                row = visible[row_start : row_start + 2]
+                cols = st.columns(2, gap="medium")
+                for col, spec in zip(cols, row):
+                    with col:
+                        _render_module_card(spec, spotlight=focus_id == spec.id)
+                if row_start + 2 < len(visible):
+                    st.markdown(
+                        "<div style='height:0.65rem'></div>",
+                        unsafe_allow_html=True,
+                    )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_main_home() -> bool:
