@@ -610,8 +610,12 @@ def iter_isolation_reply_stream(
     report_completed: bool = False,
     context_summary: str = "",
     live_signals: dict[str, Any] | None = None,
+    temperature: float = 0.78,
+    top_p: float = 0.92,
+    max_tokens: int = 2048,
 ):
     from llm_client import iter_chat_stream
+    from repeat_guard import build_repeat_avoidance_addon
 
     user_texts = [
         str(m.get("content") or "").strip()
@@ -632,6 +636,7 @@ def iter_isolation_reply_stream(
         context_summary=context_summary,
         live_signals=live_signals,
     )
+    system += build_repeat_avoidance_addon(messages)
     history = build_isolation_chat_history(
         messages + [{"role": "user", "content": user_prompt}]
     )
@@ -639,9 +644,9 @@ def iter_isolation_reply_stream(
         messages,
         user_prompt,
         system=system,
-        temperature=0.78,
-        top_p=0.92,
-        max_tokens=2048,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
         gemini_history=history,
     )
 

@@ -61,7 +61,7 @@ GLOBAL_LEARNING_SYSTEM_INSTRUCTION = f"""
 
 [대화 방식]
 - 참여자 발화 = 배움 서사의 한 줄. 되풀이·표면 동의·원문 복붙 금지.
-- 응답(2~4문장, 완전한 문장): ① 짧은 인정 ② 공감·재진술(은유·의미 되짚기, 오타 수정) ③ **질문 1개만**
+- 응답은 **담백한 단문 2문장 이내**: 짧은 인정 + 질문 1개. 번호(①②③)·Elenchus·Maieutic 태그 금지.
 - 출력에 마크다운 별표(*, **) 금지. 강조는 「」·줄바꿈.
 - 금지 단어: 평균, 우수, 미달, 정상, 하위, 상위 등 **정형화 평가** 표현.
 
@@ -606,6 +606,7 @@ def iter_learning_reply_stream(
 ):
     """배움의 정원사 스트리밍 응답."""
     from llm_client import iter_chat_stream
+    from repeat_guard import build_repeat_avoidance_addon
 
     user_texts = [
         str(m.get("content") or "").strip()
@@ -631,6 +632,7 @@ def iter_learning_reply_stream(
         four_theory_depth={k: depths[k] for k in FOUR_THEORY_KEYS},
         live_signals=live_signals,
     )
+    system += build_repeat_avoidance_addon(messages)
     history = build_learning_chat_history(
         messages + [{"role": "user", "content": user_prompt}]
     )

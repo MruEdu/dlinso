@@ -16,9 +16,16 @@ REPEAT_COMPLAINT_KEYWORDS: tuple[str, ...] = (
     "또 같은",
     "계속 같은",
     "똑같",
+    "이상해",
+    "시적",
+    "추상",
 )
 
 _DUPLICATE_THRESHOLD = 0.78
+_PRIOR_REPLY_LOOKBACK = 6
+_SENSORY_TROPE_RE = re.compile(
+    r"소리|향기|냄새|촉감|작은\s*문|잠깐\s*열|어떤\s*색"
+)
 
 
 def normalize_reply_text(text: str) -> str:
@@ -38,6 +45,45 @@ def is_near_duplicate_reply(
     if len(a) >= 12 and (a in b or b in a):
         return True
     return SequenceMatcher(None, a, b).ratio() >= threshold
+
+
+def extract_question_snippet(text: str, *, max_len: int = 90) -> str:
+    cleaned = re.sub(r"\s+", " ", (text or "").strip())
+    if not cleaned:
+        return ""
+    for sep in ("?", "？"):
+        idx = cleaned.find(sep)
+        if idx >= 0:
+            cleaned = cleaned[: idx + 1]
+            break
+    if len(cleaned) > max_len:
+        cleaned = cleaned[: max_len - 1] + "…"
+    return cleaned
+
+
+def build_repeat_avoidance_addon(messages: list[dict], *, limit: int = 5) -> str:
+    """직전 AI 질문을 system prompt에 넣어 LLM이 같은 구조를 반복하지 않게 함."""
+    priors = recent_assistant_replies(messages, limit=limit)
+    snippets = [s for s in (extract_question_snippet(p) for p in priors) if s]
+    if not snippets:
+        return ""
+    lines = "\n".join(f"- {s}" for s in snippets)
+    return (
+        "\n\n[직전 AI 질문 — 아래와 비슷한 문장·구조 재사용 금지]\n"
+        f"{lines}\n"
+        "- **소리·향기·냄새·촉감·작은 문** 같은 표현을 또 쓰지 마세요.\n"
+        "- 참여자가 방금 말한 **새 단어**로만 질문하세요."
+    )
+
+
+def _sensory_trope_count(replies: list[str]) -> int:
+    return sum(1 for r in replies if _SENSORY_TROPE_RE.search(r or ""))
+
+
+def reply_has_overused_tropes(candidate: str, priors: list[str]) -> bool:
+    if not _SENSORY_TROPE_RE.search(candidate or ""):
+        return False
+    return _sensory_trope_count(priors) >= 1
 
 
 def recent_assistant_replies(messages: list[dict], *, limit: int = 3) -> list[str]:
@@ -68,8 +114,10 @@ def reply_needs_reguard(
         return False
     if user_flags_repeat_complaint(last_user_display):
         return True
-    priors = recent_assistant_replies(messages, limit=3)
-    return any(is_near_duplicate_reply(cleaned, prior) for prior in priors)
+    priors = recent_assistant_replies(messages, limit=_PRIOR_REPLY_LOOKBACK)
+    if any(is_near_duplicate_reply(cleaned, prior, threshold=0.72) for prior in priors):
+        return True
+    return reply_has_overused_tropes(cleaned, priors)
 
 
 def build_repeat_retry_prompt(original_user: str) -> str:
@@ -106,15 +154,16 @@ def guard_reply_against_duplicates(
 ) -> str:
     """중복·반복 불만 시 1회 재생, 실패 시 비-LLM 폴백."""
     cleaned = (reply or "").strip()
-    priors = recent_assistant_replies(messages, limit=3)
+    priors = recent_assistant_replies(messages, limit=_PRIOR_REPLY_LOOKBACK)
 
     def _is_unacceptable(candidate: str) -> bool:
         text = (candidate or "").strip()
         if not text:
             return True
-        if user_flags_repeat_complaint(last_user_display):
-            return any(is_near_duplicate_reply(text, prior) for prior in priors)
-        return any(is_near_duplicate_reply(text, prior) for prior in priors)
+        threshold = 0.72 if user_flags_repeat_complaint(last_user_display) else _DUPLICATE_THRESHOLD
+        if any(is_near_duplicate_reply(text, prior, threshold=threshold) for prior in priors):
+            return True
+        return reply_has_overused_tropes(text, priors)
 
     if not _is_unacceptable(cleaned):
         return cleaned

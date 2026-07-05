@@ -77,6 +77,7 @@ from hbridge_analysis import (
 )
 from i18n import FOOTER_BANNER, get_lang, render_language_selector, t
 from repeat_guard import (
+    build_repeat_avoidance_addon,
     build_repeat_retry_prompt,
     guard_reply_against_duplicates,
     reply_needs_reguard,
@@ -313,8 +314,8 @@ def _llm_user_error(exc: BaseException) -> str:
     return f"{t('err_gemini_reply')}: {msg}"
 
 
-TOKEN_DIET_KEEP_RECENT = 20
-MAX_STORED_MESSAGES = 48
+TOKEN_DIET_KEEP_RECENT = 24
+MAX_STORED_MESSAGES = 56
 DEFAULT_INPUT_CHAR_LIMIT = 1000
 EXTENDED_INPUT_CHAR_LIMIT = 5000
 
@@ -2258,6 +2259,7 @@ def _build_mindfulness_system_instruction(lang: str) -> str:
     if thread:
         base += f"\n\n[대화 실타래 — 맥락 유지]\n{thread}"
     base += _conversation_style_addon()
+    base += build_repeat_avoidance_addon(st.session_state.messages)
     return base
 
 
@@ -2325,6 +2327,7 @@ def _build_lifespan_system_instruction(lang: str) -> str:
         )
 
     base += _conversation_style_addon()
+    base += build_repeat_avoidance_addon(st.session_state.messages)
     return base
 
 
@@ -3230,6 +3233,7 @@ def iter_reply_stream(
 ) -> Iterator[str]:
     """Solar/Gemini 스트리밍 — 배움 모드는 learning_engine 전용."""
     if _is_isolation_mode():
+        iso_temp = 0.55 if repeat_retry else 0.78
         yield from iter_isolation_reply_stream(
             messages,
             user_prompt,
@@ -3240,10 +3244,12 @@ def iter_reply_stream(
             report_completed=bool(st.session_state.get("isolation_report_count", 0)),
             context_summary=str(st.session_state.get("context_summary") or ""),
             live_signals=st.session_state.get("isolation_signals"),
+            temperature=iso_temp,
         )
         return
 
     if _is_learning_mode():
+        learn_temp = 0.55 if repeat_retry else 0.78
         yield from iter_learning_reply_stream(
             messages,
             user_prompt,
@@ -3255,6 +3261,7 @@ def iter_reply_stream(
             report_completed=bool(st.session_state.get("learning_report_count", 0)),
             context_summary=str(st.session_state.get("context_summary") or ""),
             live_signals=st.session_state.get("learning_signals"),
+            temperature=learn_temp,
         )
         return
 
@@ -3404,7 +3411,7 @@ def handle_chat_turn(
             return _llm_user_error(exc)
         return "".join(chunks).strip()
 
-    use_repeat_guard = not _is_learning_mode() and not _is_isolation_mode()
+    use_repeat_guard = True
 
     try:
         with st.chat_message("assistant", avatar=display["emoji"]):
