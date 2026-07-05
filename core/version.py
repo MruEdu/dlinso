@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 APP_VERSION_LABEL = f"v{APP_VERSION}"
 # 배포 확인용 — 홈·상담 화면 녹색 점
 APP_DEPLOY_DOT = True

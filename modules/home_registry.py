@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from modes.registry import MODE_ISOLATION, MODE_LEARNING, MODE_LIFESPAN, MODE_MINDFULNESS
+# modes.registry 와 동일 문자열 — import 시 modes 패키지 부팅 순환 오류 방지
+MODE_LIFESPAN = "lifespan"
+MODE_LEARNING = "learning"
+MODE_ISOLATION = "isolation"
+MODE_MINDFULNESS = "mindfulness"
 
 MODULE_NARRATIVE = "narrative"
 MODULE_LEARNING = "learning"

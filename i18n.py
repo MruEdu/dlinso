@@ -34,7 +34,7 @@ FOOTER_BANNER: dict[str, str] = {
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "archive_title": "서사 기록실",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "서사 인출 시작",
@@ -50,7 +50,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "대화로 발견하는 나의 보물,\n\n예술이 되는 나의 삶.\n\n**dlinso**"
         ),
-        "hub_slogan_beta_note": "v1.2.1 · 동행·숲 2방 · 반복 질문 개선",
+        "hub_slogan_beta_note": "v1.2.2 · 동행·숲 2방 · 반복 질문 개선",
         "intro_headline": (
             "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
         ),
@@ -115,7 +115,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "자아성·사회성 회복 궤적. 6턴 자산, 10턴 내면 항해 일지. "
             "data/isolation.db 로컬 저장."
         ),
-        "home_version_note": "v1.2.1 · 동행·숲 2방",
+        "home_version_note": "v1.2.2 · 동행·숲 2방",
         "salon_guide_line": (
             "dlinso — Dlinso Narrative Archive · 당신의 삶을 데이터 자산으로"
         ),
@@ -590,7 +590,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "en": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "archive_title": "Narrative Archive",
         "archive_subtitle": "Dlinso Narrative Archive",
         "btn_start_withdrawal": "Begin narrative withdrawal",
@@ -631,7 +631,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_slogan": (
             "Discover your treasure through dialogue — your life as art. **dlinso**"
         ),
-        "hub_slogan_beta_note": "v1.2.1 · Companion & Forest · repeat guard fix",
+        "hub_slogan_beta_note": "v1.2.2 · Companion & Forest · repeat guard fix",
         "lang_label": "Language",
         "tab_new": "First visit",
         "tab_return": "Continue",
@@ -683,7 +683,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "not admin metrics. Assets at 6 turns, voyage log at 10. "
             "Stored in data/isolation.db."
         ),
-        "home_version_note": "v1.2.1 · 2 rooms: Companion & Forest",
+        "home_version_note": "v1.2.2 · 2 rooms: Companion & Forest",
         "salon_guide_line": (
             "dlinso — Dlinso Narrative Archive · your life as narrative data"
         ),
@@ -908,7 +908,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "mn": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "brand_tagline": "Амь бүр урлаг болдог",
         "brand_gate_hint": "scroll · click · эхлэх",
         "hub_eyebrow": "Narrative Research Hub",
@@ -971,7 +971,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ja": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "brand_tagline": "すべての人生は芸術になる",
         "brand_gate_hint": "scroll · click · はじめる",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1033,7 +1033,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "zh": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "brand_tagline": "每一种人生，皆成艺术",
         "brand_gate_hint": "scroll · click · 开始",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1095,7 +1095,7 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "vi": {
         "app_title": "dlinso",
-        "beta_badge": "v1.2.1",
+        "beta_badge": "v1.2.2",
         "brand_tagline": "Mỗi cuộc đời đều trở thành nghệ thuật",
         "brand_gate_hint": "scroll · click · bắt đầu",
         "hub_eyebrow": "Narrative Research Hub",
