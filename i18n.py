@@ -117,11 +117,11 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "home_version_note": "v1.2.4 · 들니소 · 동행·숲 2방",
         "salon_guide_line": (
-            "들니소 — dlniso Narrative Archive · 당신의 삶을 데이터 자산으로"
+            "들니소 — 편하게 들러 이야기하는 곳"
         ),
         "salon_guide_sub": (
-            "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. "
-            "아래 두 기록실 중 하나를 선택하세요."
+            "검사·채점 없이, 말과 기억을 가볍게 나누는 디지털 아카이브입니다. "
+            "아래 기록실 중 하나를 선택해 주세요."
         ),
         "salon_section_title": "서사 기록실",
         "home_scroll_cue": "또는 화면 아무 곳을 눌러 · 스크롤해 주세요",
@@ -685,11 +685,11 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "home_version_note": "v1.2.2 · 2 rooms: Companion & Forest",
         "salon_guide_line": (
-            "dlniso — dlniso Narrative Archive · your life as narrative data"
+            "dlniso — a place to drop by and talk freely"
         ),
         "salon_guide_sub": (
-            "Not tests or scores—a digital archive to withdraw and record "
-            "words and memories. Choose one of the two rooms below."
+            "Not tests or scores—a digital archive to share words and memories lightly. "
+            "Choose a room below when you're ready."
         ),
         "salon_section_title": "Narrative Archive",
         "home_scroll_cue": "Or tap anywhere · scroll to continue",

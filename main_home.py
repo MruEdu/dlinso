@@ -7,7 +7,7 @@ import html
 import streamlit as st
 import streamlit.components.v1 as components
 
-from core.brand import BRAND_NAME_KO
+from core.brand import BRAND_NAME_EN, BRAND_NAME_KO
 from core.version import APP_DEPLOY_DOT, APP_VERSION_LABEL
 from i18n import get_lang, render_language_selector, t
 from modules.home_registry import (
@@ -1046,6 +1046,58 @@ div[data-testid="stVerticalBlock"]:has(.dlinso-home-mininav-marker)
     font-family: {FONT_SANS};
     margin: 0;
 }}
+/* FHD · dlniso 영문 히어로 · 「들르다」톤 레이아웃 */
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .block-container {{
+    max-width: 52rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}}
+.dlinso-brand-domain {{
+    letter-spacing: 0.18em !important;
+    text-transform: lowercase !important;
+    font-weight: 500 !important;
+    font-size: clamp(2.35rem, 5.5vw, 3.2rem) !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-domain {{
+    font-size: clamp(2.25rem, 5vw, 3.05rem) !important;
+    letter-spacing: 0.2em !important;
+}}
+.dlinso-brand-hero--gate .dlinso-brand-domain {{
+    font-size: clamp(2.5rem, 7vw, 3.7rem) !important;
+    letter-spacing: 0.22em !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-tagline {{
+    font-size: clamp(1.1rem, 2.8vw, 1.45rem) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.04em !important;
+    color: {TEXT_MID} !important;
+}}
+.dlinso-about-panel {{
+    max-width: 36rem !important;
+    background: rgba(255, 253, 249, 0.8) !important;
+    border: 1px solid rgba(72, 62, 50, 0.1) !important;
+    border-radius: 2px !important;
+    box-shadow: 0 10px 32px rgba(48, 40, 32, 0.05) !important;
+}}
+.dlinso-salon-guide {{
+    max-width: 32rem !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.5rem 0.4rem !important;
+}}
+.dlinso-salon-guide-title {{
+    font-size: clamp(1.08rem, 2.4vw, 1.28rem) !important;
+    font-weight: 500 !important;
+}}
+.dlinso-salon-grid {{
+    max-width: 720px !important;
+}}
+.dlinso-salon-card {{
+    border-radius: 2px !important;
+    border-color: rgba(72, 62, 50, 0.12) !important;
+    box-shadow: 0 12px 32px rgba(48, 40, 32, 0.06) !important;
+}}
 </style>
 """
 
@@ -1196,7 +1248,7 @@ def _brand_title_row_html(*, include_version: bool = True) -> str:
     version = _version_pill_html() if include_version else ""
     return (
         f'<div class="dlinso-brand-title-row">'
-        f'<h1 class="dlinso-brand-domain">{html.escape(BRAND_NAME_KO)}</h1>'
+        f'<h1 class="dlinso-brand-domain">{html.escape(BRAND_NAME_EN)}</h1>'
         f"{version}"
         f"</div>"
     )

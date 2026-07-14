@@ -16,8 +16,11 @@ MODULE_FOREST = "forest"
 MODULE_EMOTION = "emotion"
 
 SALON_SECTION_TITLE = "서사 기록실"
-SALON_GUIDE_LINE = "들니소 — dlniso Narrative Archive · 당신의 삶을 데이터 자산으로"
-SALON_GUIDE_SUB = "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. 아래 두 기록실 중 하나를 선택하세요."
+SALON_GUIDE_LINE = "들니소 — 편하게 들러 이야기하는 곳"
+SALON_GUIDE_SUB = (
+    "검사·채점 없이, 말과 기억을 가볍게 나누는 디지털 아카이브입니다. "
+    "아래 기록실 중 하나를 선택해 주세요."
+)
 BRAND_TAGLINE = "모든 삶은 예술이 된다"
 JOURNEY_CTA_KO = "여정 시작하기"
 JOURNEY_CTA_EN = "Begin the Narrative"

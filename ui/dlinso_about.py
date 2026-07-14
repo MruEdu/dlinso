@@ -6,7 +6,14 @@ import html
 
 import streamlit as st
 
-from core.brand import ARCHIVE_NAME_EN, BRAND_NAME_EN, BRAND_NAME_KO
+from core.brand import (
+    ARCHIVE_NAME_EN,
+    BRAND_INVITE_KO,
+    BRAND_NAME_EN,
+    BRAND_NAME_KO,
+    BRAND_NAME_STORY_EN,
+    BRAND_NAME_STORY_KO,
+)
 from i18n import get_lang, t
 from modules.home_registry import LANDING_MODULES
 
@@ -28,8 +35,8 @@ def about_intro_panel_copy() -> dict[str, str]:
                 "당신의 말과 기억을 인출·기록합니다."
             ),
             "philosophy": (
-                "이름은 들(들쭉날쭉)·니(人)·소(裏)에서 온 상상의 이름입니다. "
-                f"서비스명은 {BRAND_NAME_KO}이고, "
+                f"{BRAND_NAME_STORY_KO} "
+                f"{BRAND_INVITE_KO}. "
                 "운영은 바이브스타틱스(VibeStatics)입니다."
             ),
             "operator": "바이브스타틱스(VibeStatics) · vibestatics.com",
@@ -41,9 +48,9 @@ def about_intro_panel_copy() -> dict[str, str]:
             "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy": (
-            "The name is imaginative—jagged individuality is spirit, not a lab brand. "
-            f"The service is {BRAND_NAME_EN}. "
-            "Operated by VibeStatics (separate site: vibestatics.com)."
+            f"{BRAND_NAME_STORY_EN} "
+            f"{BRAND_INVITE_EN}. "
+            "Operated by VibeStatics (vibestatics.com)."
         ),
     }
 
@@ -52,7 +59,7 @@ def about_intro_panel_html() -> str:
     c = about_intro_panel_copy()
     tagline = html.escape(t("brand_tagline"))
     return (
-        f'<section class="dlinso-about-panel" aria-label="about {html.escape(BRAND_NAME_KO)}">'
+        f'<section class="dlinso-about-panel" aria-label="about {html.escape(BRAND_NAME_EN)}">'
         f'<h2 class="dlinso-about-panel-title">{html.escape(c["title"])}</h2>'
         f'<p class="dlinso-about-panel-lead">{html.escape(c["lead"])}</p>'
         f'<p class="dlinso-about-panel-body">{html.escape(c["philosophy"])}</p>'
@@ -72,9 +79,9 @@ def _about_copy() -> dict[str, str]:
             ),
             "philosophy_h": "철학",
             "philosophy": (
-                "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
-                f"{BRAND_NAME_KO}는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
-                "따뜻하지만 가볍지 않고, 신비롭되지만 멀리 두지 않습니다."
+                f"{BRAND_NAME_STORY_KO} "
+                f"{BRAND_NAME_KO}는 {BRAND_INVITE_KO}—"
+                "따뜻하지만 가볍지 않고, 이야기만 남깁니다."
             ),
             "modules_h": "서사 기록실",
             "close": "닫기",
@@ -89,8 +96,8 @@ def _about_copy() -> dict[str, str]:
         ),
         "philosophy_h": "Philosophy",
         "philosophy": (
-            "What remains at turning points is story, not scores. "
-            f"{BRAND_NAME_EN} helps you arrange that story like art—warm yet grounded."
+            f"{BRAND_NAME_STORY_EN} "
+            f"{BRAND_INVITE_EN}—warm, grounded, story first."
         ),
         "modules_h": "Narrative Archive",
         "close": "Close",
