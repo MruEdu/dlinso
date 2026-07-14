@@ -6,7 +6,7 @@ import html
 
 import streamlit as st
 
-from core.brand import ARCHIVE_NAME_EN, BRAND_DOMAIN, BRAND_NAME_EN, BRAND_NAME_KO, BRAND_URL
+from core.brand import ARCHIVE_NAME_EN, BRAND_NAME_EN, BRAND_NAME_KO
 from i18n import get_lang, t
 from modules.home_registry import LANDING_MODULES
 
@@ -29,7 +29,7 @@ def about_intro_panel_copy() -> dict[str, str]:
             ),
             "philosophy": (
                 "이름은 들(들쭉날쭉)·니(人)·소(裏)에서 온 상상의 이름입니다. "
-                f"서비스는 {BRAND_NAME_KO}({BRAND_DOMAIN})이며, "
+                f"서비스명은 {BRAND_NAME_KO}이고, "
                 "운영은 바이브스타틱스(VibeStatics)입니다."
             ),
             "operator": "바이브스타틱스(VibeStatics) · vibestatics.com",
@@ -41,8 +41,8 @@ def about_intro_panel_copy() -> dict[str, str]:
             "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy": (
-            "The name is imaginative; jagged individuality is in the spirit, not a lab brand. "
-            f"{BRAND_NAME_EN} ({BRAND_DOMAIN}) is the service. "
+            "The name is imaginative—jagged individuality is spirit, not a lab brand. "
+            f"The service is {BRAND_NAME_EN}. "
             "Operated by VibeStatics (separate site: vibestatics.com)."
         ),
     }
@@ -78,8 +78,8 @@ def _about_copy() -> dict[str, str]:
             ),
             "modules_h": "서사 기록실",
             "close": "닫기",
-            "site": f"{BRAND_DOMAIN} · {BRAND_URL}",
-            "operator": f"운영 · VibeStatics (vibestatics.com)",
+            "site": "",
+            "operator": "운영 · VibeStatics (vibestatics.com)",
         }
     return {
         "title": _about_title(),
@@ -94,7 +94,7 @@ def _about_copy() -> dict[str, str]:
         ),
         "modules_h": "Narrative Archive",
         "close": "Close",
-        "site": f"{BRAND_DOMAIN} · {BRAND_URL}",
+        "site": "",
         "operator": "Operated by VibeStatics (vibestatics.com)",
     }
 
@@ -111,7 +111,7 @@ def _render_about_body() -> None:
     )
     st.markdown(
         f'<p style="color:#666;font-size:0.92rem;margin:0.5rem 0;">'
-        f'{html.escape(c["site"])} · {html.escape(c["operator"])}</p>',
+        f'{html.escape(c["operator"])}</p>',
         unsafe_allow_html=True,
     )
     st.markdown(f"**{c['modules_h']}**")

@@ -668,7 +668,20 @@ CUSTOM_CSS = """
         text-align: center;
         max-width: 940px;
         margin: 0 auto;
-        padding: 0 0.5rem 1.75rem !important;
+        padding: 0 0.5rem 2.5rem !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.home-foot-marker) .inquiry-fab-anchor.fab-inline
+        ~ div[data-testid="stElementContainer"] {
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        z-index: 1 !important;
+        width: min(100%, 18rem) !important;
+        max-width: 18rem !important;
+        margin: 0.35rem auto 1.25rem !important;
+        padding: 0 !important;
     }
     /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림(:has 숨김은 대화 패널 오동작 유발) */
     @media (min-width: 601px) {
@@ -4617,8 +4630,9 @@ def _run_app() -> None:
         if show_footer:
             with st.container():
                 _html_layout_marker("home-foot-marker")
-                render_home_footer_minimal()
+                # 문의 버튼을 푸터 위에 두어 판권·메일이 가려지지 않게 함
                 render_inquiry_fab(above_chat_input=False)
+                render_home_footer_minimal()
         return
 
     if not is_ready_for_chat():
