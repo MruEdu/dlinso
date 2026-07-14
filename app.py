@@ -667,8 +667,8 @@ CUSTOM_CSS = """
     div[data-testid="stVerticalBlock"]:has(.home-foot-marker) {
         text-align: center;
         max-width: 940px;
-        margin: 0 auto;
-        padding: 0 0.5rem 2.5rem !important;
+        margin: 1.25rem auto 0;
+        padding: 1.5rem 0.5rem 2.75rem !important;
     }
     div[data-testid="stVerticalBlock"]:has(.home-foot-marker) .inquiry-fab-anchor.fab-inline
         ~ div[data-testid="stElementContainer"] {
@@ -680,8 +680,14 @@ CUSTOM_CSS = """
         z-index: 1 !important;
         width: min(100%, 18rem) !important;
         max-width: 18rem !important;
-        margin: 0.35rem auto 1.25rem !important;
-        padding: 0 !important;
+        margin: 0.85rem auto 1.75rem !important;
+        padding: 0.15rem 0 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.home-foot-marker)
+        .inquiry-fab-anchor.fab-inline ~ div[data-testid="stElementContainer"] button {
+        min-height: 2.85rem !important;
+        padding-top: 0.55rem !important;
+        padding-bottom: 0.55rem !important;
     }
     /* 데스크톱 — 모바일 전용 입력은 서버 UA로만 그림(:has 숨김은 대화 패널 오동작 유발) */
     @media (min-width: 601px) {

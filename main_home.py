@@ -182,8 +182,16 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     padding: clamp(1.15rem, 4vw, 2rem) clamp(1rem, 4.5vw, 2.35rem) !important;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-about-panel {{
-    margin: 0.15rem auto 0.55rem !important;
-    padding: 0.75rem 0.85rem 0.7rem !important;
+    margin: 1.35rem auto 1.5rem !important;
+    padding: 1.15rem 1.25rem 1.1rem !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker)
+[data-testid="stVerticalBlock"] {{
+    gap: 0.55rem !important;
+}}
+div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker)
+div.element-container {{
+    margin-bottom: 0.35rem !important;
 }}
 @media (max-width: 600px) {{
     div[data-testid="stAppViewContainer"]:has(.dlinso-landing-root-marker)
@@ -366,8 +374,8 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     padding: 1.25rem 1rem 0.15rem;
 }}
 div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlinso-brand-hero-panel {{
-    padding: 0 0.65rem 0 !important;
-    margin: 0 auto !important;
+    padding: 0.35rem 0.65rem 0.85rem !important;
+    margin: 0 auto 0.5rem !important;
 }}
 .dlinso-brand-hero {{
     position: relative; z-index: 2;
@@ -1078,25 +1086,37 @@ div[data-testid="stAppViewContainer"]:has(.dlinso-landing-revealed-marker) .dlin
     border: 1px solid rgba(72, 62, 50, 0.1) !important;
     border-radius: 2px !important;
     box-shadow: 0 10px 32px rgba(48, 40, 32, 0.05) !important;
+    margin: 1.5rem auto 1.65rem !important;
+    padding: 1.2rem 1.35rem 1.15rem !important;
 }}
 .dlinso-salon-guide {{
     max-width: 32rem !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0.5rem 0.4rem !important;
+    padding: 0.85rem 0.5rem !important;
+    margin: 0.5rem auto 1.75rem !important;
 }}
 .dlinso-salon-guide-title {{
     font-size: clamp(1.08rem, 2.4vw, 1.28rem) !important;
     font-weight: 500 !important;
 }}
+.dlinso-salon-heading {{
+    margin: 0.35rem 0 1.35rem 0 !important;
+    letter-spacing: 0.28em !important;
+}}
 .dlinso-salon-grid {{
     max-width: 720px !important;
+    padding: 0 0.5rem 2.25rem !important;
+    margin-top: 0.25rem !important;
 }}
 .dlinso-salon-card {{
     border-radius: 2px !important;
     border-color: rgba(72, 62, 50, 0.12) !important;
     box-shadow: 0 12px 32px rgba(48, 40, 32, 0.06) !important;
+}}
+.lab-footer-brand {{
+    padding-top: 1.75rem !important;
 }}
 </style>
 """
