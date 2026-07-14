@@ -1,4 +1,4 @@
-"""나의 지난 이야기 동반자: dlinso — 지능형 서사 통합 시스템."""
+"""나의 지난 이야기 동반자: 들니소 — 지능형 서사 통합 시스템."""
 
 from __future__ import annotations
 
@@ -95,6 +95,7 @@ from narrative_engine import (
     generate_humanistic_midpoint_report,
     translate_to_korean,
 )
+from core.brand import BRAND_NAME_KO
 from core.views import VIEW_APP, VIEW_HOME, VIEW_INQUIRY, VIEW_INTRO
 from main_home import (
     ensure_home_salon_ready,
@@ -157,7 +158,7 @@ from ui.age_entry import render_current_age_context, render_mode_roadmap
 
 os.chdir(APP_DIR)
 
-PAGE_TITLE = "dlinso | 모든 삶은 예술이 된다"
+PAGE_TITLE = f"{BRAND_NAME_KO} | 모든 삶은 예술이 된다"
 LANDING_PAGE_PATH = APP_DIR / "landing_page.html"
 # VIEW_* → core.views
 DB_MANAGER_CACHE_VERSION = 4
@@ -1643,7 +1644,7 @@ def render_intro() -> None:
     _html_layout_marker("dlinso-intro-marker")
     guide_inner = _simple_bold_html(t("intro_guide_body"))
     panel = (
-        '<div class="dlinso-intro-panel" role="region" aria-label="dlinso">'
+        f'<div class="dlinso-intro-panel" role="region" aria-label="{html.escape(BRAND_NAME_KO)}">'
         f"{_intro_headline_html()}"
         f"{_intro_sub_html()}"
         '<div class="dlinso-intro-guide">'
@@ -1688,7 +1689,7 @@ def render_hybrid_nav(*, include_lang: bool = True) -> None:
 
     with cols[idx]:
         st.markdown(
-            f'<span class="hybrid-brand">🌿 dlinso</span>{_beta_badge_html()}',
+            f'<span class="hybrid-brand">🌿 {html.escape(BRAND_NAME_KO)}</span>{_beta_badge_html()}',
             unsafe_allow_html=True,
         )
     idx += 1

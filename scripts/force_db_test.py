@@ -2,7 +2,7 @@
 """
 Supabase 통신선 강제 점검 — 가짜 1행 INSERT 후 Table Editor에서 확인.
 
-  cd E:\\dlinso_v2
+  cd C:\\Workspace\\dlinso_v2_TP
   pip install -r requirements.txt
   python scripts/force_db_test.py
 

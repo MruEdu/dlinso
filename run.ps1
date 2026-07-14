@@ -1,4 +1,4 @@
-# dlinso v2 — Streamlit 실행 (E:\dlinso_v2)
+# dlinso v2 — Streamlit 실행 (C:\Workspace\dlinso_v2_TP)
 Set-Location $PSScriptRoot
 if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
     Write-Host "가상환경이 없습니다. setup_and_run.ps1 을 먼저 실행하세요." -ForegroundColor Red

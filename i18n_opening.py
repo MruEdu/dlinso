@@ -6,159 +6,159 @@ from __future__ import annotations
 OPENING_I18N: dict[str, dict[str, str]] = {
     "en": {
         "opening": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Today, right now, or a memory from long ago—whatever surfaces is welcome. "
             "No fixed topic; start at your own pace.\n\n"
             "Share whatever comes to mind first, and we'll take it from there."
         ),
         "opening_stage_초등학생": (
-            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hi! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll look for treasures in your heart through our chat. "
             "School, friends, home—or whatever felt exciting or hard lately—all count.\n\n"
             "What's the first story that comes to mind today?"
         ),
         "opening_stage_중학생": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll explore the stories in your life together. "
             "Friends, school, dreams, and little everyday moments are all precious pieces.\n\n"
             "Share whatever is staying with you right now."
         ),
         "opening_stage_고등학생": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll continue the stories you care about. "
             "Future paths, relationships, worries, or small joys—all are welcome.\n\n"
             "What story feels largest in your heart today?"
         ),
         "opening_stage_대학생": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll weave the pieces of your life together through dialogue. "
             "Studies, relationships, choices ahead—write without pressure.\n\n"
             "What's on your mind right now?"
         ),
         "opening_stage_중·고등학생_재학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll explore the stories in your life together. "
             "School, friends, dreams, and paths ahead—all count.\n\n"
             "Share whatever is staying with you right now."
         ),
         "opening_stage_청소년_비재학·홈스쿨·중·고_휴학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Whether you're out of school, homeschooling, or on leave—that's okay. "
             "Relationships, daily life, dreams, family—tell your story as you live it.\n\n"
             "What's the first thing that comes to mind?"
         ),
         "opening_stage_대학·전문대_재학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll weave the pieces of your life together through dialogue. "
             "Studies, relationships, choices ahead—write without pressure.\n\n"
             "What's on your mind right now?"
         ),
         "opening_stage_대학·전문대_휴학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Time on leave or pause is part of your story too. "
             "Feelings, relationships, what's next—all welcome.\n\n"
             "Share at your own pace."
         ),
         "opening_stage_대학원_재학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Research, study, relationships, what's ahead—share without pressure. "
             "What's on your mind right now?"
         ),
         "opening_stage_대학원_휴학": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Time on leave counts too. We'll reflect on how you feel and what comes next.\n\n"
             "Share at your own pace."
         ),
         "opening_stage_일·활동_중": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Through our dialogue, we'll look for the treasures hidden in your life.\n\n"
             "What story is taking up the most space in your heart today?"
         ),
         "opening_stage_준비·돌봄·쉬는_중": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Preparing, caring, or resting—this chapter counts too. "
             "We'll respect your pace.\n\n"
             "What's the first story you'd like to share?"
         ),
         "opening_stage_은퇴_후": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll gently revisit the stories you've lived and the heart you carry now.\n\n"
             "Share at your own pace."
         ),
         "opening_stage_성인일반": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "Through our dialogue, we'll look for the treasures hidden in your life.\n\n"
             "What story is taking up the most space in your heart today? "
             "Even a small piece of daily life is welcome.\n\n"
             "We're listening."
         ),
         "opening_stage_은퇴_후_삶": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll gently revisit the stories you've lived and the heart you carry now. "
             "Memories, relationships, feelings—anything is welcome.\n\n"
             "Share at your own pace."
         ),
         "opening_age_초등_연령약_7–12세": (
-            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hi! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll look for treasures in your heart through our chat. "
             "Home, friends, or whatever felt exciting or hard lately—all count.\n\n"
             "What's the first story that comes to mind today?"
         ),
         "opening_age_중등_연령약_13–15세": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll explore your days and inner stories together. "
             "Friends, school, small joys or hurts—all count.\n\n"
             "What comes to mind first right now?"
         ),
         "opening_age_고등_연령약_16–18세": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll continue the stories you care about. "
             "Paths ahead, relationships, worries, or small joys—all welcome.\n\n"
             "What story feels largest in your heart today?"
         ),
         "opening_age_10대": (
-            "Hi! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hi! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll explore your days and inner stories together. "
             "Friends, school, small joys or hurts—all count.\n\n"
             "What comes to mind first right now?"
         ),
         "opening_age_20대": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll walk the path you've taken and the heart you hold now. "
             "Choices, relationships, and small daily moments all matter.\n\n"
             "What story feels largest today?"
         ),
         "opening_age_30대": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll look for hidden treasures in work and relationships. "
             "A small scene from a busy day is enough.\n\n"
             "What's on your mind?"
         ),
         "opening_age_40대": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll sit with the weight of life and its bright moments together. "
             "Responsibility, transition, small joys—anything goes.\n\n"
             "We're listening."
         ),
         "opening_age_50대": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll reflect on the stories you've built and how you feel now.\n\n"
             "What would you like to share today?"
         ),
         "opening_age_60대": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll move slowly through life's memories and today's heart. "
             "Even a small daily moment is precious.\n\n"
             "Share comfortably, in your own time."
         ),
         "opening_age_60대_이상": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll move slowly through life's memories and today's heart. "
             "Even a small daily moment is precious.\n\n"
             "Share comfortably, in your own time."
         ),
         "opening_age_70대_이상": (
-            "Hello! I'm **dlinso**, your Narrative Companion.\n\n"
+            "Hello! I'm **dlniso**, your Narrative Companion.\n\n"
             "We'll take our time—memories, family, how you feel today. "
             "Even a small story matters.\n\n"
             "Share at your own pace."
@@ -238,69 +238,69 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     },
     "mn": {
         "opening": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Өнөөдөр, одоо, эсвэл өнгөрсөн дурсамж—юу ч болно. "
             "Сэдэв сонгохгүй, өөрийн хурдаар эхэлнэ үү.\n\n"
             "Эхлээд санаанд орсон зүйлээ хэлээрэй."
         ),
         "opening_stage_초등학생": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Сургууль, найз, гэр—сүүлийн баярлах эсвэл уйтгартай зүйл ч болно.\n\n"
             "Өнөөдөр эхлээд санаанд орж ирсэн түүхээ хэлээрэй."
         ),
         "opening_stage_중학생": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Найз, сургууль, мөрөөдөл, жижиг өдөр тутам—бүгд үнэтэй.\n\n"
             "Одоо зүрхэнд үлдсэн түүхээ бичээрэй."
         ),
         "opening_stage_고등학생": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Ирээдүй, харилцаа, санаа зоволт, баяр бүхий зүйл зөвшөөрөгдөнө.\n\n"
             "Өнөөдрийн хамгийн том түүхээ хуваалцаарай."
         ),
         "opening_stage_대학생": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Сурлага, харилцаа, сонголт—ачаалгүй бичээрэй.\n\n"
             "Одоо санаанд байгаа түүхээ хэлээрэй."
         ),
         "opening_stage_성인일반": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Яриагаар амьдралынхаа эрдэнэсийг хамтдаа олно.\n\n"
             "Өнөөдөр зүрхэнд хамгийн том түүх юу вэ?\n\n"
             "Ярьж өгнө үү."
         ),
         "opening_stage_은퇴_후_삶": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Өнгөрсөн түүх, одоогийн сэтгэлийг аажмаар хамтдаа үзнэ.\n\n"
             "Өөрийн хурдаар ярьж өгнө үү."
         ),
         "opening_age_10대": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Найз, сургууль, баяр эсвэл гуниг—бүгд болно.\n\n"
             "Эхлээд санаанд орсон зүйлээ хэлээрэй."
         ),
         "opening_age_20대": (
-            "Сайн уу! Би **dlinso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, чиний **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Сонголт, харилцаа, өдөр тутмын зүйл бүхэн чухал.\n\n"
             "Өнөөдрийн түүхээ хуваалцаарай."
         ),
         "opening_age_30대": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Ажил, харилцааны доторх эрдэнэсийг хамтдаа олно.\n\n"
             "Одоо юу бодож байна вэ?"
         ),
         "opening_age_40대": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Амьдралын жин, гэрэл гэгээтэй мөчүүдийг хамтдаа үзнэ.\n\n"
             "Түүхээ хуваалцаарай."
         ),
         "opening_age_50대": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Хуримтлуулсан түүх, одоогийн сэтгэлийг хамтдаа үзнэ.\n\n"
             "Өнөөдөр юу хэлмээр байна?"
         ),
         "opening_age_60대_이상": (
-            "Сайн уу! Би **dlinso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
+            "Сайн уу! Би **dlniso**, таны **Сэтгэлийн цэцэрлэгчин**.\n\n"
             "Дурсамж, өнөөдрийн зүрхийг аажмаар үргэлжлүүлнэ.\n\n"
             "Тайвшлан ярьж өгнө үү."
         ),
@@ -321,69 +321,69 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     },
     "ja": {
         "opening": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "今日のこと、いまの気持ち、昔の記憶—どれでも大丈夫です。"
             "決まったテーマはありません。自分のペースで始めてください。\n\n"
             "まず浮かんだことをひとつ、聞かせてください。"
         ),
         "opening_stage_초등학생": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "学校・友だち・おうちのこと、うれしかったことやつらかったことも大歓迎。\n\n"
             "いちばん先に浮かんだ話を聞かせてくれる？"
         ),
         "opening_stage_중학생": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "友だち、学校、夢、小さな日常も大切なかけらです。\n\n"
             "今、心に残っている話を気軽に書いてください。"
         ),
         "opening_stage_고등학생": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "進路、関係、いまの悩みや小さなよろこびも大丈夫です。\n\n"
             "今日いちばん大きく残っている物語を聞かせてください。"
         ),
         "opening_stage_대학생": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "専攻、関係、これからの選択—無理なく書いてください。\n\n"
             "いま心にある話を聞かせてください。"
         ),
         "opening_stage_성인일반": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "対話を通して、人生の中の宝物を一緒に探します。\n\n"
             "今日、心いちばんに残っている物語は何ですか？\n\n"
             "お聞かせください。"
         ),
         "opening_stage_은퇴_후_삶": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "これまでの物語と、いまの心をゆっくり一緒にたどります。\n\n"
             "ご自身のペースでお話しください。"
         ),
         "opening_age_10대": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "友だち、学校、小さなよろこびやつらさも大丈夫。\n\n"
             "いちばん先に浮かんだ話を聞かせてくれる？"
         ),
         "opening_age_20대": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "歩いてきた道といまの心を、対話でつなぎます。\n\n"
             "今日いちばん大きな物語を聞かせてください。"
         ),
         "opening_age_30대": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "仕事と関係の中の宝物を一緒に探します。忙しい一日の小さな場面でも。\n\n"
             "いま心にある話をどうぞ。"
         ),
         "opening_age_40대": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "人生の重さと光る瞬間を一緒に味わいます。\n\n"
             "お聞かせください。"
         ),
         "opening_age_50대": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "積み重ねた物語といまの心を一緒に見つめます。\n\n"
             "今日伝えたい話をどうぞ。"
         ),
         "opening_age_60대_이상": (
-            "こんにちは。**心の庭師** dlinso です。\n\n"
+            "こんにちは。**心の庭師** dlniso です。\n\n"
             "ゆっくり、記憶といまの心をつなぎます。小さな日常も大切です。\n\n"
             "安心してお話しください。"
         ),
@@ -404,69 +404,69 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     },
     "zh": {
         "opening": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "今天的事、此刻的心情、过去的记忆—都可以。"
             "没有固定主题，请按自己的节奏开始。\n\n"
             "先说说最先浮现的一件事就好。"
         ),
         "opening_stage_초등학생": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "学校、朋友、家里的事，最近开心或难过的事都可以。\n\n"
             "今天最先想到的故事是什么？"
         ),
         "opening_stage_중학생": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "朋友、学校、梦想、小小的日常都是珍贵的碎片。\n\n"
             "请写下此刻心里最放不下的事。"
         ),
         "opening_stage_고등학생": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "升学、关系、现在的烦恼或小快乐都可以。\n\n"
             "今天心里最大的故事是什么？"
         ),
         "opening_stage_대학생": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "专业、关系、未来的选择——不必有压力，写下来就好。\n\n"
             "此刻心里的事，请告诉我们。"
         ),
         "opening_stage_성인일반": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "我们将通过对谈，一起寻找你生命中的宝藏。\n\n"
             "今天心里最大的故事是什么？\n\n"
             "我们在这里倾听。"
         ),
         "opening_stage_은퇴_후_삶": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "我们会慢慢梳理走过的路与此刻的心。\n\n"
             "请按自己的节奏分享。"
         ),
         "opening_age_10대": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "朋友、学校、小小的快乐或难过都可以。\n\n"
             "此刻最先想到的是什么？"
         ),
         "opening_age_20대": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "我们一起连接你走过的路与现在的心。\n\n"
             "今天最想分享的故事是什么？"
         ),
         "opening_age_30대": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "在工作与关系里寻找隐藏的宝藏，忙碌一天里的小场景也可以。\n\n"
             "此刻心里的事请告诉我们。"
         ),
         "opening_age_40대": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "我们一起面对生命的重量与闪亮的瞬间。\n\n"
             "请分享你的故事。"
         ),
         "opening_age_50대": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "我们一起回看积累的故事与现在的心情。\n\n"
             "今天最想说什么？"
         ),
         "opening_age_60대_이상": (
-            "你好！我是 **dlinso**，你的**心灵园丁**。\n\n"
+            "你好！我是 **dlniso**，你的**心灵园丁**。\n\n"
             "慢慢连接生命的记忆与今天的心，日常的一小片也很珍贵。\n\n"
             "请安心分享。"
         ),
@@ -487,69 +487,69 @@ OPENING_I18N: dict[str, dict[str, str]] = {
     },
     "vi": {
         "opening": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Hôm nay, lúc này, hay ký ức xưa—đều được. "
             "Không có chủ đề cố định; hãy bắt đầu theo nhịp của bạn.\n\n"
             "Hãy kể điều đầu tiên nghĩ đến, rồi chúng ta sẽ cùng đi tiếp."
         ),
         "opening_stage_초등학생": (
-            "Chào bạn! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Chào bạn! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Trường, bạn bè, nhà—điều vui hay buồn gần đây đều được.\n\n"
             "Câu chuyện đầu tiên nghĩ đến hôm nay là gì?"
         ),
         "opening_stage_중학생": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Bạn bè, trường học, ước mơ, khoảnh khắc nhỏ đều quý.\n\n"
             "Hãy viết điều còn lưu lại trong tim lúc này."
         ),
         "opening_stage_고등학생": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Định hướng, quan hệ, lo lắng hay niềm vui nhỏ—đều được.\n\n"
             "Câu chuyện lớn nhất hôm nay là gì?"
         ),
         "opening_stage_대학생": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chuyên ngành, quan hệ, lựa chọn phía trước—viết thoải mái.\n\n"
             "Điều gì đang ở trong tim bạn?"
         ),
         "opening_stage_성인일반": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chúng ta sẽ cùng tìm kho báu trong đời bạn qua đối thoại.\n\n"
             "Hôm nay câu chuyện lớn nhất trong tim là gì?\n\n"
             "Chúng tôi đang lắng nghe."
         ),
         "opening_stage_은퇴_후_삶": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chúng ta sẽ nhẹ nhàng nhìn lại quãng đời đã qua và trái tim hiện tại.\n\n"
             "Hãy kể theo nhịp của bạn."
         ),
         "opening_age_10대": (
-            "Chào bạn! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Chào bạn! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Bạn bè, trường, niềm vui hay buồn nhỏ—đều được.\n\n"
             "Điều gì nghĩ đến đầu tiên lúc này?"
         ),
         "opening_age_20대": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chúng ta nối con đường bạn đã đi với trái tim hiện tại.\n\n"
             "Câu chuyện lớn nhất hôm nay là gì?"
         ),
         "opening_age_30대": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Cùng tìm kho báu trong công việc và quan hệ—một cảnh nhỏ trong ngày bận cũng đủ.\n\n"
             "Tim bạn đang nghĩ gì?"
         ),
         "opening_age_40대": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chúng ta cùng nhìn gánh nặng và khoảnh sáng của đời.\n\n"
             "Hãy kể câu chuyện của bạn."
         ),
         "opening_age_50대": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Chúng ta cùng nhìn những gì đã tích lũy và cảm xúc hiện tại.\n\n"
             "Hôm nay bạn muốn chia sẻ điều gì?"
         ),
         "opening_age_60대_이상": (
-            "Xin chào! Tôi là **dlinso**, **Người làm vườn tâm hồn** của bạn.\n\n"
+            "Xin chào! Tôi là **dlniso**, **Người làm vườn tâm hồn** của bạn.\n\n"
             "Từ từ nối ký ức với trái tim hôm nay—một mảnh nhỏ cũng quý.\n\n"
             "Hãy kể một cách thoải mái."
         ),

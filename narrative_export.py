@@ -81,7 +81,7 @@ def export_pdf_bytes(payload: dict[str, Any]) -> bytes:
     향후 fpdf2/reportlab 로 레이아웃 고도화 가능.
     """
     lines = [
-        "Dlinso Narrative Archive",
+        "dlniso Narrative Archive",
         f"Exported: {payload.get('exported_at', '')}",
         f"Module: {payload.get('module_type', '')}",
         f"Stage: {payload.get('narrative_stage', '')}",

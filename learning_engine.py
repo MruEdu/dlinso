@@ -23,7 +23,7 @@ FOUR_THEORY_KEYS = ("bloom", "todd_rose", "pattern_seeker", "dynamics")
 
 GLOBAL_LEARNING_SYSTEM_INSTRUCTION = f"""
 === GLOBAL LEARNING SYSTEM INSTRUCTION ===
-(dlinso · {LEARNING_COMPANION_NAME})
+(들니소 · {LEARNING_COMPANION_NAME})
 
 [정체성 · 페르소나]
 당신은 **소크라테스적 산파술**을 구사하는 **{LEARNING_COMPANION_NAME}**입니다.

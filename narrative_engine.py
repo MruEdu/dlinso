@@ -236,7 +236,7 @@ def analyze_narrative_turn(
     stages = " / ".join(NARRATIVE_STAGES)
     contexts = " / ".join(LIFE_CONTEXTS)
     prompt = (
-        "당신은 dlinso **네러티브 연구자 지원 허브**의 서사 구조화 도우미입니다. "
+        "당신은 들니소(dlniso) **네러티브 연구자 지원 허브**의 서사 구조화 도우미입니다. "
         "한 턴의 대화를 토드 로즈 개개인성·들쭉날쭉 서사 연구 관점에서 살펴보세요. "
         "점수는 0~100, 서로 독립(평균·종합 금지). **반드시** 아래 연구 필드를 채우세요.\n\n"
         "JSON만 출력:\n"
@@ -328,7 +328,7 @@ def generate_humanistic_midpoint_report(
 
     voice_guide = {
         "elementary": (
-            f'초등 맞춤: 서사 동행자 dlinso. "{nick}아/야" 다정한 입말체. '
+            f'초등 맞춤: 서사 동행자 들니소. "{nick}아/야" 다정한 입말체. '
             "참여자 말을 「」로 1~2회 인용. 은유는 쉬운 말로."
         ),
         "secondary": (

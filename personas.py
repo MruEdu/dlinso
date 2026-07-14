@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-SERVICE_TITLE = "dlinso"
+SERVICE_TITLE = "dlniso"
 GUIDE_NAME = "서사 동행자"
 GUIDE_EMOJI = "🌿"
 

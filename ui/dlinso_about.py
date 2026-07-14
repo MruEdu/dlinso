@@ -1,4 +1,4 @@
-"""About dlinso — 철학·모듈 안내 다이얼로그."""
+"""About 들니소 — 철학·모듈 안내 다이얼로그."""
 
 from __future__ import annotations
 
@@ -6,34 +6,43 @@ import html
 
 import streamlit as st
 
+from core.brand import ARCHIVE_NAME_EN, BRAND_DOMAIN, BRAND_NAME_EN, BRAND_NAME_KO, BRAND_URL
 from i18n import get_lang, t
 from modules.home_registry import LANDING_MODULES
+
+
+def _about_title() -> str:
+    if get_lang() == "ko":
+        return f"About {BRAND_NAME_KO}"
+    return f"About {BRAND_NAME_EN}"
 
 
 def about_intro_panel_copy() -> dict[str, str]:
     """홈 카드 상단 상시 노출용 짧은 소개."""
     if get_lang() == "ko":
         return {
-            "title": "About dlinso",
+            "title": _about_title(),
             "lead": (
-                "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
-                "디지털 서사 기록실(Dlinso Narrative Archive)입니다. "
-                "검사나 채점이 아니라, 당신의 말과 기억을 인출·기록합니다."
+                f"{BRAND_NAME_KO}는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
+                "디지털 서사 기록실입니다. 검사나 채점이 아니라, "
+                "당신의 말과 기억을 인출·기록합니다."
             ),
             "philosophy": (
-                "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
-                "dlinso는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다."
+                "이름은 들(들쭉날쭉)·니(人)·소(裏)에서 온 상상의 이름입니다. "
+                "「들쭉날쭉 인간 연구소」는 실재 기관이 아닙니다. "
+                f"운영 · 바이브스타틱스(VibeStatics) · {BRAND_DOMAIN}"
             ),
+            "operator": f"바이브스타틱스(VibeStatics) · vibestatics.com",
         }
     return {
-        "title": "About dlinso",
+        "title": _about_title(),
         "lead": (
-            "dlinso is a digital Narrative Archive built on the belief that every life becomes art. "
-            "We withdraw and record your words—not test or grade."
+            f"{BRAND_NAME_EN} is a digital Narrative Archive built on the belief that "
+            "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy": (
             "What remains at turning points is story, not scores. "
-            "dlinso helps you arrange that story—warm yet grounded, never distant."
+            f"{BRAND_NAME_EN} helps you arrange that story—warm yet grounded, never distant."
         ),
     }
 
@@ -42,7 +51,7 @@ def about_intro_panel_html() -> str:
     c = about_intro_panel_copy()
     tagline = html.escape(t("brand_tagline"))
     return (
-        '<section class="dlinso-about-panel" aria-label="about dlinso">'
+        f'<section class="dlinso-about-panel" aria-label="about {html.escape(BRAND_NAME_KO)}">'
         f'<h2 class="dlinso-about-panel-title">{html.escape(c["title"])}</h2>'
         f'<p class="dlinso-about-panel-lead">{html.escape(c["lead"])}</p>'
         f'<p class="dlinso-about-panel-body">{html.escape(c["philosophy"])}</p>'
@@ -54,34 +63,38 @@ def about_intro_panel_html() -> str:
 def _about_copy() -> dict[str, str]:
     if get_lang() == "ko":
         return {
-            "title": "About dlinso",
+            "title": _about_title(),
             "lead": (
-                "dlinso는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
-                "디지털 서사 기록실(Dlinso Narrative Archive)입니다. "
+                f"{BRAND_NAME_KO}는 「모든 삶은 예술이 된다」는 믿음 위에 세워진 "
+                f"디지털 서사 기록실({ARCHIVE_NAME_EN})입니다. "
                 "검사나 채점이 아니라, 당신의 말과 기억을 인출·기록합니다."
             ),
             "philosophy_h": "철학",
             "philosophy": (
                 "삶의 고비마다 남는 것은 점수가 아니라 이야기입니다. "
-                "dlinso는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
+                f"{BRAND_NAME_KO}는 그 이야기를 예술처럼 정리하고, 스스로를 다시 바라보게 돕습니다. "
                 "따뜻하지만 가볍지 않고, 신비롭되지만 멀리 두지 않습니다."
             ),
             "modules_h": "서사 기록실",
             "close": "닫기",
+            "site": f"{BRAND_DOMAIN} · {BRAND_URL}",
+            "operator": f"운영 · VibeStatics (vibestatics.com)",
         }
     return {
-        "title": "About dlinso",
+        "title": _about_title(),
         "lead": (
-            "dlinso is a digital Narrative Archive built on the belief that "
+            f"{BRAND_NAME_EN} is a digital Narrative Archive built on the belief that "
             "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy_h": "Philosophy",
         "philosophy": (
             "What remains at turning points is story, not scores. "
-            "dlinso helps you arrange that story like art—warm yet grounded."
+            f"{BRAND_NAME_EN} helps you arrange that story like art—warm yet grounded."
         ),
         "modules_h": "Narrative Archive",
         "close": "Close",
+        "site": f"{BRAND_DOMAIN} · {BRAND_URL}",
+        "operator": "Operated by VibeStatics (vibestatics.com)",
     }
 
 
@@ -93,6 +106,11 @@ def _render_about_body() -> None:
     st.markdown(
         f'<p style="color:#333333;font-size:1.02rem;margin:1rem 0;">'
         f"「{html.escape(t('brand_tagline'))}」</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<p style="color:#666;font-size:0.92rem;margin:0.5rem 0;">'
+        f'{html.escape(c["site"])} · {html.escape(c["operator"])}</p>',
         unsafe_allow_html=True,
     )
     st.markdown(f"**{c['modules_h']}**")
@@ -112,7 +130,7 @@ def _dialog_supported() -> bool:
 
 if _dialog_supported():
 
-    @st.dialog("About dlinso", width="large")  # type: ignore[misc]
+    @st.dialog(f"About {BRAND_NAME_KO}", width="large")  # type: ignore[misc]
     def dlinso_about_dialog() -> None:
         _render_about_body()
         c = _about_copy()

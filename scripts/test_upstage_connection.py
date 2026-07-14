@@ -2,7 +2,7 @@
 """
 Upstage Solar API 연결 테스트 — UPSTAGE_API_KEY 값은 출력하지 않습니다.
 
-  cd E:\\dlinso_v2
+  cd C:\\Workspace\\dlinso_v2_TP
   pip install -r requirements.txt
   python scripts/test_upstage_connection.py
 """

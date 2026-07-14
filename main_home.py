@@ -1,4 +1,4 @@
-"""dlinso.com 브랜드 랜딩 — 신비주의 · 서사 기록실."""
+"""dlniso.com 브랜드 랜딩 — 신비주의 · 서사 기록실."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import html
 import streamlit as st
 import streamlit.components.v1 as components
 
+from core.brand import BRAND_NAME_KO
 from core.version import APP_DEPLOY_DOT, APP_VERSION_LABEL
 from i18n import get_lang, render_language_selector, t
 from modules.home_registry import (
@@ -1195,21 +1196,21 @@ def _brand_title_row_html(*, include_version: bool = True) -> str:
     version = _version_pill_html() if include_version else ""
     return (
         f'<div class="dlinso-brand-title-row">'
-        f'<h1 class="dlinso-brand-domain">dlinso</h1>'
+        f'<h1 class="dlinso-brand-domain">{html.escape(BRAND_NAME_KO)}</h1>'
         f"{version}"
         f"</div>"
     )
 
 
 def render_home_top_bar(*, dark: bool = False) -> None:
-    """홈 전용 상단 — 언어 · About dlinso."""
+    """홈 전용 상단 — 언어 · About 들니소."""
     _html_layout_marker("dlinso-home-mininav-marker")
     st.markdown('<div class="dlinso-home-mininav-wrap">', unsafe_allow_html=True)
     brand_color = "#c8c4be" if dark else TEXT_DARK
     row1_left, row1_right = st.columns([1, 1.15], gap="small")
     with row1_left:
         st.markdown(
-            f'<span class="dlinso-mininav-brand" style="color:{brand_color};">dlinso</span>',
+            f'<span class="dlinso-mininav-brand" style="color:{brand_color};">{html.escape(BRAND_NAME_KO)}</span>',
             unsafe_allow_html=True,
         )
     with row1_right:
@@ -1346,7 +1347,7 @@ def _render_intro_gate_footer() -> None:
     _html_layout_marker("dlinso-gate-footer-marker")
     st.markdown('<div class="dlinso-gate-footer-wrap">', unsafe_allow_html=True)
     st.markdown(
-        f'<p class="dlinso-gate-footer-brand">dlinso · {html.escape(t("brand_tagline"))}</p>',
+        f'<p class="dlinso-gate-footer-brand">{html.escape(BRAND_NAME_KO)} · {html.escape(t("brand_tagline"))}</p>',
         unsafe_allow_html=True,
     )
     render_copyright_footer()
@@ -1450,7 +1451,7 @@ def render_main_home() -> bool:
 
 def render_home_footer_minimal() -> None:
     st.markdown(
-        f'<p class="lab-footer-brand">dlinso · {html.escape(t("brand_tagline"))}</p>',
+        f'<p class="lab-footer-brand">{html.escape(BRAND_NAME_KO)} · {html.escape(t("brand_tagline"))}</p>',
         unsafe_allow_html=True,
     )
     render_copyright_footer()

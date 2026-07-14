@@ -24,19 +24,19 @@ LANG_FULL: dict[str, str] = {
 
 # 하단 배너 — 언어 선택과 무관하게 한/영 병기 (글로벌 공통)
 FOOTER_BANNER: dict[str, str] = {
-    "primary": "🌿 dlinso",
-    "secondary": "Dlinso Lab",
-    "copyright": "© 2026 Dlinso Lab by sinihyun. All Rights Reserved.",
+    "primary": "🌿 들니소",
+    "secondary": "dlniso",
+    "copyright": "© 2026 dlniso · VibeStatics. All Rights Reserved.",
     "powered": "대화 · 서사 구조화 · 로컬 SQLite",
 }
 
 # 공통 옵션 (연령·생활 단계 라벨은 한국어 유지 → DB·말투 키, UI만 번역)
 TEXTS: dict[str, dict[str, str]] = {
     "ko": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "들니소",
+        "beta_badge": "v1.2.4",
         "archive_title": "서사 기록실",
-        "archive_subtitle": "Dlinso Narrative Archive",
+        "archive_subtitle": "dlniso Narrative Archive",
         "btn_start_withdrawal": "서사 인출 시작",
         "btn_view_life_archive": "생애 아카이브 열람",
         "asset_progress_label": "자산화 진척도",
@@ -48,11 +48,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "hub_eyebrow": "",
         "hub_tagline": "",
         "hub_slogan": (
-            "대화로 발견하는 나의 보물,\n\n예술이 되는 나의 삶.\n\n**dlinso**"
+            "대화로 발견하는 나의 보물,\n\n예술이 되는 나의 삶.\n\n**들니소**"
         ),
-        "hub_slogan_beta_note": "v1.2.2 · 동행·숲 2방 · 반복 질문 개선",
+        "hub_slogan_beta_note": "v1.2.4 · 들니소 · 동행·숲 2방 · 반복 질문 개선",
         "intro_headline": (
-            "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. dlinso"
+            "대화로 발견하는 나의 보물, 예술이 되는 나의 삶. 들니소"
         ),
         "intro_headline_line1": "대화로 발견하는 나의 보물,",
         "intro_headline_line2": "예술이 되는 나의 삶.",
@@ -60,7 +60,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "당신의 일상이 작품이 되고, 당신의 강점이 빛나는 기록이 되는 곳."
         ),
         "intro_sub_line2": (
-            "dlinso는 당신만의 이야기를 완성하는 대화형 성찰 플랫폼입니다."
+            "들니소는 당신만의 이야기를 완성하는 대화형 성찰 플랫폼입니다."
         ),
         "intro_guide_label": "안내",
         "intro_guide_body": (
@@ -86,8 +86,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "👇 아래에서 **개인정보 동의** 후, "
             "「{tab_new}」또는 「{tab_return}」탭을 선택해 주세요."
         ),
-        "nav_home": "🏠 dlinso",
-        "nav_about": "About dlinso",
+        "nav_home": "🏠 들니소",
+        "nav_about": "About 들니소",
         "nav_consult": "📖 나의\u00a0이야기",
         "nav_inquiry": "✉️ 문의하기",
         "nav_inquiry_short": "✉️",
@@ -101,7 +101,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_back": "← 이전 화면으로",
         "inquiry_fab_label": "✉️ 연구 협업 등 문의",
         "go_life_story": "📖 나의 이야기 · 가입/로그인",
-        "mode_roadmap_title": "dlinso 여정",
+        "mode_roadmap_title": "들니소 여정",
         "mode_lifespan_label": "생애사적 대화",
         "mode_lifespan_desc": "지금의 말투로 대화하며, 이어지는 이야기 속에서 삶의 서사를 함께 만듭니다.",
         "mode_learning_label": "나의 배움 여정",
@@ -115,9 +115,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "자아성·사회성 회복 궤적. 6턴 자산, 10턴 내면 항해 일지. "
             "data/isolation.db 로컬 저장."
         ),
-        "home_version_note": "v1.2.2 · 동행·숲 2방",
+        "home_version_note": "v1.2.4 · 들니소 · 동행·숲 2방",
         "salon_guide_line": (
-            "dlinso — Dlinso Narrative Archive · 당신의 삶을 데이터 자산으로"
+            "들니소 — dlniso Narrative Archive · 당신의 삶을 데이터 자산으로"
         ),
         "salon_guide_sub": (
             "검사나 채점이 아닌, 말과 기억을 인출·기록하는 디지털 아카이브입니다. "
@@ -323,164 +323,164 @@ TEXTS: dict[str, dict[str, str]] = {
             "지금 떠오르는 말을 자유롭게 적어 보세요…"
         ),
         "opening": (
-            "반가워요! 당신의 **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! 당신의 **서사 동행자** 들니소입니다.\n\n"
             "오늘의 하루, 지금 마음, 혹은 떠오르는 옛날 이야기—무엇이든 괜찮아요. "
             "정해진 주제 없이, 편한 속도로 시작해 주세요.\n\n"
             "먼저 떠오르는 한 가지를 들려주시면, 대화가 이어집니다."
         ),
         "opening_stage_초등학생": (
-            "반가워요! **서사 동행자** dlinso예요.\n\n"
+            "반가워요! **서사 동행자** 들니소예요.\n\n"
             "우리는 대화로 네 마음속 보물을 함께 찾아볼 거야. "
             "학교·친구·집 이야기, 요즘 제일 신나거나 속상한 일도 좋아.\n\n"
             "오늘 가장 먼저 떠오르는 이야기를 들려줄래?"
         ),
         "opening_stage_중학생": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 네 삶 속 이야기를 함께 살펴볼 거예요. "
             "친구, 학교, 꿈, 작은 일상도 모두 소중한 조각이에요.\n\n"
             "지금 마음에 가장 남는 이야기를 편하게 적어 주세요."
         ),
         "opening_stage_고등학생": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "우리는 대화로 네가 소중히 여기는 이야기를 함께 이어 갈 거예요. "
             "진로, 관계, 지금의 고민이나 작은 기쁨도 괜찮아요.\n\n"
             "오늘 가장 크게 자리한 이야기를 들려주세요."
         ),
         "opening_stage_대학생": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 네 삶의 조각들을 함께 이어 볼 거예요. "
             "전공, 관계, 앞으로의 선택—부담 없이 적어 주세요.\n\n"
             "지금 마음속 이야기를 들려주세요."
         ),
         "opening_stage_중·고등학생_재학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 네 삶 속 이야기를 함께 살펴볼 거예요. "
             "학교, 친구, 꿈, 진로—작은 일상도 모두 소중한 조각이에요.\n\n"
             "지금 마음에 가장 남는 이야기를 편하게 적어 주세요."
         ),
         "opening_stage_청소년_비재학·홈스쿨·중·고_휴학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "학교에 다니지 않거나, 홈스쿨·휴학 중이어도 괜찮아요. "
             "관계, 하루, 꿈, 가족—지금 살아가는 방식 그대로 이야기해 주세요.\n\n"
             "먼저 떠오르는 한 가지를 들려주세요."
         ),
         "opening_stage_대학·전문대_재학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 네 삶의 조각들을 함께 이어 볼 거예요. "
             "공부, 관계, 앞으로의 선택—부담 없이 적어 주세요.\n\n"
             "지금 마음속 이야기를 들려주세요."
         ),
         "opening_stage_대학·전문대_휴학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "휴학·쉼의 시간도 소중한 이야기예요. "
             "지금의 마음, 관계, 앞으로—어느 것이든 괜찮아요.\n\n"
             "편하게 들려주세요."
         ),
         "opening_stage_대학원_재학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "연구·공부·관계, 앞으로의 길—부담 없이 이야기해 주세요. "
             "지금 마음속 무게도 괜찮아요.\n\n"
             "먼저 떠오르는 이야기를 들려주세요."
         ),
         "opening_stage_대학원_휴학": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "휴학·쉼의 시간도 소중한 이야기예요. "
             "지금의 마음과 다음 선택을 함께 짚어 볼게요.\n\n"
             "편하게 들려주세요."
         ),
         "opening_stage_일·활동_중": (
-            "반가워요! 당신의 **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! 당신의 **서사 동행자** 들니소입니다.\n\n"
             "우리는 대화를 통해 당신의 삶 속 보물을 함께 찾아볼 거예요.\n\n"
             "오늘 마음속에 가장 크게 자리한 이야기는 무엇인가요? "
             "작은 일상의 조각도 괜찮아요.\n\n"
             "당신의 이야기를 들려주세요."
         ),
         "opening_stage_준비·돌봄·쉬는_중": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "준비하거나, 돌보거나, 쉬는 시간도 이야기가 됩니다. "
             "지금의 속도와 선택을 존중하며 함께할게요.\n\n"
             "먼저 떠오르는 이야기를 들려주세요."
         ),
         "opening_stage_은퇴_후": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "천천히 대화하며 지나온 이야기와 앞으로의 마음을 함께 짚어 볼 거예요. "
             "기억, 관계, 지금 느끼는 감정—무엇이든 괜찮습니다.\n\n"
             "편한 마음으로 이야기를 들려주세요."
         ),
         "opening_stage_성인일반": (
-            "반가워요! 당신의 **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! 당신의 **서사 동행자** 들니소입니다.\n\n"
             "우리는 대화를 통해 당신의 삶 속 보물을 함께 찾아볼 거예요.\n\n"
             "오늘 마음속에 가장 크게 자리한 이야기는 무엇인가요? "
             "작은 일상의 조각도 괜찮아요.\n\n"
             "당신의 이야기를 들려주세요."
         ),
         "opening_stage_은퇴_후_삶": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "천천히 대화하며 지나온 이야기와 앞으로의 마음을 함께 짚어 볼 거예요. "
             "기억, 관계, 지금 느끼는 감정—무엇이든 괜찮습니다.\n\n"
             "편한 마음으로 이야기를 들려주세요."
         ),
         "opening_age_초등_연령약_7–12세": (
-            "반가워요! **서사 동행자** dlinso예요.\n\n"
+            "반가워요! **서사 동행자** 들니소예요.\n\n"
             "우리는 대화로 네 마음속 보물을 함께 찾아볼 거야. "
             "집, 친구, 요즘 제일 신나거나 속상한 일도 좋아.\n\n"
             "오늘 가장 먼저 떠오르는 이야기를 들려줄래?"
         ),
         "opening_age_중등_연령약_13–15세": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화로 네 하루와 마음속 이야기를 함께 살펴볼 거예요. "
             "친구, 학교, 작은 기쁨이나 속상함도 좋아요.\n\n"
             "지금 가장 먼저 떠오르는 이야기를 들려주세요."
         ),
         "opening_age_고등_연령약_16–18세": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화로 네가 소중히 여기는 이야기를 함께 이어 갈 거예요. "
             "진로, 관계, 지금의 고민이나 작은 기쁨도 괜찮아요.\n\n"
             "오늘 가장 크게 자리한 이야기를 들려주세요."
         ),
         "opening_age_10대": (
-            "반가워요! **서사 동행자** dlinso예요.\n\n"
+            "반가워요! **서사 동행자** 들니소예요.\n\n"
             "대화로 네 하루와 마음속 이야기를 함께 살펴볼 거야. "
             "친구, 학교, 작은 기쁨이나 속상함도 좋아.\n\n"
             "지금 가장 먼저 떠오르는 이야기를 들려줄래?"
         ),
         "opening_age_20대": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "우리는 대화로 네가 걸어온 길과 지금의 마음을 함께 이어 볼 거예요. "
             "선택, 관계, 작은 일상도 모두 소중해요.\n\n"
             "오늘 가장 크게 자리한 이야기를 들려주세요."
         ),
         "opening_age_30대": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 일과 관계 속에 숨은 보물을 함께 찾아볼 거예요. "
             "바쁜 하루 속 작은 장면도 괜찮아요.\n\n"
             "지금 마음속 이야기를 들려주세요."
         ),
         "opening_age_40대": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "우리는 대화로 삶의 무게와 빛나는 순간을 함께 짚어 볼 거예요. "
             "책임, 전환, 작은 기쁨—무엇이든 괜찮아요.\n\n"
             "당신의 이야기를 들려주세요."
         ),
         "opening_age_50대": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "대화를 통해 쌓아 온 이야기와 지금의 마음을 함께 살펴볼 거예요.\n\n"
             "오늘 가장 전하고 싶은 이야기를 편하게 적어 주세요."
         ),
         "opening_age_60대": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "천천히 대화하며 삶의 기억과 지금의 마음을 함께 이어 가요. "
             "작은 일상의 한 조각도 소중합니다.\n\n"
             "편안한 마음으로 이야기를 들려주세요."
         ),
         "opening_age_60대_이상": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "천천히 대화하며 삶의 기억과 지금의 마음을 함께 이어 가요. "
             "작은 일상의 한 조각도 소중합니다.\n\n"
             "편안한 마음으로 이야기를 들려주세요."
         ),
         "opening_age_70대_이상": (
-            "반가워요! **서사 동행자** dlinso입니다.\n\n"
+            "반가워요! **서사 동행자** 들니소입니다.\n\n"
             "천천히, 기다리며 대화할게요. 기억·가족·지금 마음—"
             "작은 이야기도 소중합니다.\n\n"
             "편한 속도로 들려주세요."
@@ -558,11 +558,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_placeholder": "궁금한 점이나 전하고 싶은 말을 적어 주세요…",
         "inquiry_send": "문의 보내기",
         "inquiry_ok": "문의가 저장되었습니다. 🌿",
-        "admin_reply_title": "🌿 dlinso sinihyun님의 답변이 도착했습니다",
+        "admin_reply_title": "🌿 들니소 sinihyun님의 답변이 도착했습니다",
         "admin_reply_title_research": (
-            "🌿 dlinso · 네러티브 연구 협업 회신"
+            "🌿 들니소 · 네러티브 연구 협업 회신"
         ),
-        "admin_reply_title_interview": "🌿 dlinso · 인터뷰 관련 회신",
+        "admin_reply_title_interview": "🌿 들니소 · 인터뷰 관련 회신",
         "connection": "연결 상태",
         "connected": "연결됨",
         "disconnected": "연결 안 됨",
@@ -589,10 +589,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 재방문",
     },
     "en": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "dlniso",
+        "beta_badge": "v1.2.4",
         "archive_title": "Narrative Archive",
-        "archive_subtitle": "Dlinso Narrative Archive",
+        "archive_subtitle": "dlniso Narrative Archive",
         "btn_start_withdrawal": "Begin narrative withdrawal",
         "btn_view_life_archive": "View life archive",
         "asset_progress_label": "Asset progress",
@@ -608,7 +608,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Where daily life becomes a work and your strengths shine in what you record."
         ),
         "intro_sub_line2": (
-            "dlinso is a conversational reflection space to complete your own story."
+            "dlniso is a conversational reflection space to complete your own story."
         ),
         "intro_guide_label": "Guide",
         "intro_guide_body": (
@@ -629,7 +629,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "status_record": "Record",
         "hub_tagline": "",
         "hub_slogan": (
-            "Discover your treasure through dialogue — your life as art. **dlinso**"
+            "Discover your treasure through dialogue — your life as art. **dlniso**"
         ),
         "hub_slogan_beta_note": "v1.2.2 · Companion & Forest · repeat guard fix",
         "lang_label": "Language",
@@ -685,7 +685,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "home_version_note": "v1.2.2 · 2 rooms: Companion & Forest",
         "salon_guide_line": (
-            "dlinso — Dlinso Narrative Archive · your life as narrative data"
+            "dlniso — dlniso Narrative Archive · your life as narrative data"
         ),
         "salon_guide_sub": (
             "Not tests or scores—a digital archive to withdraw and record "
@@ -798,8 +798,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "After about 10 turns, you can open the learning map report."
         ),
         "education": "Current life stage",
-        "nav_home": "🏠 dlinso",
-        "nav_about": "About dlinso",
+        "nav_home": "🏠 dlniso",
+        "nav_about": "About dlniso",
         "nav_consult": "📖 My story",
         "nav_inquiry": "✉️ Contact",
         "nav_inquiry_short": "✉️",
@@ -879,8 +879,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "inquiry_send": "Send inquiry",
         "inquiry_ok": "Your message was saved locally. 🌿",
         "admin_reply_title": "🌿 A reply from Director sinihyun has arrived",
-        "admin_reply_title_research": "🌿 Jjokjjok Lab · Narrative research collaboration reply",
-        "admin_reply_title_interview": "🌿 Jjokjjok Lab · Interview-related reply",
+        "admin_reply_title_research": "🌿 dlniso · Narrative research collaboration reply",
+        "admin_reply_title_interview": "🌿 dlniso · Interview-related reply",
         "connection": "Connection",
         "connected": "Connected",
         "disconnected": "Not connected",
@@ -907,8 +907,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 Return visit",
     },
     "mn": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "dlniso",
+        "beta_badge": "v1.2.4",
         "brand_tagline": "Амь бүр урлаг болдог",
         "brand_gate_hint": "scroll · click · эхлэх",
         "hub_eyebrow": "Narrative Research Hub",
@@ -970,8 +970,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 Буцах",
     },
     "ja": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "dlniso",
+        "beta_badge": "v1.2.4",
         "brand_tagline": "すべての人生は芸術になる",
         "brand_gate_hint": "scroll · click · はじめる",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1032,8 +1032,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 再訪",
     },
     "zh": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "dlniso",
+        "beta_badge": "v1.2.4",
         "brand_tagline": "每一种人生，皆成艺术",
         "brand_gate_hint": "scroll · click · 开始",
         "hub_eyebrow": "Narrative Research Hub",
@@ -1094,8 +1094,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "returning_badge": "🔄 回访",
     },
     "vi": {
-        "app_title": "dlinso",
-        "beta_badge": "v1.2.3",
+        "app_title": "dlniso",
+        "beta_badge": "v1.2.4",
         "brand_tagline": "Mỗi cuộc đời đều trở thành nghệ thuật",
         "brand_gate_hint": "scroll · click · bắt đầu",
         "hub_eyebrow": "Narrative Research Hub",

@@ -17,7 +17,7 @@ GARDEN_KEEPER_NAME = NARRATIVE_COMPANION_NAME
 
 # System Instruction — 모든 모듈 공통 최소 제약
 GLOBAL_MAIEUTIC_SYSTEM_INSTRUCTION = """
-너는 참여자의 내러티브를 경청하고 자연스럽게 생각을 따라가는 들인소(DLINSO) 엔진이다.
+너는 참여자의 내러티브를 경청하고 자연스럽게 생각을 따라가는 들니소(dlniso) 엔진이다.
 [치명적 절대 규칙 - 위반 시 시스템 오류]
 - **Elenchus**, **공감**, **Maieutic question** 같은 학술용어 태그를 절대 화면에 출력하지 마라.
 - 문장에 번호(①, ②, ③, 1), 2))를 매겨서 질문하지 마라. 자연스러운 하나의 구어체로만 대화하라.

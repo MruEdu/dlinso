@@ -1,5 +1,5 @@
 # dlinso v2 - Upstage Solar API test
-# PowerShell: cd E:\dlinso_v2 ; .\test_upstage.ps1
+# PowerShell: cd C:\Workspace\dlinso_v2_TP ; .\test_upstage.ps1
 # (ASCII only in this file; Korean output comes from Python)
 Set-Location $PSScriptRoot
 $env:PYTHONIOENCODING = "utf-8"
