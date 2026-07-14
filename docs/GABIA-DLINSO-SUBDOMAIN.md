@@ -3,11 +3,14 @@
 Streamlit Community Cloud는 커스텀 도메인 CNAME을 지원하지 않습니다.  
 **가비아 URL 포워딩(301)**으로 `dlniso.com` → 앱만 연결하면 됩니다.
 
-브랜드 표기: **들니소** (한글) / **dlniso** (영문) · `core/brand.py`
+브랜드 표기: **들니소** (한글) / **dlniso** (영문) · `core/brand.py`  
+운영사: **바이브스타틱스(VibeStatics)** — 별도 홈 https://vibestatics.com/  
+(가비아 키워드에는 들니소만: `dlniso, 들니소, 서사`)
 
 | 주소 | 역할 |
 |------|------|
-| **https://dlniso.com** | 가비아 포워딩 (입구) |
+| **https://dlniso.com** | 들니소 입구 (가비아 → Streamlit) |
+| **https://vibestatics.com** | 바이브스타틱스 회사 홈 (별도) |
 | **Streamlit 앱** | 실제 대화 (`?gate=1`) |
 
 ---

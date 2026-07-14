@@ -91,7 +91,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "nav_consult": "📖 나의\u00a0이야기",
         "nav_inquiry": "✉️ 문의하기",
         "nav_inquiry_short": "✉️",
-        "inquiry_page_title": "✉️ 연구소에 문의하기",
+        "inquiry_page_title": "✉️ 들니소에 문의하기",
         "inquiry_page_intro": (
             "아래 양식을 작성해 **보내기**를 누르면 문의가 로컬 DB에 "
             "안전하게 기록됩니다. (이메일 앱은 사용하지 않습니다.)"
@@ -548,7 +548,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "잠시 접속이 많아 기록이 지연되었습니다. "
             "잠시 후 다시 보내 주시거나, 같은 내용이 중복되지 않았는지 확인해 주세요."
         ),
-        "sidebar_inquiry": "연구소에 문의하기",
+        "sidebar_inquiry": "들니소에 문의하기",
         "inquiry_type_label": "문의 유형",
         "inquiry_type_general": "일반 기록",
         "inquiry_type_research": "네러티브 연구 협업",
@@ -803,7 +803,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "nav_consult": "📖 My story",
         "nav_inquiry": "✉️ Contact",
         "nav_inquiry_short": "✉️",
-        "inquiry_page_title": "✉️ Contact the lab",
+        "inquiry_page_title": "✉️ Contact dlniso",
         "inquiry_page_intro": (
             "Fill out the form below and tap **Send** — your message is saved "
             "to the local database (no email app required)."
@@ -868,7 +868,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "Many people are connected right now; saving was delayed. "
             "Please try again shortly, or check that the same message was not sent twice."
         ),
-        "sidebar_inquiry": "Contact the lab",
+        "sidebar_inquiry": "Contact dlniso",
         "inquiry_type_label": "Inquiry type",
         "inquiry_type_general": "General counseling",
         "inquiry_type_research": "Narrative research collaboration",

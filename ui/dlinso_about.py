@@ -29,10 +29,10 @@ def about_intro_panel_copy() -> dict[str, str]:
             ),
             "philosophy": (
                 "이름은 들(들쭉날쭉)·니(人)·소(裏)에서 온 상상의 이름입니다. "
-                "「들쭉날쭉 인간 연구소」는 실재 기관이 아닙니다. "
-                f"운영 · 바이브스타틱스(VibeStatics) · {BRAND_DOMAIN}"
+                f"서비스는 {BRAND_NAME_KO}({BRAND_DOMAIN})이며, "
+                "운영은 바이브스타틱스(VibeStatics)입니다."
             ),
-            "operator": f"바이브스타틱스(VibeStatics) · vibestatics.com",
+            "operator": "바이브스타틱스(VibeStatics) · vibestatics.com",
         }
     return {
         "title": _about_title(),
@@ -41,8 +41,9 @@ def about_intro_panel_copy() -> dict[str, str]:
             "every life becomes art. We withdraw and record your words—not test or grade."
         ),
         "philosophy": (
-            "What remains at turning points is story, not scores. "
-            f"{BRAND_NAME_EN} helps you arrange that story—warm yet grounded, never distant."
+            "The name is imaginative; jagged individuality is in the spirit, not a lab brand. "
+            f"{BRAND_NAME_EN} ({BRAND_DOMAIN}) is the service. "
+            "Operated by VibeStatics (separate site: vibestatics.com)."
         ),
     }
 
